@@ -2,45 +2,49 @@
 
 Simulador Monte Carlo: Séries A, B, C, D + Copa do Brasil + Ao Vivo.
 
-## Deploy no GitHub Pages
+## Deploy
 
-1. Crie um repositório no GitHub (ex: `brasileirao-2026`)
-2. Suba os arquivos: `index.html`, `icon-180.png`, `update_results.py`
-3. Settings → Pages → Source: `main` / `root` → Save
-4. Acesse: `https://seuuser.github.io/brasileirao-2026/`
+1. Crie repositório no GitHub
+2. Suba: `index.html`, `icon-180.png`, `update_results.py`
+3. Settings → Pages → Source: `main` / `root`
 
-**⚠️ A pasta `.github` não sobe pelo upload web do GitHub.**
-Para o workflow funcionar, crie manualmente:
-1. No repositório, clique "Add file" → "Create new file"
-2. Nome: `.github/workflows/daily-update.yml`
-3. Cole o conteúdo do arquivo `daily-update.yml`
+**Pasta `.github` não sobe pelo upload web.** Crie manualmente:
+→ "Add file" → "Create new file" → nome: `.github/workflows/daily-update.yml` → cole o conteúdo
+
+## Atualização automática (Claude + Web Search)
+
+O workflow roda todo dia às 05:00 BRT. Usa a API do Claude para buscar
+resultados na web e atualizar o `index.html` automaticamente.
+
+### Setup:
+
+1. Pegue sua API key em [console.anthropic.com](https://console.anthropic.com/)
+2. No repositório: **Settings → Secrets → Actions → New secret**
+3. Nome: `ANTHROPIC_API_KEY` | Valor: sua chave `sk-ant-...`
+4. Pronto — roda sozinho todo dia
+
+### Custo:
+
+Cada execução usa ~1 chamada ao Claude Sonnet com web search.
+Custo estimado: ~$0.01 por dia (~$0.30/mês).
+
+### Rodar manualmente:
+
+```bash
+# Ontem:
+ANTHROPIC_API_KEY=sk-ant-... python update_results.py
+
+# Data específica:
+ANTHROPIC_API_KEY=sk-ant-... python update_results.py 2026-04-05
+
+# Adicionar 1 jogo manual:
+python update_results.py add A 10 "Flamengo" 2 1 "Santos"
+```
+
+### Rodar via GitHub:
+
+Actions → "Atualizar Resultados" → Run workflow → (opcionalmente digitar data)
 
 ## Salvar no iPhone
 
-1. Abra o link no Safari
-2. Toque em Compartilhar (⬆️) → "Adicionar à Tela de Início"
-3. O app abre em tela cheia com o ícone ⚽
-
-## Atualizar Resultados
-
-Sem API key. 3 opções:
-
-```bash
-# Opção 1: Adicionar 1 jogo
-python update_results.py add A 10 "Flamengo" 2 1 "Santos"
-
-# Opção 2: Arquivo com vários jogos
-echo "A 10 Flamengo 2 1 Santos" >> resultados.txt
-echo "A 10 Palmeiras 3 0 Grêmio" >> resultados.txt
-python update_results.py manual
-
-# Opção 3: Via GitHub (crie resultados.txt no repo, rode o workflow)
-```
-
-Formato do `resultados.txt`:
-```
-# Serie Rodada Casa GolsCasa GolsFora Fora
-A 10 Flamengo 2 1 Santos
-A 10 Palmeiras 3 0 Grêmio
-B 3 Fortaleza 1 0 Goiás
-```
+Safari → ⬆️ → "Adicionar à Tela de Início"
