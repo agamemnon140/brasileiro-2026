@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Brasileirão 2026">
+<title>Simulador Brasileirão 2026</title>
+<meta name="description" content="Simulador Monte Carlo do Campeonato Brasileiro 2026">
+<meta name="theme-color" content="#064e3b">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Outfit',sans-serif;-webkit-tap-highlight-color:transparent;}
+@media(display-mode:standalone){body{padding-top:env(safe-area-inset-top);}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useMemo, useCallback } = React;
+
+// ============================================================================
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4
+// Motor único | Config: total+pesoCasa | Copa do Brasil | Datas por rodada
+// ============================================================================
+
+const poissonProb = (l,k) => { let p=Math.exp(-l); for(let i=1;i<=k;i++) p*=l/i; return p; };
+const poissonRandom = (l) => { if(l<=0) return 0; const L=Math.exp(-l); let k=0,p=1; do{k++;p*=Math.random();}while(p>L); return k-1; };
+const suavLog = (s) => Math.sign(s)*Math.log1p(Math.abs(s));
+
+
+// === ESCUDOS — componente com fallback para iniciais ===
+const BADGE_CDN = 'https://api.sofascore.app/api/v1/team/'; // fallback: initials
+const TEAM_IDS = {
+  // Série A
+  'Flamengo':1961,'Palmeiras':1963,'Cruzeiro':1954,'Botafogo':1958,'Fluminense':1961,'Bahia':1955,
+  'São Paulo':1981,'Internacional':1966,'Grêmio':5926,'Santos':1968,'Corinthians':1957,'Vasco':1974,
+  'Atlético-MG':1977,'Vitória':2017,'Coritiba':7768,'Athletico-PR':1960,'Chapecoense':7315,
+  // Série B
+  'Fortaleza':1965,'Ceará':2025,'Sport':1999,'Juventude':7316,'Criciúma':7702,'Goiás':1959,
+  'CRB':7696,'Avaí':7698,'Cuiabá':7770,'Vila Nova':7697,'América-MG':7699,'Náutico':7700,
+  'Ponte Preta':7703,'Londrina':7766,'Novorizontino':80370,
+  // Série C
+  'Paysandu':7704,'Guarani':7774,'Figueirense':7695,'Brusque':211251,'Ituano':7907,
+  'Botafogo-PB':7772,'Amazonas':394078,'Volta Redonda':7769,'Santa Cruz':7701,
+};
+
+const Badge = ({name, size=20}) => {
+  const [err, setErr] = useState(false);
+  const id = TEAM_IDS[name];
+  const ab = name.length <= 3 ? name : name.replace(/-[A-Z]{2}$/,'').split(/[\s-]/).map(w=>w[0]).join('').slice(0,3).toUpperCase();
+  let h = 0; for(let i=0;i<name.length;i++) h = name.charCodeAt(i) + ((h<<5)-h);
+  const hue = Math.abs(h) % 360;
+  if (id && !err) return (<img src={BADGE_CDN+id+'/image'} alt={name} width={size} height={size} className="inline-block rounded-sm flex-shrink-0" style={{marginRight:4,verticalAlign:'middle'}} onError={()=>setErr(true)} loading="lazy"/>);
+  return (<span className="inline-flex items-center justify-center rounded-sm flex-shrink-0 text-white font-bold" style={{width:size,height:size,fontSize:size*0.38,marginRight:4,verticalAlign:'middle',background:`hsl(${hue},45%,35%)`}}>{ab}</span>);
+};
+const TN = ({name}) => (<><Badge name={name} size={18}/>{name}</>);
+
+// === CONFIG DEFAULT ===
+const DEFAULT_CFG = {
+  targetRatio: 3.0, homeAdv: 100, defaultAlpha: 'base',
+  alphas: {
+    conservador: { atk:0.05, def:0.08, kElo:16, label:'Conservador' },
+    base:        { atk:0.10, def:0.16, kElo:32, label:'Base' },
+    agressivo:   { atk:0.20, def:0.32, kElo:48, label:'Agressivo' },
+  },
+  // Gols por jogo: total × pesoCasa = λ_casa; total × (1-pesoCasa) = λ_fora
+  lambdas: {
+    A: { total:2.50, pesoCasa:0.652 }, B: { total:2.20, pesoCasa:0.583 },
+    C: { total:2.20, pesoCasa:0.583 }, D: { total:2.65, pesoCasa:0.604 },
+    CB:{ total:2.50, pesoCasa:0.652 },
+  },
+  mnMM: 1.35, // mata-mata neutro 180min (Série D + Final Copa)
+  maxSpread: 5.0, // cap do expoente (evita distorção em ligas de range estreito)
+};
+const getML = (cfg,k) => { const l=cfg.lambdas[k]; return { mc:l.total*l.pesoCasa, mf:l.total*(1-l.pesoCasa) }; };
+// Probabilidades V/E/D via Poisson
+const calcProbs = (lC,lF) => { let pH=0,pD=0,pA=0; for(let gc=0;gc<8;gc++) for(let gf=0;gf<8;gf++){const p=poissonProb(lC,gc)*poissonProb(lF,gf);if(gc>gf)pH+=p;else if(gc===gf)pD+=p;else pA+=p;} const t=pH+pD+pA; return{pH:pH/t*100,pD:pD/t*100,pA:pA/t*100}; };
+
+// === ENGINE ===
+const initLeague = (times, getElo, cfg) => {
+  const elos=times.map(t=>getElo(t)); const mean=elos.reduce((s,e)=>s+e,0)/elos.length;
+  const mx=Math.max(...elos),mn=Math.min(...elos);
+  const rawSpread=(mx===mn)?1:Math.log(cfg.targetRatio)/Math.log(mx/mn);
+  const spread=Math.min(rawSpread, cfg.maxSpread||5.0);
+  const rA=times.map(t=>Math.pow(getElo(t)/mean,spread)),rD=times.map(t=>Math.pow(mean/getElo(t),spread));
+  const aA=rA.reduce((s,v)=>s+v,0)/rA.length,aD=rD.reduce((s,v)=>s+v,0)/rD.length;
+  return { mean,spread,aA,aD, initAD:(elo)=>({atk:Math.pow(elo/mean,spread)/aA,def:Math.pow(mean/elo,spread)/aD}) };
+};
+const calcL = (aC,dC,aF,dF,eC,eF,mc,mf,ha,eo) => {
+  if(eo){const d=(eC+ha)-eF;const e=1/(1+Math.pow(10,-d/400));return{lC:mc*(0.5+e),lF:mf*(0.5+(1-e))};}
+  return{lC:Math.max(0.2,Math.min(4.5,mc*aC*dF)),lF:Math.max(0.15,Math.min(4.0,mf*aF*dC))};
+};
+const updR = (elos,atk,def_,c,f,gc,gf,lC,lF,cfg,ak,eo) => {
+  const ap=cfg.alphas[ak];const d=(elos[c]+cfg.homeAdv)-elos[f];const ex=1/(1+Math.pow(10,-d/400));
+  const r=gc>gf?1:gc===gf?0.5:0;const mg=Math.log(Math.abs(gc-gf)+1);
+  const dt=ap.kElo*(1+mg*0.5)*(r-ex);elos[c]+=dt;elos[f]-=dt;
+  if(!eo){const sAC=lC>0.01?(gc-lC)/lC:0,sDC=lF>0.01?(gf-lF)/lF:0;
+    atk[c]=Math.max(0.3,Math.min(3,atk[c]*(1+ap.atk*suavLog(sAC))));def_[c]=Math.max(0.3,Math.min(3,def_[c]*(1+ap.def*suavLog(sDC))));
+    const sAF=lF>0.01?(gf-lF)/lF:0,sDF=lC>0.01?(gc-lC)/lC:0;
+    atk[f]=Math.max(0.3,Math.min(3,atk[f]*(1+ap.atk*suavLog(sAF))));def_[f]=Math.max(0.3,Math.min(3,def_[f]*(1+ap.def*suavLog(sDF))));}
+};
+const calcClassif = (times,res) => { const s={};times.forEach(t=>{s[t]={P:0,J:0,V:0,E:0,D:0,GP:0,GC:0};});
+  res.forEach(r=>{if(!s[r.c]||!s[r.f])return;s[r.c].J++;s[r.f].J++;s[r.c].GP+=r.gc;s[r.c].GC+=r.gf;s[r.f].GP+=r.gf;s[r.f].GC+=r.gc;
+    if(r.gc>r.gf){s[r.c].V++;s[r.c].P+=3;s[r.f].D++;}else if(r.gc===r.gf){s[r.c].E++;s[r.f].E++;s[r.c].P++;s[r.f].P++;}else{s[r.f].V++;s[r.f].P+=3;s[r.c].D++;}});
+  return times.map(t=>({time:t,...s[t],SG:s[t].GP-s[t].GC})).sort((a,b)=>b.P-a.P||b.V-a.V||b.SG-a.SG||b.GP-a.GP).map((c,i)=>({...c,pos:i+1}));
+};
+const simMC = (times,ranking,tab,res,cfg,sk,nS,ak,eo) => {
+  const lg=initLeague(times,t=>ranking[t].elo,cfg);const{mc,mf}=getML(cfg,sk);
+  const ct={},pts={},posF={};
+  const ptsAtPos=Array.from({length:times.length},()=>[]);
+  times.forEach(t=>{ct[t]={t:0,g4:0,z4:0};pts[t]=[];posF[t]=new Array(times.length).fill(0);});
+  for(let sim=0;sim<nS;sim++){const st={},el={},at={},df={};
+    times.forEach(t=>{st[t]={P:0,J:0,V:0,E:0,D:0,GP:0,GC:0};el[t]=ranking[t].elo;const i=lg.initAD(ranking[t].elo);at[t]=i.atk;df[t]=i.def;});
+    for(const j of tab){const{casa:c,fora:f,rodada:rd}=j;if(!st[c]||!st[f])continue;
+      const real=res.find(r=>r.c===c&&r.f===f&&r.r===rd);let gc,gf;
+      if(real){gc=real.gc;gf=real.gf;}else{const{lC,lF}=calcL(at[c],df[c],at[f],df[f],el[c],el[f],mc,mf,cfg.homeAdv,eo);gc=poissonRandom(lC);gf=poissonRandom(lF);}
+      st[c].J++;st[f].J++;st[c].GP+=gc;st[c].GC+=gf;st[f].GP+=gf;st[f].GC+=gc;
+      if(gc>gf){st[c].V++;st[c].P+=3;st[f].D++;}else if(gc===gf){st[c].E++;st[f].E++;st[c].P++;st[f].P++;}else{st[f].V++;st[f].P+=3;st[c].D++;}
+      if(real){const{lC,lF}=calcL(at[c],df[c],at[f],df[f],el[c],el[f],mc,mf,cfg.homeAdv,eo);updR(el,at,df,c,f,gc,gf,lC,lF,cfg,ak,eo);}}
+    const cl=times.map(t=>({time:t,...st[t],SG:st[t].GP-st[t].GC})).sort((a,b)=>b.P-a.P||b.V-a.V||b.SG-a.SG||b.GP-a.GP);
+    cl.forEach((c,i)=>{pts[c.time].push(c.P);posF[c.time][i]++;ptsAtPos[i].push(c.P);
+      if(i===0)ct[c.time].t++;if(i<4)ct[c.time].g4++;if(i>=times.length-4)ct[c.time].z4++;});}
+  const pctl=(arr,q)=>{if(!arr.length)return 0;const s=[...arr].sort((a,b)=>a-b);return s[Math.floor(s.length*q)]||0;};
+  const pc=(pos)=>({p10:pctl(ptsAtPos[pos],0.1),p50:pctl(ptsAtPos[pos],0.5),p90:pctl(ptsAtPos[pos],0.9)});
+  return{probs:times.map(t=>({time:t,titulo:ct[t].t/nS*100,g4:ct[t].g4/nS*100,z4:ct[t].z4/nS*100,mediaPts:pts[t].reduce((s,p)=>s+p,0)/nS,posF:posF[t].map(v=>v/nS*100)})).sort((a,b)=>b.mediaPts-a.mediaPts),nSims:nS,
+    cortes:{titulo:pc(0),g4:pc(3),meio:pc(Math.floor(times.length/2)),z4:pc(times.length-4),ultimo:pc(times.length-1)}};
+};
+const simUnica = (times,ranking,tab,res,cfg,sk,ak,eo) => {
+  const lg=initLeague(times,t=>ranking[t].elo,cfg);const{mc,mf}=getML(cfg,sk);
+  const st={},el={},at={},df={};times.forEach(t=>{st[t]={P:0,J:0,V:0,E:0,D:0,GP:0,GC:0};el[t]=ranking[t].elo;const i=lg.initAD(ranking[t].elo);at[t]=i.atk;df[t]=i.def;});
+  const jogos=[];
+  for(const j of tab){const{casa:c,fora:f,rodada:rd}=j;if(!st[c]||!st[f])continue;
+    const real=res.find(r=>r.c===c&&r.f===f&&r.r===rd);let gc,gf;
+    if(real){gc=real.gc;gf=real.gf;}else{const{lC,lF}=calcL(at[c],df[c],at[f],df[f],el[c],el[f],mc,mf,cfg.homeAdv,eo);gc=poissonRandom(lC);gf=poissonRandom(lF);}
+    jogos.push({casa:c,fora:f,gc,gf,rodada:rd,real:!!real,data:j.data||''});
+    st[c].J++;st[f].J++;st[c].GP+=gc;st[c].GC+=gf;st[f].GP+=gf;st[f].GC+=gc;
+    if(gc>gf){st[c].V++;st[c].P+=3;st[f].D++;}else if(gc===gf){st[c].E++;st[f].E++;st[c].P++;st[f].P++;}else{st[f].V++;st[f].P+=3;st[c].D++;}
+    const{lC,lF}=calcL(at[c],df[c],at[f],df[f],el[c],el[f],mc,mf,cfg.homeAdv,eo);if(real)updR(el,at,df,c,f,gc,gf,lC,lF,cfg,ak,eo);}
+  return{classificacao:times.map(t=>({time:t,...st[t],SG:st[t].GP-st[t].GC})).sort((a,b)=>b.P-a.P||b.V-a.V||b.SG-a.SG||b.GP-a.GP).map((c,i)=>({...c,pos:i+1})),jogos};
+};
+// === MONTE CARLO SÉRIE D (extraído para uso no Simular Tudo) ===
+const simMC_D = (cfg,nS,ak,eo) => {
+  const lg=initLeague(SD_TIMES,t=>SD_INFO[t].elo,cfg);const{mc,mf}=getML(cfg,'D');
+  const ct={};SD_TIMES.forEach(t=>{ct[t]={cl:0,ac:0,ch:0};});
+  for(let sim=0;sim<nS;sim++){const st={},el={},at={},df={};
+    SD_TIMES.forEach(t=>{st[t]={P:0,J:0,V:0,E:0,D:0,GP:0,GC:0};el[t]=SD_INFO[t].elo;const i=lg.initAD(SD_INFO[t].elo);at[t]=i.atk;df[t]=i.def;});
+    for(const j of SD_TABELA){const{lC,lF}=calcL(at[j.casa],df[j.casa],at[j.fora],df[j.fora],el[j.casa],el[j.fora],mc,mf,cfg.homeAdv,eo);const gc=poissonRandom(lC),gf=poissonRandom(lF);st[j.casa].J++;st[j.fora].J++;st[j.casa].GP+=gc;st[j.casa].GC+=gf;st[j.fora].GP+=gf;st[j.fora].GC+=gc;if(gc>gf){st[j.casa].V++;st[j.casa].P+=3;st[j.fora].D++;}else if(gc===gf){st[j.casa].E++;st[j.fora].E++;st[j.casa].P++;st[j.fora].P++;}else{st[j.fora].V++;st[j.fora].P+=3;st[j.casa].D++;}updR(el,at,df,j.casa,j.fora,gc,gf,lC,lF,cfg,ak,eo);}
+    const gc=SD_GRUPOS.map(g=>g.map(t=>({time:t,...st[t],SG:st[t].GP-st[t].GC})).sort((a,b)=>b.P-a.P||b.V-a.V||b.SG-a.SG||b.GP-a.GP).slice(0,4).map(c=>c.time));gc.forEach(g=>g.forEach(t=>ct[t].cl++));
+    const s180=(a,b)=>{const{lC,lF}=eo?(()=>{const d=el[a]-el[b];const e=1/(1+Math.pow(10,-d/400));return{lC:2*cfg.mnMM*(0.5+e),lF:2*cfg.mnMM*(0.5+(1-e))};})():{lC:Math.max(0.2,2*cfg.mnMM*at[a]*df[b]),lF:Math.max(0.2,2*cfg.mnMM*at[b]*df[a])};const ga=poissonRandom(lC),gb=poissonRandom(lF);return ga>gb?a:gb>ga?b:Math.random()<0.5?a:b;};
+    let f2=[];for(const[gx,gy]of SD_PAIRS){f2.push(s180(gc[gx][0],gc[gy][3]));f2.push(s180(gc[gx][1],gc[gy][2]));f2.push(s180(gc[gy][0],gc[gx][3]));f2.push(s180(gc[gy][1],gc[gx][2]));}
+    let f3=[];for(const[p1,p2]of SD_SUPER)for(let j=0;j<4;j++)f3.push(s180(f2[p1*4+j],f2[p2*4+(3-j)]));
+    const r16=[...f3].sort((a,b)=>st[b].P-st[a].P||(st[b].GP-st[b].GC)-(st[a].GP-st[a].GC));const o8=[];for(let i=0;i<8;i++)o8.push(s180(r16[i],r16[15-i]));
+    const r8=[...o8].sort((a,b)=>st[b].P-st[a].P);const qW=[],qL=[];for(let i=0;i<4;i++){const w=s180(r8[i],r8[7-i]);qW.push(w);qL.push(w===r8[i]?r8[7-i]:r8[i]);}
+    qW.forEach(t=>ct[t].ac++);[s180(qL[0],qL[1]),s180(qL[2],qL[3])].forEach(t=>ct[t].ac++);ct[s180(s180(qW[0],qW[1]),s180(qW[2],qW[3]))].ch++;}
+  return{probs:SD_TIMES.map(t=>({time:t,uf:SD_INFO[t].uf,elo:SD_INFO[t].elo,cl:ct[t].cl/nS*100,ac:ct[t].ac/nS*100,ch:ct[t].ch/nS*100})).sort((a,b)=>b.ac-a.ac||b.elo-a.elo),nSims:nS};
+};
+
+// === MONTE CARLO COPA DO BRASIL (extraído) ===
+const simMC_CB = (cfg,nS,ak,eo,teamElos) => {
+  const teams=CB_TEAMS;const elos={};teams.forEach(t=>elos[t]=teamElos[t]||CB_ELOS[t]||1340);
+  const lg=initLeague(teams,t=>elos[t],cfg);const ct={};teams.forEach(t=>ct[t]={r16:0,qf:0,sf:0,fin:0,ch:0});
+  const sim2L=(a,b,at,df,el)=>{const{mc:m1,mf:m2}=getML(cfg,'CB');const l1=calcL(at[a],df[a],at[b],df[b],el[a],el[b],m1,m2,cfg.homeAdv,eo);const g1a=poissonRandom(l1.lC),g1b=poissonRandom(l1.lF);const l2=calcL(at[b],df[b],at[a],df[a],el[b],el[a],m1,m2,cfg.homeAdv,eo);const g2b=poissonRandom(l2.lC),g2a=poissonRandom(l2.lF);const aa=g1a+g2a,ab=g1b+g2b;return{w:aa>ab?a:ab>aa?b:Math.random()<0.5?a:b};};
+  const simFin=(a,b,at,df,el)=>{const mn=cfg.mnMM;const{lC,lF}=eo?(()=>{const d=el[a]-el[b];const e=1/(1+Math.pow(10,-d/400));return{lC:mn*(0.5+e),lF:mn*(0.5+(1-e))};})():{lC:Math.max(0.2,mn*at[a]*df[b]),lF:Math.max(0.2,mn*at[b]*df[a])};const ga=poissonRandom(lC),gb=poissonRandom(lF);return{w:ga>gb?a:gb>ga?b:Math.random()<0.5?a:b};};
+  for(let sim=0;sim<nS;sim++){const at={},df={},el={};teams.forEach(t=>{el[t]=elos[t];const i=lg.initAD(elos[t]);at[t]=i.atk;df[t]=i.def;});
+    const r32=CB_R32.map(([ia,ib])=>sim2L(teams[ia],teams[ib],at,df,el));
+    const r16p=[];for(let i=0;i<r32.length;i+=2)r16p.push(sim2L(r32[i].w,r32[i+1].w,at,df,el));
+    const qfp=[];for(let i=0;i<r16p.length;i+=2)qfp.push(sim2L(r16p[i].w,r16p[i+1].w,at,df,el));
+    const sfp=[sim2L(qfp[0].w,qfp[1].w,at,df,el),sim2L(qfp[2].w,qfp[3].w,at,df,el)];
+    const fin=simFin(sfp[0].w,sfp[1].w,at,df,el);
+    r32.forEach(j=>ct[j.w].r16++);r16p.forEach(j=>ct[j.w].qf++);qfp.forEach(j=>ct[j.w].sf++);sfp.forEach(j=>ct[j.w].fin++);ct[fin.w].ch++;}
+  return{probs:teams.map(t=>({time:t,elo:elos[t],r16:ct[t].r16/nS*100,qf:ct[t].qf/nS*100,sf:ct[t].sf/nS*100,fin:ct[t].fin/nS*100,ch:ct[t].ch/nS*100})).sort((a,b)=>b.ch-a.ch||b.elo-a.elo),nSims:nS};
+};
+const parseTab = (raw,nm,dates) => { const j=[];raw.forEach((s,ri)=>{s.split(',').forEach(g=>{const[c,f]=g.split('-');j.push({casa:nm[c],fora:nm[f],rodada:ri+1,data:(dates&&dates[ri])||''});});});return j; };
+
+// ============================================================================
+// DADOS — SÉRIE A (datas oficiais CBF 2026)
+// ============================================================================
+const SA_DATES=['29/01','05/02','12/02','26/02','11/03','15/03','19/03','22/03','02/04','05/04','12/04','19/04','26/04','03/05','10/05','17/05','24/05','31/05','23/07','26/07','30/07','09/08','16/08','23/08','30/08','06/09','13/09','20/09','08/10','11/10','18/10','25/10','29/10','05/11','19/11','22/11','29/11','02/12'];
+const SA_RANKING={'Flamengo':{elo:1720},'Palmeiras':{elo:1700},'Cruzeiro':{elo:1660},'Mirassol':{elo:1640},'Fluminense':{elo:1615},'Botafogo':{elo:1600},'Bahia':{elo:1575},'São Paulo':{elo:1555},'Internacional':{elo:1545},'Grêmio':{elo:1530},'Atlético-MG':{elo:1520},'Santos':{elo:1510},'Corinthians':{elo:1500},'Vasco':{elo:1485},'Red Bull Bragantino':{elo:1470},'Vitória':{elo:1450},'Coritiba':{elo:1400},'Athletico-PR':{elo:1390},'Chapecoense':{elo:1370},'Remo':{elo:1350}};
+const SA_NM={'BAH':'Bahia','BOT':'Botafogo','BRA':'Red Bull Bragantino','CAM':'Atlético-MG','CAP':'Athletico-PR','CHA':'Chapecoense','COR':'Corinthians','CRU':'Cruzeiro','CTB':'Coritiba','FLA':'Flamengo','FLU':'Fluminense','GRE':'Grêmio','INT':'Internacional','MIR':'Mirassol','PAL':'Palmeiras','REM':'Remo','SAN':'Santos','SAO':'São Paulo','VAS':'Vasco','VIT':'Vitória'};
+const SA_TAB=['FLU-GRE,BOT-CRU,SAO-FLA,COR-BAH,MIR-VAS,CAM-PAL,INT-CAP,CTB-BRA,VIT-REM,CHA-SAN','FLA-INT,VAS-CHA,SAN-SAO,PAL-VIT,BRA-CAM,CRU-CTB,GRE-BOT,CAP-COR,BAH-FLU,REM-MIR','FLU-BOT,VAS-BAH,SAO-GRE,COR-BRA,MIR-CRU,CAM-REM,INT-PAL,CAP-SAN,VIT-FLA,CHA-CTB','FLA-MIR,BOT-VIT,SAN-VAS,PAL-FLU,BRA-CAP,CRU-COR,GRE-CAM,CTB-SAO,BAH-CHA,REM-INT','FLA-CRU,VAS-PAL,SAO-CHA,COR-CTB,MIR-SAN,CAM-INT,GRE-BRA,CAP-BOT,BAH-VIT,REM-FLU','FLU-CAP,BOT-FLA,SAN-COR,PAL-MIR,BRA-SAO,CRU-VAS,INT-BAH,CTB-REM,VIT-CAM,CHA-GRE','FLA-REM,VAS-FLU,SAN-INT,PAL-BOT,MIR-CTB,CAM-SAO,GRE-VIT,CAP-CRU,BAH-BRA,CHA-COR','FLU-CAM,VAS-GRE,SAO-PAL,COR-FLA,BRA-BOT,CRU-SAN,INT-CHA,CAP-CTB,VIT-MIR,REM-BAH','FLU-COR,BOT-MIR,SAN-REM,PAL-GRE,BRA-FLA,CRU-VIT,INT-SAO,CTB-VAS,BAH-CAP,CHA-CAM','FLA-SAN,VAS-BOT,SAO-CRU,COR-INT,MIR-BRA,CAM-CAP,GRE-REM,CTB-FLU,BAH-PAL,CHA-VIT','FLU-FLA,BOT-CTB,SAN-CAM,COR-PAL,MIR-BAH,CRU-BRA,INT-GRE,CAP-CHA,VIT-SAO,REM-VAS','FLA-BAH,VAS-SAO,SAN-FLU,PAL-CAP,BRA-REM,CRU-GRE,INT-MIR,CTB-CAM,VIT-COR,CHA-BOT','FLU-CHA,BOT-INT,SAO-MIR,COR-VAS,BRA-PAL,CAM-FLA,GRE-CTB,CAP-VIT,BAH-SAN,REM-CRU','FLA-VAS,BOT-REM,SAO-BAH,PAL-SAN,MIR-COR,CRU-CAM,INT-FLU,CAP-GRE,VIT-CTB,CHA-BRA','FLU-VIT,VAS-CAP,SAN-BRA,COR-SAO,MIR-CHA,CAM-BOT,GRE-FLA,CTB-INT,BAH-CRU,REM-PAL','FLU-SAO,BOT-COR,SAN-CTB,PAL-CRU,BRA-VIT,CAM-MIR,INT-VAS,CAP-FLA,BAH-GRE,CHA-REM','FLA-PAL,VAS-BRA,SAO-BOT,COR-CAM,MIR-FLU,CRU-CHA,GRE-SAN,CTB-BAH,VIT-INT,REM-CAP','FLA-CTB,VAS-CAM,SAN-VIT,PAL-CHA,BRA-INT,CRU-FLU,GRE-COR,CAP-MIR,BAH-BOT,REM-SAO','FLU-BRA,BOT-SAN,SAO-CAP,COR-REM,MIR-GRE,CAM-BAH,INT-CRU,CTB-PAL,VIT-VAS,CHA-FLA','FLA-SAO,VAS-MIR,SAN-CHA,PAL-CAM,BRA-CTB,CRU-BOT,GRE-FLU,CAP-INT,BAH-COR,REM-VIT','FLU-BAH,BOT-GRE,SAO-SAN,COR-CAP,MIR-REM,CAM-BRA,INT-FLA,CTB-CRU,VIT-PAL,CHA-VAS','FLA-VIT,BOT-FLU,SAN-CAP,PAL-INT,BRA-COR,CRU-MIR,GRE-SAO,CTB-CHA,BAH-VAS,REM-CAM','FLU-PAL,VAS-SAN,SAO-CTB,COR-CRU,MIR-FLA,CAM-GRE,INT-REM,CAP-BRA,VIT-BOT,CHA-BAH','FLU-REM,BOT-CAP,SAN-MIR,PAL-VAS,BRA-GRE,CRU-FLA,INT-CAM,CTB-COR,VIT-BAH,CHA-SAO','FLA-BOT,VAS-CRU,SAO-BRA,COR-SAN,MIR-PAL,CAM-VIT,GRE-CHA,CAP-FLU,BAH-INT,REM-CTB','FLU-VAS,BOT-PAL,SAO-CAM,COR-CHA,BRA-BAH,CRU-CAP,INT-SAN,CTB-MIR,VIT-GRE,REM-FLA','FLA-COR,BOT-BRA,SAN-CRU,PAL-SAO,MIR-VIT,CAM-FLU,GRE-VAS,CTB-CAP,BAH-REM,CHA-INT','FLA-BRA,VAS-CTB,SAO-INT,COR-FLU,MIR-BOT,CAM-CHA,GRE-PAL,CAP-BAH,VIT-CRU,REM-SAN','FLU-CTB,BOT-VAS,SAN-FLA,PAL-BAH,BRA-MIR,CRU-SAO,INT-COR,CAP-CAM,VIT-CHA,REM-GRE','FLA-FLU,VAS-REM,SAO-VIT,PAL-COR,BRA-CRU,CAM-SAN,GRE-INT,CTB-BOT,BAH-MIR,CHA-CAP','FLU-SAN,BOT-CHA,SAO-VAS,COR-VIT,MIR-INT,CAM-CTB,GRE-CRU,CAP-PAL,BAH-FLA,REM-BRA','FLA-CAM,VAS-COR,SAN-BAH,PAL-BRA,MIR-SAO,CRU-REM,INT-BOT,CTB-GRE,VIT-CAP,CHA-FLU','FLU-INT,VAS-FLA,SAN-PAL,COR-MIR,BRA-CHA,CAM-CRU,GRE-CAP,CTB-VIT,BAH-SAO,REM-BOT','FLA-GRE,BOT-CAM,SAO-COR,PAL-REM,BRA-SAN,CRU-BAH,INT-CTB,CAP-VAS,VIT-FLU,CHA-MIR','FLA-CAP,VAS-INT,SAO-FLU,COR-BOT,MIR-CAM,CRU-PAL,GRE-BAH,CTB-SAN,VIT-BRA,REM-CHA','FLU-MIR,BOT-SAO,SAN-GRE,PAL-FLA,BRA-VAS,CAM-COR,INT-VIT,CAP-REM,BAH-CTB,CHA-CRU','FLU-CRU,BOT-BAH,SAO-REM,COR-GRE,MIR-CAP,CAM-VAS,INT-BRA,CTB-FLA,VIT-SAN,CHA-PAL','FLA-CHA,VAS-VIT,SAN-BOT,PAL-CTB,BRA-FLU,CRU-INT,GRE-MIR,CAP-SAO,BAH-CAM,REM-COR'];
+const SA_RES=[{c:'Fluminense',f:'Grêmio',gc:2,gf:1,r:1},{c:'Botafogo',f:'Cruzeiro',gc:4,gf:0,r:1},{c:'São Paulo',f:'Flamengo',gc:2,gf:1,r:1},{c:'Corinthians',f:'Bahia',gc:1,gf:2,r:1},{c:'Mirassol',f:'Vasco',gc:2,gf:1,r:1},{c:'Atlético-MG',f:'Palmeiras',gc:2,gf:2,r:1},{c:'Internacional',f:'Athletico-PR',gc:0,gf:1,r:1},{c:'Coritiba',f:'Red Bull Bragantino',gc:0,gf:1,r:1},{c:'Vitória',f:'Remo',gc:2,gf:0,r:1},{c:'Chapecoense',f:'Santos',gc:4,gf:2,r:1},{c:'Flamengo',f:'Internacional',gc:1,gf:1,r:2},{c:'Vasco',f:'Chapecoense',gc:1,gf:1,r:2},{c:'Santos',f:'São Paulo',gc:1,gf:1,r:2},{c:'Palmeiras',f:'Vitória',gc:5,gf:1,r:2},{c:'Red Bull Bragantino',f:'Atlético-MG',gc:1,gf:0,r:2},{c:'Cruzeiro',f:'Coritiba',gc:1,gf:2,r:2},{c:'Grêmio',f:'Botafogo',gc:5,gf:3,r:2},{c:'Bahia',f:'Fluminense',gc:1,gf:1,r:2},{c:'Remo',f:'Mirassol',gc:2,gf:2,r:2},{c:'Fluminense',f:'Botafogo',gc:1,gf:0,r:3},{c:'Vasco',f:'Bahia',gc:0,gf:1,r:3},{c:'São Paulo',f:'Grêmio',gc:2,gf:0,r:3},{c:'Corinthians',f:'Red Bull Bragantino',gc:2,gf:0,r:3},{c:'Mirassol',f:'Cruzeiro',gc:2,gf:2,r:3},{c:'Atlético-MG',f:'Remo',gc:3,gf:3,r:3},{c:'Internacional',f:'Palmeiras',gc:1,gf:3,r:3},{c:'Athletico-PR',f:'Santos',gc:2,gf:1,r:3},{c:'Vitória',f:'Flamengo',gc:1,gf:2,r:3},{c:'Chapecoense',f:'Coritiba',gc:3,gf:3,r:3},{c:'Santos',f:'Vasco',gc:2,gf:1,r:4},{c:'Palmeiras',f:'Fluminense',gc:2,gf:1,r:4},{c:'Red Bull Bragantino',f:'Athletico-PR',gc:1,gf:1,r:4},{c:'Cruzeiro',f:'Corinthians',gc:1,gf:1,r:4},{c:'Grêmio',f:'Atlético-MG',gc:2,gf:1,r:4},{c:'Coritiba',f:'São Paulo',gc:0,gf:1,r:4},{c:'Remo',f:'Internacional',gc:1,gf:1,r:4},{c:'Flamengo',f:'Cruzeiro',gc:2,gf:0,r:5},{c:'Vasco',f:'Palmeiras',gc:2,gf:1,r:5},{c:'São Paulo',f:'Chapecoense',gc:2,gf:0,r:5},{c:'Corinthians',f:'Coritiba',gc:0,gf:2,r:5},{c:'Mirassol',f:'Santos',gc:2,gf:2,r:5},{c:'Atlético-MG',f:'Internacional',gc:1,gf:0,r:5},{c:'Grêmio',f:'Red Bull Bragantino',gc:1,gf:1,r:5},{c:'Bahia',f:'Vitória',gc:1,gf:1,r:5},{c:'Remo',f:'Fluminense',gc:0,gf:2,r:5},{c:'Fluminense',f:'Athletico-PR',gc:3,gf:2,r:6},{c:'Botafogo',f:'Flamengo',gc:0,gf:3,r:6},{c:'Santos',f:'Corinthians',gc:1,gf:1,r:6},{c:'Palmeiras',f:'Mirassol',gc:1,gf:0,r:6},{c:'Red Bull Bragantino',f:'São Paulo',gc:1,gf:2,r:6},{c:'Cruzeiro',f:'Vasco',gc:3,gf:3,r:6},{c:'Internacional',f:'Bahia',gc:0,gf:1,r:6},{c:'Coritiba',f:'Remo',gc:1,gf:0,r:6},{c:'Vitória',f:'Atlético-MG',gc:2,gf:0,r:6},{c:'Chapecoense',f:'Grêmio',gc:1,gf:1,r:6},{c:'Flamengo',f:'Remo',gc:3,gf:0,r:7},{c:'Vasco',f:'Fluminense',gc:3,gf:2,r:7},{c:'Santos',f:'Internacional',gc:1,gf:2,r:7},{c:'Palmeiras',f:'Botafogo',gc:2,gf:1,r:7},{c:'Mirassol',f:'Coritiba',gc:0,gf:1,r:7},{c:'Atlético-MG',f:'São Paulo',gc:1,gf:0,r:7},{c:'Grêmio',f:'Vitória',gc:2,gf:0,r:7},{c:'Athletico-PR',f:'Cruzeiro',gc:2,gf:1,r:7},{c:'Bahia',f:'Red Bull Bragantino',gc:2,gf:0,r:7},{c:'Chapecoense',f:'Corinthians',gc:0,gf:0,r:7},{c:'Fluminense',f:'Atlético-MG',gc:1,gf:0,r:8},{c:'Vasco',f:'Grêmio',gc:2,gf:1,r:8},{c:'São Paulo',f:'Palmeiras',gc:0,gf:1,r:8},{c:'Corinthians',f:'Flamengo',gc:1,gf:1,r:8},{c:'Red Bull Bragantino',f:'Botafogo',gc:1,gf:2,r:8},{c:'Cruzeiro',f:'Santos',gc:0,gf:0,r:8},{c:'Internacional',f:'Chapecoense',gc:2,gf:0,r:8},{c:'Athletico-PR',f:'Coritiba',gc:2,gf:0,r:8},{c:'Vitória',f:'Mirassol',gc:1,gf:0,r:8},{c:'Remo',f:'Bahia',gc:4,gf:1,r:8},{c:'Fluminense',f:'Corinthians',gc:3,gf:1,r:9},{c:'Botafogo',f:'Mirassol',gc:3,gf:2,r:9},{c:'Santos',f:'Remo',gc:2,gf:0,r:9},{c:'Palmeiras',f:'Grêmio',gc:2,gf:1,r:9},{c:'Red Bull Bragantino',f:'Flamengo',gc:3,gf:0,r:9},{c:'Cruzeiro',f:'Vitória',gc:3,gf:0,r:9},{c:'Internacional',f:'São Paulo',gc:1,gf:1,r:9},{c:'Coritiba',f:'Vasco',gc:1,gf:1,r:9},{c:'Bahia',f:'Athletico-PR',gc:3,gf:0,r:9},{c:'Chapecoense',f:'Atlético-MG',gc:0,gf:4,r:9}];
+const SA_META={key:'A',nR:38,zonas:{g4:4,g4L:'Libertadores (G4)',g6:6,g6L:'Pré-Liberta (5-6)',g8:8,g8L:'Sul-Americana (7-8)',z4:17}};
+
+// === SÉRIE B ===
+const SB_DATES=['22/03','01/04','05/04','12/04','19/04','26/04','03/05','10/05','17/05','24/05','31/05','07/06','14/06','21/06','28/06','05/07','12/07','19/07','26/07','02/08','09/08','16/08','23/08','30/08','06/09','13/09','20/09','27/09','04/10','11/10','18/10','25/10','01/11','08/11','15/11','22/11','25/11','28/11'];
+const SB_RANKING={'Fortaleza':{elo:1400},'Ceará':{elo:1400},'Sport':{elo:1350},'Juventude':{elo:1350},'Criciúma':{elo:1340},'Goiás':{elo:1340},'Novorizontino':{elo:1340},'CRB':{elo:1340},'Avaí':{elo:1340},'Cuiabá':{elo:1340},'Atlético-GO':{elo:1340},'Operário-PR':{elo:1340},'Vila Nova':{elo:1340},'América-MG':{elo:1340},'Athletic':{elo:1340},'Botafogo-SP':{elo:1340},'Ponte Preta':{elo:1340},'Londrina':{elo:1340},'Náutico':{elo:1340},'São Bernardo':{elo:1340}};
+const SB_NM={'AGO':'Atlético-GO','AMG':'América-MG','ATH':'Athletic','AVA':'Avaí','BSP':'Botafogo-SP','CEA':'Ceará','CRB':'CRB','CRI':'Criciúma','CUI':'Cuiabá','FOR':'Fortaleza','GOI':'Goiás','JUV':'Juventude','LON':'Londrina','NAU':'Náutico','NOV':'Novorizontino','OPR':'Operário-PR','PPR':'Ponte Preta','SBR':'São Bernardo','SPT':'Sport','VLN':'Vila Nova'};
+const SB_TAB=['BSP-FOR,NOV-LON,ATH-PPR,OPR-AGO,CEA-SBR,GOI-AMG,AVA-JUV,NAU-CRI,CUI-SPT,VLN-CRB','PPR-CEA,SBR-OPR,AMG-BSP,LON-GOI,FOR-CUI,AGO-NAU,CRI-ATH,SPT-VLN,CRB-AVA,JUV-NOV','BSP-SBR,NOV-CRB,ATH-AMG,LON-SPT,FOR-JUV,GOI-CRI,AVA-OPR,NAU-PPR,CUI-CEA,VLN-AGO','PPR-VLN,SBR-FOR,AMG-NOV,OPR-CUI,CEA-NAU,AGO-LON,CRI-BSP,SPT-AVA,CRB-ATH,JUV-GOI','BSP-AGO,NOV-ATH,AMG-SPT,LON-CEA,FOR-CRI,GOI-CUI,AVA-PPR,NAU-SBR,CRB-JUV,VLN-OPR','PPR-AMG,SBR-GOI,ATH-NAU,OPR-FOR,CEA-VLN,AGO-AVA,CRI-CRB,SPT-NOV,CUI-BSP,JUV-LON','BSP-CRI,NOV-PPR,AMG-AGO,LON-OPR,FOR-NAU,GOI-CEA,AVA-SBR,CRB-CUI,SPT-ATH,JUV-VLN','PPR-GOI,SBR-LON,ATH-CUI,OPR-BSP,CEA-AVA,AGO-CRB,NAU-JUV,CRI-NOV,SPT-AMG,VLN-FOR','BSP-NAU,NOV-SBR,AMG-OPR,LON-AVA,FOR-GOI,GOI-VLN,ATH-AGO,CUI-PPR,CRB-SPT,JUV-CRI','PPR-BSP,SBR-ATH,OPR-NOV,CEA-CRI,AGO-CUI,NAU-AMG,AVA-GOI,CRB-LON,SPT-JUV,VLN-FOR','BSP-LON,NOV-CEA,AMG-AVA,FOR-AGO,GOI-OPR,ATH-VLN,NAU-CRB,CUI-SBR,CRI-PPR,JUV-SPT','PPR-NOV,SBR-CRI,OPR-ATH,CEA-BSP,AGO-GOI,LON-NAU,AVA-CUI,CRB-FOR,SPT-AMG,VLN-JUV','BSP-AVA,NOV-AGO,AMG-CEA,LON-CRI,FOR-PPR,GOI-SBR,ATH-JUV,OPR-NAU,CUI-VLN,SPT-CRB','PPR-SPT,SBR-NAU,CEA-ATH,AGO-BSP,CRI-AMG,LON-CUI,AVA-NOV,CRB-OPR,JUV-FOR,VLN-GOI','BSP-VLN,NOV-FOR,AMG-LON,OPR-JUV,CEA-GOI,AGO-SBR,ATH-AVA,NAU-CUI,CRI-CRB,SPT-PPR','PPR-OPR,SBR-CRB,GOI-BSP,LON-ATH,FOR-AMG,AGO-CRI,NAU-NOV,AVA-VLN,CUI-JUV,SPT-CEA','BSP-JUV,NOV-GOI,AMG-NAU,OPR-AVA,CEA-CUI,AGO-PPR,ATH-SBR,LON-CRB,CRI-FOR,VLN-SPT','PPR-AVA,SBR-NOV,GOI-ATH,LON-AGO,FOR-BSP,CEA-OPR,NAU-VLN,CUI-CRI,CRB-AMG,JUV-SPT','BSP-SPT,NOV-CUI,AMG-JUV,OPR-SBR,CEA-CRB,AGO-FOR,ATH-LON,NAU-GOI,AVA-CRI,VLN-PPR','FOR-BSP,LON-NOV,PPR-ATH,AGO-OPR,SBR-CEA,AMG-GOI,JUV-AVA,CRI-NAU,SPT-CUI,CRB-VLN','CEA-PPR,OPR-SBR,BSP-AMG,GOI-LON,CUI-FOR,NAU-AGO,ATH-CRI,VLN-SPT,AVA-CRB,NOV-JUV','SBR-BSP,CRB-NOV,AMG-ATH,SPT-LON,JUV-FOR,CRI-GOI,OPR-AVA,PPR-NAU,CEA-CUI,AGO-VLN','VLN-PPR,FOR-SBR,NOV-AMG,CUI-OPR,NAU-CEA,LON-AGO,BSP-CRI,AVA-SPT,ATH-CRB,GOI-JUV','AGO-BSP,ATH-NOV,SPT-AMG,CEA-LON,CRI-FOR,CUI-GOI,PPR-AVA,SBR-NAU,JUV-CRB,OPR-VLN','AMG-PPR,GOI-SBR,NAU-ATH,FOR-OPR,VLN-CEA,AVA-AGO,CRB-CRI,NOV-SPT,BSP-CUI,LON-JUV','CRI-BSP,PPR-NOV,AGO-AMG,OPR-LON,NAU-FOR,CEA-GOI,SBR-AVA,CUI-CRB,ATH-SPT,VLN-JUV','GOI-PPR,LON-SBR,CUI-ATH,BSP-OPR,AVA-CEA,CRB-AGO,JUV-NAU,NOV-CRI,AMG-SPT,FOR-VLN','NAU-BSP,SBR-NOV,OPR-AMG,AVA-LON,GOI-FOR,VLN-GOI,AGO-ATH,PPR-CUI,SPT-CRB,CRI-JUV','BSP-PPR,ATH-SBR,NOV-OPR,CRI-CEA,CUI-AGO,AMG-NAU,GOI-AVA,LON-CRB,JUV-SPT,FOR-VLN','LON-BSP,CEA-NOV,AVA-AMG,AGO-FOR,OPR-GOI,VLN-ATH,CRB-NAU,SBR-CUI,PPR-CRI,SPT-JUV','NOV-PPR,CRI-SBR,ATH-OPR,BSP-CEA,GOI-AGO,NAU-LON,CUI-AVA,FOR-CRB,AMG-SPT,JUV-VLN','AVA-BSP,AGO-NOV,CEA-AMG,CRI-LON,PPR-FOR,SBR-GOI,JUV-ATH,NAU-OPR,VLN-CUI,CRB-SPT','SPT-PPR,NAU-SBR,ATH-CEA,BSP-AGO,AMG-CRI,CUI-LON,NOV-AVA,OPR-CRB,FOR-JUV,GOI-VLN','VLN-BSP,FOR-NOV,LON-AMG,JUV-OPR,GOI-CEA,SBR-AGO,AVA-ATH,CUI-NAU,CRB-CRI,PPR-SPT','OPR-PPR,CRB-SBR,BSP-GOI,ATH-LON,AMG-FOR,CRI-AGO,NOV-NAU,VLN-AVA,JUV-CUI,CEA-SPT','JUV-BSP,GOI-NOV,NAU-AMG,AVA-OPR,CUI-CEA,PPR-AGO,SBR-ATH,CRB-LON,FOR-CRI,SPT-VLN','AVA-PPR,NOV-SBR,ATH-GOI,AGO-LON,BSP-FOR,OPR-CEA,VLN-NAU,CRI-CUI,AMG-CRB,SPT-JUV','SPT-BSP,CUI-NOV,JUV-AMG,SBR-OPR,CRB-CEA,FOR-AGO,LON-ATH,GOI-NAU,CRI-AVA,PPR-VLN'];
+const SB_RES=[{c:'Botafogo-SP',f:'Fortaleza',gc:4,gf:0,r:1},{c:'Novorizontino',f:'Londrina',gc:1,gf:3,r:1},{c:'Athletic',f:'Ponte Preta',gc:2,gf:1,r:1},{c:'Operário-PR',f:'Atlético-GO',gc:1,gf:0,r:1},{c:'Ceará',f:'São Bernardo',gc:1,gf:1,r:1},{c:'Goiás',f:'América-MG',gc:3,gf:1,r:1},{c:'Avaí',f:'Juventude',gc:2,gf:0,r:1},{c:'Náutico',f:'Criciúma',gc:0,gf:1,r:1},{c:'Cuiabá',f:'Sport',gc:0,gf:0,r:1},{c:'Vila Nova',f:'CRB',gc:2,gf:2,r:1},{c:'Ponte Preta',f:'Ceará',gc:1,gf:1,r:2},{c:'São Bernardo',f:'Operário-PR',gc:1,gf:2,r:2},{c:'América-MG',f:'Botafogo-SP',gc:1,gf:2,r:2},{c:'Londrina',f:'Goiás',gc:2,gf:2,r:2},{c:'Fortaleza',f:'Cuiabá',gc:0,gf:0,r:2},{c:'Atlético-GO',f:'Náutico',gc:1,gf:2,r:2},{c:'Criciúma',f:'Athletic',gc:1,gf:1,r:2},{c:'Sport',f:'Vila Nova',gc:1,gf:1,r:2},{c:'CRB',f:'Avaí',gc:0,gf:1,r:2},{c:'Juventude',f:'Novorizontino',gc:0,gf:0,r:2}];
+const SB_META={key:'B',nR:38,zonas:{g4:2,g4L:'Acesso (G2)',g6:6,g6L:'Playoff (3-6)',z4:17}};
+
+// === SÉRIE C ===
+const SC_DATES=['05/04','12/04','19/04','26/04','03/05','10/05','17/05','24/05','31/05','07/06','14/06','21/06','28/06','05/07','12/07','19/07','26/07','09/08','16/08'];
+const SC_RANKING={'Ferroviária':{elo:1310},'Amazonas':{elo:1310},'Volta Redonda':{elo:1310},'Paysandu':{elo:1310},'Caxias':{elo:1306},'Brusque':{elo:1302},'Guarani':{elo:1302},'Floresta':{elo:1302},'Confiança':{elo:1296},'Ypiranga':{elo:1296},'Maringá':{elo:1296},'Ituano':{elo:1296},'Botafogo-PB':{elo:1296},'Figueirense':{elo:1296},'Anápolis':{elo:1296},'Itabaiana':{elo:1296},'Inter de Limeira':{elo:1280},'Barra':{elo:1280},'Maranhão':{elo:1280},'Santa Cruz':{elo:1280}};
+const SC_NM={'AMA':'Amazonas','ANA':'Anápolis','BAR':'Barra','BPB':'Botafogo-PB','BRQ':'Brusque','CAX':'Caxias','CON':'Confiança','FER':'Ferroviária','FIG':'Figueirense','FLR':'Floresta','GUA':'Guarani','IDL':'Inter de Limeira','ITB':'Itabaiana','ITU':'Ituano','MAR':'Maringá','MRA':'Maranhão','PAY':'Paysandu','SCR':'Santa Cruz','VRD':'Volta Redonda','YPI':'Ypiranga'};
+const SC_TAB=['FER-AMA,SCR-VRD,MRA-PAY,BAR-CAX,BRQ-IDL,GUA-ITB,ANA-FLR,FIG-CON,BPB-YPI,ITU-MAR','VRD-FER,AMA-PAY,CAX-SCR,MRA-BRQ,BAR-GUA,IDL-FLR,CON-ITB,YPI-ANA,MAR-FIG,BPB-ITU','PAY-FER,CAX-VRD,AMA-BRQ,GUA-SCR,FLR-MRA,CON-BAR,IDL-YPI,ITB-MAR,ANA-ITU,FIG-BPB','FER-BRQ,VRD-GUA,PAY-CAX,SCR-FLR,AMA-IDL,MRA-BAR,ITB-CON,ANA-FIG,YPI-ITU,MAR-BPB','CAX-FER,GUA-PAY,BRQ-VRD,FLR-AMA,IDL-SCR,BAR-ITB,CON-ANA,FIG-YPI,BPB-MAR,ITU-MRA','FER-GUA,PAY-BRQ,CAX-FLR,VRD-IDL,AMA-SCR,MRA-ITB,BAR-CON,ANA-BPB,YPI-MAR,FIG-ITU','BRQ-CAX,FLR-GUA,IDL-PAY,SCR-MRA,AMA-BAR,ITB-FER,CON-VRD,BPB-YPI,MAR-ANA,ITU-FIG','FER-FLR,CAX-IDL,GUA-PAY,BRQ-SCR,MRA-AMA,BAR-VRD,ITB-ANA,CON-BPB,YPI-FIG,MAR-ITU','IDL-GUA,FLR-BRQ,SCR-CAX,PAY-VRD,AMA-FER,BAR-ITB,CON-MRA,ANA-MAR,BPB-FIG,ITU-YPI','FER-SCR,VRD-AMA,PAY-FLR,CAX-MRA,GUA-BRQ,IDL-ITB,BAR-ANA,CON-FIG,YPI-BPB,MAR-ITU','AMA-CAX,FLR-VRD,SCR-PAY,MRA-GUA,BRQ-FER,BAR-FIG,IDL-CON,ITB-YPI,ANA-ITU,BPB-MAR','FER-MRA,VRD-BRQ,PAY-AMA,CAX-GUA,FLR-SCR,BAR-IDL,ANA-ITB,FIG-CON,YPI-ANA,ITU-BPB','GUA-FER,BRQ-PAY,FLR-CAX,IDL-VRD,SCR-AMA,ITB-MRA,CON-BAR,BPB-ANA,MAR-YPI,ITU-FIG','FER-IDL,GUA-VRD,PAY-FLR,CAX-SCR,BRQ-AMA,MRA-BAR,ANA-CON,YPI-FIG,MAR-BPB,ITU-ITB','FLR-FER,IDL-CAX,PAY-GUA,SCR-BRQ,AMA-MRA,VRD-BAR,ANA-ITB,BPB-CON,FIG-YPI,ITU-MAR','GUA-IDL,BRQ-FLR,CAX-SCR,VRD-PAY,FER-AMA,ITB-BAR,MRA-CON,MAR-ANA,FIG-BPB,YPI-ITU','SCR-FER,AMA-VRD,FLR-PAY,MRA-CAX,BRQ-GUA,ITB-IDL,ANA-BAR,FIG-CON,BPB-YPI,ITU-MAR','CAX-AMA,VRD-FLR,PAY-SCR,GUA-MRA,FER-BRQ,FIG-BAR,CON-IDL,YPI-ITB,ITU-ANA,MAR-BPB','MRA-FER,BRQ-VRD,AMA-PAY,GUA-CAX,SCR-FLR,IDL-BAR,ITB-ANA,CON-FIG,ANA-YPI,BPB-ITU'];
+const SC_RES=[];const SC_META={key:'C',nR:19,zonas:{g4:8,g4L:'Quadrangular (G8)',z4:17}};
+
+// === SÉRIE D ===
+const SD_UF={PE:1235,SC:1234,SE:1233,DF:1231,PB:1229,PR:1229,RN:1228,MT:1226,RS:1223,SP:1220,ES:1213,RJ:1213,BA:1211,CE:1208,GO:1208,AL:1207,MA:1198,MG:1198,PI:1192,PA:1191,MS:1177,TO:1176,AM:1169,RO:1163,RR:1136,AP:1128,AC:1125};
+const SD_ADJ={rebaixado_c:45,retorno_d_avancou:40,estadual:0,ranking_nacional:0};
+const SD_TD=[{n:'CSA',u:'AL',o:'rebaixado_c'},{n:'Tombense',u:'MG',o:'rebaixado_c'},{n:'ABC',u:'RN',o:'rebaixado_c'},{n:'Retrô',u:'PE',o:'rebaixado_c'},{n:'Ferroviário',u:'CE',o:'estadual'},{n:'América-RN',u:'RN',o:'estadual'},{n:'Manaus',u:'AM',o:'estadual'},{n:'Águia de Marabá',u:'PA',o:'estadual'},{n:'Brasil-RS',u:'RS',o:'estadual'},{n:'Sousa',u:'PB',o:'estadual'},{n:'Tocantinópolis',u:'TO',o:'estadual'},{n:'ASA',u:'AL',o:'estadual'},{n:'Porto Velho',u:'RO',o:'estadual'},{n:'Trem',u:'AP',o:'estadual'},{n:'Sergipe',u:'SE',o:'estadual'},{n:'Tuna Luso',u:'PA',o:'estadual'},{n:'Maracanã',u:'CE',o:'estadual'},{n:'Cianorte',u:'PR',o:'estadual'},{n:'Operário-MS',u:'MS',o:'estadual'},{n:'Jacuipense',u:'BA',o:'estadual'},{n:'Capital',u:'DF',o:'estadual'},{n:'Fluminense-PI',u:'PI',o:'estadual'},{n:'São Luiz-RS',u:'RS',o:'estadual'},{n:'Azuriz',u:'PR',o:'estadual'},{n:'Rio Branco-ES',u:'ES',o:'estadual'},{n:'GAS',u:'RR',o:'estadual'},{n:'Guarany de Bagé',u:'RS',o:'estadual'},{n:'Mixto',u:'MT',o:'estadual'},{n:'Portuguesa-SP',u:'SP',o:'estadual'},{n:'Atlético-BA',u:'BA',o:'estadual'},{n:'Lagarto',u:'SE',o:'estadual'},{n:'CSE',u:'AL',o:'estadual'},{n:'Independência',u:'AC',o:'estadual'},{n:'Joinville',u:'SC',o:'estadual'},{n:'CRAC',u:'GO',o:'estadual'},{n:'Uberlândia',u:'MG',o:'estadual'},{n:'Imperatriz',u:'MA',o:'estadual'},{n:'Democrata GV',u:'MG',o:'estadual'},{n:'Vitória-ES',u:'ES',o:'estadual'},{n:'Nacional-AM',u:'AM',o:'estadual'},{n:'XV de Piracicaba',u:'SP',o:'estadual'},{n:'São Joseense',u:'PR',o:'estadual'},{n:'Oratório',u:'AP',o:'estadual'},{n:'Madureira',u:'RJ',o:'estadual'},{n:'Gama',u:'DF',o:'estadual'},{n:'Galvez',u:'AC',o:'estadual'},{n:'Noroeste',u:'SP',o:'estadual'},{n:'Velo Clube',u:'SP',o:'estadual'},{n:'Sampaio Corrêa-RJ',u:'RJ',o:'estadual'},{n:'Betim',u:'MG',o:'estadual'},{n:'Tirol',u:'CE',o:'estadual'},{n:'ABECAT',u:'GO',o:'estadual'},{n:'Inhumas',u:'GO',o:'estadual'},{n:'Porto',u:'BA',o:'estadual'},{n:'Santa Catarina',u:'SC',o:'estadual'},{n:'Decisão',u:'PE',o:'estadual'},{n:'Maguary',u:'PE',o:'estadual'},{n:'Primavera',u:'MT',o:'estadual'},{n:'Serra Branca',u:'PB',o:'estadual'},{n:'IAPE',u:'MA',o:'estadual'},{n:'Piauí',u:'PI',o:'estadual'},{n:'Guaporé',u:'RO',o:'estadual'},{n:'Monte Roraima',u:'RR',o:'estadual'},{n:'Ivinhema',u:'MS',o:'estadual'},{n:'Laguna',u:'RN',o:'estadual'},{n:'America-RJ',u:'RJ',o:'estadual'},{n:'Araguaína',u:'TO',o:'estadual'},{n:'Blumenau',u:'SC',o:'estadual'},{n:'Sampaio Corrêa',u:'MA',o:'retorno_d_avancou'},{n:'Aparecidense',u:'GO',o:'retorno_d_avancou'},{n:'São José-RS',u:'RS',o:'retorno_d_avancou'},{n:'Altos',u:'PI',o:'retorno_d_avancou'},{n:'FC Cascavel',u:'PR',o:'retorno_d_avancou'},{n:'Ceilândia',u:'DF',o:'retorno_d_avancou'},{n:'Juazeirense',u:'BA',o:'retorno_d_avancou'},{n:'Manauara',u:'AM',o:'retorno_d_avancou'},{n:'Água Santa',u:'SP',o:'retorno_d_avancou'},{n:'Marcílio Dias',u:'SC',o:'retorno_d_avancou'},{n:'Central',u:'PE',o:'retorno_d_avancou'},{n:'Goiatuba',u:'GO',o:'retorno_d_avancou'},{n:'Luverdense',u:'MT',o:'retorno_d_avancou'},{n:'Maricá',u:'RJ',o:'retorno_d_avancou'},{n:'Nova Iguaçu',u:'RJ',o:'ranking_nacional'},{n:'Brasiliense',u:'DF',o:'ranking_nacional'},{n:'Pouso Alegre',u:'MG',o:'ranking_nacional'},{n:'Portuguesa-RJ',u:'RJ',o:'ranking_nacional'},{n:'Humaitá',u:'AC',o:'ranking_nacional'},{n:'São Raimundo-RR',u:'RR',o:'ranking_nacional'},{n:'Iguatu',u:'CE',o:'ranking_nacional'},{n:'União-MT',u:'MT',o:'ranking_nacional'},{n:'Real Noroeste',u:'ES',o:'ranking_nacional'},{n:'Treze',u:'PB',o:'ranking_nacional'},{n:'Atlético-CE',u:'CE',o:'ranking_nacional'},{n:'Operário-MT',u:'MT',o:'ranking_nacional'},{n:'Moto Club',u:'MA',o:'ranking_nacional'},{n:'Parnahyba',u:'PI',o:'ranking_nacional'}];
+const SD_OVR={'ABECAT':1225,'CRAC':1210,'Goiatuba':1205,'Aparecidense':1200,'Inhumas':1195,'Pouso Alegre':1215,'Tombense':1200,'Uberlândia':1200,'Betim':1185,'Democrata GV':1185,'Retrô':1250,'Decisão':1230,'Maguary':1225,'Azuriz':1240,'Cianorte':1235,'São Joseense':1230,'FC Cascavel':1210,'Madureira':1235,'Nova Iguaçu':1215,'Portuguesa-RJ':1215,'Maricá':1205,'Sampaio Corrêa-RJ':1205,'São José-RS':1235,'São Luiz-RS':1225,'Guarany de Bagé':1210,'Santa Catarina':1245,'Marcílio Dias':1230,'Joinville':1225,'Água Santa':1240,'Portuguesa-SP':1255,'Velo Clube':1210,'Sampaio Corrêa':1211,'Altos':1205,'Ceilândia':1244,'Juazeirense':1224,'Manauara':1182,'Central':1248,'Luverdense':1239};
+const SD_INFO={};SD_TD.forEach(t=>{SD_INFO[t.n]={uf:t.u,origem:t.o,elo:SD_OVR[t.n]||(SD_UF[t.u]+(SD_ADJ[t.o]||0))};});
+const SD_TIMES=SD_TD.map(t=>t.n);
+const SD_GRUPOS=[['Nacional-AM','Manaus','Manauara','GAS','Monte Roraima','São Raimundo-RR'],['Independência','Galvez','Humaitá','Porto Velho','Guaporé','Araguaína'],['Gama','Brasiliense','Luverdense','Primavera','Inhumas','Aparecidense'],['Capital','Ceilândia','Mixto','Operário-MT','União-MT','Goiatuba'],['Trem','Oratório','Tuna Luso','Águia de Marabá','Tocantinópolis','Imperatriz'],['Sampaio Corrêa','Moto Club','IAPE','Maracanã','Iguatu','Parnahyba'],['Ferroviário','Tirol','Atlético-CE','Altos','Piauí','Fluminense-PI'],['ABC','América-RN','Laguna','Sousa','Maguary','Central'],['Retrô','Decisão','Serra Branca','Treze','Lagarto','Sergipe'],['ASA','CSA','CSE','Jacuipense','Atlético-BA','Juazeirense'],['Uberlândia','Betim','CRAC','ABECAT','Operário-MS','Ivinhema'],['Porto','Rio Branco-ES','Vitória-ES','Real Noroeste','Tombense','Democrata GV'],['Madureira','Portuguesa-RJ','America-RJ','Portuguesa-SP','Água Santa','Pouso Alegre'],['Nova Iguaçu','Sampaio Corrêa-RJ','Maricá','XV de Piracicaba','Noroeste','Velo Clube'],['Cianorte','FC Cascavel','Santa Catarina','Joinville','Guarany de Bagé','São Luiz-RS'],['Blumenau','Marcílio Dias','São Joseense','Azuriz','São José-RS','Brasil-RS']];
+const SD_GL=['A1·AM+RR','A2·AC+RO+TO','A3·DF+MT+GO','A4·DF+MT+GO','A5·AP+PA+TO+MA','A6·MA+CE+PI','A7·CE+PI','A8·RN+PB+PE','A9·PE+PB+SE','A10·AL+BA','A11·MG+GO+MS','A12·BA+ES+MG','A13·RJ+SP+MG','A14·RJ+SP','A15·PR+SC+RS','A16·SC+PR+RS'];
+const SD_PAIRS=[[0,1],[2,3],[4,5],[6,7],[8,9],[10,11],[12,13],[14,15]];
+const SD_SUPER=[[0,1],[2,3],[4,5],[6,7]];
+// Datas oficiais CBF — Série D 2026
+// Fase de grupos: 10 rodadas (5 turno + 5 returno)
+const SD_GRP_DATES=['05/04','12/04','19/04','26/04','03/05','10/05','17/05','24/05','31/05','14/06'];
+// Mata-mata: ida/volta por fase
+const SD_MM_DATES={f2:['21/06','28/06'],f3:['05/07','12/07'],oit:['19/07','26/07'],qrt:['02/08','09/08'],po:['16/08','23/08'],semi:['30/08','06/09'],final:'13/09'};
+const genGrpTab=(g)=>{const n=g.length,j=[],t=[...g],rds=[];for(let r=0;r<n-1;r++){const rm=[];for(let i=0;i<n/2;i++)rm.push([t[i],t[n-1-i]]);rds.push(rm);const l=t.pop();t.splice(1,0,l);}let rd=1;for(const r of rds){for(const[a,b]of r)j.push({casa:a,fora:b,rodada:rd,data:SD_GRP_DATES[rd-1]||''});rd++;}for(const r of rds){for(const[a,b]of r)j.push({casa:b,fora:a,rodada:rd,data:SD_GRP_DATES[rd-1]||''});rd++;}return j;};
+// Datas CBF — grupos (10 rodadas) + mata-mata (ida/volta)
+const SD_GRP_DATES=['05/04','12/04','19/04','26/04','03/05','10/05','17/05','24/05','31/05','07/06'];
+const SD_TABELA=SD_GRUPOS.flatMap((g,gi)=>genGrpTab(g).map(j=>({...j,grupo:gi})));
+
+// === COPA DO BRASIL 2026 ===
+// 32 times: 20 Série A (seeds 1-20) + 12 classificados divisões inferiores
+// R32 ida/volta → R16 → Quartas → Semi → Final (jogo único neutro)
+const CB_TEAMS=['Flamengo','Palmeiras','Cruzeiro','Mirassol','Fluminense','Botafogo','Bahia','São Paulo','Internacional','Grêmio','Atlético-MG','Santos','Corinthians','Vasco','Red Bull Bragantino','Vitória','Coritiba','Athletico-PR','Chapecoense','Remo','Fortaleza','Ceará','Sport','Juventude','Goiás','Novorizontino','CRB','Ponte Preta','Ferroviária','Amazonas','Paysandu','Volta Redonda'];
+const CB_ELOS={};CB_TEAMS.forEach(t=>{CB_ELOS[t]=(SA_RANKING[t]&&SA_RANKING[t].elo)||(SB_RANKING[t]&&SB_RANKING[t].elo)||(SC_RANKING[t]&&SC_RANKING[t].elo)||1340;});
+// Bracket (seed 1v32, distribuído para que 1-4 não se cruzem até semi)
+const CB_R32=[[0,31],[15,16],[7,24],[8,23],[3,28],[12,19],[4,27],[11,20],[1,30],[14,17],[6,25],[9,22],[2,29],[13,18],[5,26],[10,21]];
+const CB_ROUND_NAMES=['Oitavas (R32)','Quartas de Final','Semifinal','Final'];
+const CB_DATES=['30/04','21/05','13/08','17/09','29/10'];
+
+// ============================================================================
+// COMPONENTES UI — helpers reutilizáveis
+// ============================================================================
+const GameRow=({j,real,prob})=>{const hasScore=real||j.gc!==undefined;const gc=real?real.gc:j.gc;const gf=real?real.gf:j.gf;
+  return(<div className={`flex items-center justify-between p-1.5 rounded text-xs ${(real||j.real)?'bg-emerald-900/20 border-l-2 border-emerald-500':hasScore?'bg-slate-700/20 border-l-2 border-slate-600':'bg-slate-700/30'}`}>
+    {j.data&&<span className="text-slate-600 w-12 text-[10px]">{j.data}</span>}
+    <span className="text-slate-500 w-6 text-right font-mono">R{j.rodada}</span>
+    {prob&&!hasScore&&<span className="text-blue-400 w-8 text-right text-[10px] font-mono">{Math.round(prob.pH)}%</span>}
+    <span className="flex-1 text-right truncate pr-1">{j.casa}</span>
+    {hasScore?<span className={`mx-1 font-mono font-bold w-12 text-center ${gc>gf?'text-emerald-400':gc<gf?'text-red-400':'text-yellow-400'}`}>{gc} x {gf}</span>:<span className="mx-1 w-12 text-center text-slate-600">{prob?Math.round(prob.pD)+'%':'vs'}</span>}
+    <span className="flex-1 truncate pl-1">{j.fora}</span>
+    {prob&&!hasScore&&<span className="text-orange-400 w-8 text-[10px] font-mono">{Math.round(prob.pA)}%</span>}
+    {(real||j.real)&&<span className="ml-1 text-emerald-400 text-[10px]">✓</span>}
+  </div>);};
+
+// ============================================================================
+// CONFIGURAÇÕES
+// ============================================================================
+function SettingsTab({cfg,setCfg}){
+  const upd=(path,val)=>{setCfg(prev=>{const n=JSON.parse(JSON.stringify(prev));const p=path.split('.');let o=n;for(let i=0;i<p.length-1;i++)o=o[p[i]];o[p[p.length-1]]=isNaN(Number(val))?val:Number(val);return n;});};
+  const Inp=({label,path,step=0.01})=>(<div className="flex items-center justify-between gap-2"><span className="text-xs text-slate-400">{label}</span><input type="number" step={step} value={path.split('.').reduce((o,k)=>o[k],cfg)} onChange={e=>upd(path,e.target.value)} className="w-20 bg-slate-700 text-white text-xs rounded px-2 py-1 border border-slate-600 text-right"/></div>);
+  return(<div className="space-y-4">
+    <div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"><h3 className="text-sm font-bold text-emerald-300 mb-3">Motor Geral</h3>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3"><Inp label="Target Ratio" path="targetRatio" step={0.1}/><Inp label="Home Adv" path="homeAdv" step={10}/><Inp label="Max Spread" path="maxSpread" step={0.5}/>
+        <div className="flex items-center justify-between gap-2"><span className="text-xs text-slate-400">Default</span><select value={cfg.defaultAlpha} onChange={e=>upd('defaultAlpha',e.target.value)} className="bg-slate-700 text-white text-xs rounded px-2 py-1 border border-slate-600">{Object.keys(cfg.alphas).map(k=><option key={k} value={k}>{cfg.alphas[k].label}</option>)}</select></div>
+        <Inp label="MN mata-mata" path="mnMM" step={0.05}/>
+      </div></div>
+    <div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"><h3 className="text-sm font-bold text-emerald-300 mb-3">Perfis Alpha (α_atk / α_def / K)</h3>
+      {Object.entries(cfg.alphas).map(([k,a])=>(<div key={k} className="flex items-center gap-3 mb-2"><span className="text-xs text-slate-300 w-24 font-medium">{a.label}</span><Inp label="α_atk" path={`alphas.${k}.atk`}/><Inp label="α_def" path={`alphas.${k}.def`}/><Inp label="K" path={`alphas.${k}.kElo`} step={1}/></div>))}</div>
+    <div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"><h3 className="text-sm font-bold text-emerald-300 mb-3">Gols por jogo (total + peso casa)</h3>
+      <p className="text-xs text-slate-500 mb-2">λ_casa = total × pesoCasa | λ_fora = total × (1 − pesoCasa)</p>
+      {['A','B','C','D','CB'].map(s=>(<div key={s} className="flex items-center gap-3 mb-2"><span className="text-xs text-slate-300 w-16 font-medium">{s==='CB'?'Copa BR':`Série ${s}`}</span><Inp label="Total" path={`lambdas.${s}.total`} step={0.05}/><Inp label="Peso Casa" path={`lambdas.${s}.pesoCasa`} step={0.01}/><span className="text-[10px] text-slate-600">λ={(((cfg.lambdas[s]||{}).total||0)*((cfg.lambdas[s]||{}).pesoCasa||0)).toFixed(2)}+{(((cfg.lambdas[s]||{}).total||0)*(1-((cfg.lambdas[s]||{}).pesoCasa||0))).toFixed(2)}</span></div>))}</div>
+    <div className="text-xs text-slate-500 text-center">Spread = log(targetRatio)/log(max/min) | Suavização: sign(s)·log(1+|s|) | λ = media × ATK × DEF</div>
+  </div>);
+}
+
+// ============================================================================
+// SIMULADOR DE LIGA (A/B/C) — 5 sub-abas
+// ============================================================================
+function LeagueSim({times,ranking,tabela,res,meta,cfg}){
+  const[aba,setAba]=useState('ratings');const[nS,setNS]=useState(1000);const[ak,setAk]=useState(cfg.defaultAlpha);const[eo,setEo]=useState(false);
+  const[rMC,setRMC]=useState(null);const[rSU,setRSU]=useState(null);const[busy,setBusy]=useState(false);const[rF,setRF]=useState(0);
+  const lg=useMemo(()=>initLeague(times,t=>ranking[t].elo,cfg),[times,ranking,cfg]);
+  const cl=useMemo(()=>calcClassif(times,res),[times,res]);const maxR=Math.max(0,...res.map(r=>r.r));
+  const ranks=useMemo(()=>{const{mc,mf}=getML(cfg,meta.key);const el={},at={},df={};
+    times.forEach(t=>{el[t]=ranking[t].elo;const i=lg.initAD(ranking[t].elo);at[t]=i.atk;df[t]=i.def;});
+    for(const j of tabela){const real=res.find(r=>r.c===j.casa&&r.f===j.fora&&r.r===j.rodada);if(!real)continue;
+      const{lC,lF}=calcL(at[j.casa],df[j.casa],at[j.fora],df[j.fora],el[j.casa],el[j.fora],mc,mf,cfg.homeAdv,eo);updR(el,at,df,j.casa,j.fora,real.gc,real.gf,lC,lF,cfg,ak,eo);}
+    return times.map(t=>({time:t,elo:Math.round(el[t]),dE:Math.round(el[t]-ranking[t].elo),atk:at[t],def:df[t],ad:at[t]/df[t]})).sort((a,b)=>b.elo-a.elo);
+  },[times,ranking,tabela,res,cfg,ak,eo,lg,meta.key]);
+  const doMC=useCallback(()=>{setBusy(true);setTimeout(()=>{setRMC(simMC(times,ranking,tabela,res,cfg,meta.key,nS,ak,eo));setBusy(false);},50);},[times,ranking,tabela,res,cfg,meta.key,nS,ak,eo]);
+  const doSU=useCallback(()=>{setRSU(simUnica(times,ranking,tabela,res,cfg,meta.key,ak,eo));setAba('simU');},[times,ranking,tabela,res,cfg,meta.key,ak,eo]);
+  const getCor=(pos)=>{const z=meta.zonas;if(z.g4&&pos<=z.g4)return'bg-blue-900/40 border-l-2 border-blue-400';if(z.g6&&pos<=z.g6)return'bg-sky-900/30 border-l-2 border-sky-500';if(z.g8&&pos<=z.g8)return'bg-teal-900/20 border-l-2 border-teal-600';if(z.z4&&pos>=z.z4)return'bg-red-900/30 border-l-2 border-red-500';return'bg-slate-800/30 border-l-2 border-slate-600';};
+  const jVis=useMemo(()=>{if(rF>0)return tabela.filter(j=>j.rodada===rF);for(let r=1;r<=meta.nR;r++){const jr=tabela.filter(j=>j.rodada===r);if(!jr.every(j=>res.some(x=>x.c===j.casa&&x.f===j.fora&&x.r===j.rodada)))return jr;}return tabela.slice(0,10);},[tabela,res,rF,meta.nR]);
+  const CT=({data})=>(<div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-slate-400 border-b border-slate-700 text-xs"><th className="text-left py-2 w-8">#</th><th className="text-left py-2">Time</th><th className="text-center py-2">P</th><th className="text-center py-2">J</th><th className="text-center py-2">V</th><th className="text-center py-2">E</th><th className="text-center py-2">D</th><th className="text-center py-2">GP</th><th className="text-center py-2">GC</th><th className="text-center py-2">SG</th></tr></thead><tbody>{data.map(c=>(<tr key={c.time} className={`${getCor(c.pos)} rounded hover:brightness-125`}><td className="py-1 pl-2 font-bold text-slate-500">{c.pos}</td><td className="py-1 font-medium"><TN name={c.time}/></td><td className="text-center font-bold text-emerald-300">{c.P}</td><td className="text-center text-slate-400">{c.J}</td><td className="text-center text-green-400">{c.V}</td><td className="text-center text-yellow-400">{c.E}</td><td className="text-center text-red-400">{c.D}</td><td className="text-center">{c.GP}</td><td className="text-center">{c.GC}</td><td className={`text-center font-medium ${c.SG>0?'text-green-400':c.SG<0?'text-red-400':'text-slate-400'}`}>{c.SG>0?'+':''}{c.SG}</td></tr>))}</tbody></table></div>);
+  return(<div>
+    <div className="flex flex-wrap items-center justify-center gap-2 mb-3">
+      <div className="flex items-center gap-1 bg-slate-800/60 rounded-lg px-2 py-1.5 border border-slate-700">{Object.entries(cfg.alphas).map(([k,a])=>(<button key={k} onClick={()=>{setAk(k);setRMC(null);setRSU(null);}} className={`px-2 py-0.5 rounded text-xs ${ak===k?'bg-emerald-600 text-white':'bg-slate-700 text-slate-300'}`}>{a.label}</button>))}</div>
+      <button onClick={()=>{setEo(!eo);setRMC(null);setRSU(null);}} className={`px-3 py-1 rounded-lg text-xs font-medium border ${eo?'bg-amber-600/30 border-amber-500 text-amber-300':'bg-slate-700 border-slate-600 text-slate-300'}`}>{eo?'ELO puro':'ATK/DEF'}</button>
+      <div className="flex items-center gap-1 bg-slate-800/60 rounded-lg px-2 py-1.5 border border-slate-700">{[500,1000,3000,5000].map(n=>(<button key={n} onClick={()=>setNS(n)} className={`px-2 py-0.5 rounded text-xs ${nS===n?'bg-emerald-600 text-white':'bg-slate-700 text-slate-300'}`}>{n>=1000?`${n/1000}k`:n}</button>))}</div>
+      <button onClick={doMC} disabled={busy} className="px-4 py-1.5 bg-gradient-to-r from-emerald-600 to-emerald-500 rounded-lg font-semibold text-xs disabled:opacity-50">{busy?'...':'Monte Carlo'}</button>
+      <button onClick={doSU} className="px-4 py-1.5 bg-slate-700 rounded-lg text-xs border border-slate-600">1 Sim</button>
+    </div>
+    <div className="flex gap-1 mb-3 bg-slate-800/40 rounded-xl p-1">{[{id:'ratings',l:'Ratings'},{id:'jogos',l:'Jogos'},{id:'classif',l:'Classificação'},{id:'mc',l:'Monte Carlo'},{id:'simU',l:'1 Simulação'}].map(t=>(<button key={t.id} onClick={()=>setAba(t.id)} className={`flex-1 py-1.5 px-1 rounded-lg text-xs font-medium ${aba===t.id?'bg-emerald-600/80 text-white shadow':'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}>{t.l}</button>))}</div>
+    {aba==='ratings'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"><h2 className="text-base font-semibold text-emerald-300 mb-1">ELO + ATK/DEF{eo&&' (ELO puro)'}</h2><p className="text-xs text-slate-500 mb-3">Spread={lg.spread.toFixed(2)} | {(()=>{const{mc,mf}=getML(cfg,meta.key);return`λ=${mc.toFixed(2)}+${mf.toFixed(2)}`;})()}</p>
+      <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-slate-400 border-b border-slate-700 text-xs"><th className="text-left py-2 w-8">#</th><th className="text-left py-2">Time</th><th className="text-right py-2">ELO</th><th className="text-right py-2">Δ</th><th className="text-right py-2">ATK</th><th className="text-right py-2">DEF</th><th className="text-right py-2">A/D</th></tr></thead><tbody>{ranks.map((r,i)=>(<tr key={r.time} className="border-b border-slate-700/20 hover:bg-slate-700/30"><td className="py-1 pl-2 text-slate-500 font-bold">{i+1}</td><td className="py-1 font-medium"><TN name={r.time}/></td><td className="text-right font-mono font-bold">{r.elo}</td><td className={`text-right font-mono text-xs ${r.dE>0?'text-green-400':r.dE<0?'text-red-400':'text-slate-500'}`}>{r.dE>0?'+':''}{r.dE}</td><td className={`text-right font-mono ${r.atk>1.05?'text-green-400':r.atk<0.95?'text-red-400':'text-slate-400'}`}>{r.atk.toFixed(2)}</td><td className={`text-right font-mono ${r.def<0.95?'text-green-400':r.def>1.05?'text-red-400':'text-slate-400'}`}>{r.def.toFixed(2)}</td><td className={`text-right font-mono font-bold ${r.ad>1.2?'text-emerald-400':r.ad<0.8?'text-red-400':'text-slate-300'}`}>{r.ad.toFixed(2)}</td></tr>))}</tbody></table></div></div>}
+    {aba==='jogos'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"><div className="flex items-center justify-between mb-3"><h2 className="text-base font-semibold text-emerald-300">Jogos</h2><select value={rF} onChange={e=>setRF(Number(e.target.value))} className="bg-slate-700 text-white text-xs rounded-lg px-2 py-1 border border-slate-600"><option value={0}>Próxima</option>{Array.from({length:meta.nR},(_,i)=>i+1).map(r=>{const dt=(tabela.find(j=>j.rodada===r)||{}).data||'';return (<option key={r} value={r}>{'R'+r+(dt?' ('+dt+')':'')}</option>);})}</select></div>
+      <div className="space-y-0.5 max-h-[500px] overflow-y-auto">{jVis.map((j,i)=>{const rl=res.find(r=>r.c===j.casa&&r.f===j.fora&&r.r===j.rodada);let prob=null;if(!rl){const rc=ranks.find(x=>x.time===j.casa),rf=ranks.find(x=>x.time===j.fora);if(rc&&rf){const{mc:m1,mf:m2}=getML(cfg,meta.key);const{lC,lF}=calcL(rc.atk,rc.def,rf.atk,rf.def,rc.elo,rf.elo,m1,m2,cfg.homeAdv,eo);prob=calcProbs(lC,lF);}}return <GameRow key={i} j={j} real={rl} prob={prob}/>;})}</div></div>}
+    {aba==='classif'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"><h2 className="text-base font-semibold text-emerald-300 mb-3">{maxR>0?`Após R${maxR}`:'Pré-temporada'} — {res.length} jogos</h2><CT data={cl}/><div className="flex gap-3 mt-3 text-xs text-slate-500 flex-wrap">{meta.zonas.g4L&&<span className="flex items-center gap-1"><span className="w-3 h-3 bg-blue-400 rounded-sm"></span>{meta.zonas.g4L}</span>}{meta.zonas.g6L&&<span className="flex items-center gap-1"><span className="w-3 h-3 bg-sky-500 rounded-sm"></span>{meta.zonas.g6L}</span>}{meta.zonas.g8L&&<span className="flex items-center gap-1"><span className="w-3 h-3 bg-teal-600 rounded-sm"></span>{meta.zonas.g8L}</span>}{meta.zonas.z4&&<span className="flex items-center gap-1"><span className="w-3 h-3 bg-red-500 rounded-sm"></span>Rebaixamento</span>}</div></div>}
+    {aba==='mc'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50">{!rMC?<p className="text-slate-400 text-center py-8">Clique "Monte Carlo"</p>:<div><h2 className="text-base font-semibold text-emerald-300 mb-3">{rMC.nSims.toLocaleString()} sims{eo&&' (ELO)'}</h2>
+      {rMC.cortes&&<div className="mb-4 overflow-x-auto"><table className="text-xs w-full max-w-md"><thead><tr className="text-slate-400 border-b border-slate-700"><th className="text-left py-1">Posição</th><th className="text-center py-1">p10</th><th className="text-center py-1 font-bold">p50</th><th className="text-center py-1">p90</th></tr></thead><tbody>
+        {[{l:'Título (1°)',d:rMC.cortes.titulo,c:'text-yellow-300'},{l:'G'+(meta.zonas.g4||4)+' ('+((meta.zonas.g4||4))+'°)',d:rMC.cortes.g4,c:'text-blue-300'},{l:'Meio ('+(Math.floor(times.length/2)+1)+'°)',d:rMC.cortes.meio,c:'text-slate-300'},{l:'Z4 ('+(times.length-3)+'°)',d:rMC.cortes.z4,c:'text-red-300'},{l:'Último ('+times.length+'°)',d:rMC.cortes.ultimo,c:'text-red-400'}].map((r,ri)=>(<tr key={ri} className="border-b border-slate-700/30"><td className={`py-1 font-medium ${r.c}`}>{r.l}</td><td className="text-center font-mono">{r.d.p10}</td><td className="text-center font-mono font-bold">{r.d.p50}</td><td className="text-center font-mono">{r.d.p90}</td></tr>))}
+      </tbody></table></div>}
+      <div className="overflow-x-auto mb-4"><table className="w-full text-sm"><thead><tr className="text-slate-400 border-b border-slate-700 text-xs"><th className="text-left py-2 w-8">#</th><th className="text-left py-2">Time</th><th className="text-center py-2">Pts</th><th className="text-center py-2">Título%</th><th className="text-center py-2">G{meta.zonas.g4||4}%</th><th className="text-center py-2">Z4%</th></tr></thead><tbody>{rMC.probs.map((p,i)=>(<tr key={p.time} className="border-b border-slate-700/30 hover:bg-slate-700/30"><td className="py-1 pl-2 text-slate-500 font-bold">{i+1}</td><td className="py-1 font-medium text-xs"><TN name={p.time}/></td><td className="text-center font-mono text-emerald-300">{p.mediaPts.toFixed(1)}</td><td className="text-center font-mono text-yellow-400">{p.titulo<0.5&&p.titulo>0?'<1':Math.round(p.titulo)}</td><td className="text-center font-mono text-blue-400">{Math.round(p.g4)}</td><td className="text-center font-mono text-red-400">{p.z4<0.5&&p.z4>0?'<1':Math.round(p.z4)}</td></tr>))}</tbody></table></div>
+      <details className="mt-2"><summary className="text-xs text-emerald-400 cursor-pointer hover:underline">Matriz de posições completa</summary>
+      <div className="overflow-x-auto mt-2"><table className="text-[10px]"><thead><tr className="text-slate-400 border-b border-slate-700"><th className="text-left py-1 px-1 sticky left-0 bg-slate-900">Time</th>{Array.from({length:times.length},(_,i)=>(<th key={i} className="text-center py-1 px-0.5 min-w-[24px]">{i+1}°</th>))}</tr></thead><tbody>{rMC.probs.map(p=>(<tr key={p.time} className="border-b border-slate-700/20"><td className="py-0.5 px-1 font-medium sticky left-0 bg-slate-900 whitespace-nowrap">{p.time}</td>{p.posF&&p.posF.map((v,pi)=>(<td key={pi} className="text-center px-0.5 font-mono" style={{backgroundColor:v>15?'rgba(74,222,128,0.3)':v>5?'rgba(148,163,184,0.15)':'transparent'}}>{v<0.5?'':Math.round(v)}</td>))}</tr>))}</tbody></table></div></details>
+    </div>}</div>}
+    {aba==='simU'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50">{!rSU?<p className="text-slate-400 text-center py-8">Clique "1 Sim"</p>:<div><h2 className="text-base font-semibold text-emerald-300 mb-3">Simulação Única</h2><CT data={rSU.classificacao}/><h3 className="text-sm font-semibold text-slate-300 mt-4 mb-2">Jogos</h3><div className="space-y-0.5 max-h-[400px] overflow-y-auto">{rSU.jogos.map((j,i)=><GameRow key={i} j={j}/>)}</div></div>}</div>}
+  </div>);
+}
+
+// ============================================================================
+// SÉRIE D — idêntico v3 (resumido)
+// ============================================================================
+function SerieDSim({cfg}){
+  const[aba,setAba]=useState('ratings');const[nS,setNS]=useState(500);const[eo,setEo]=useState(false);const[ak,setAk]=useState(cfg.defaultAlpha);
+  const[rMC,setRMC]=useState(null);const[rSU,setRSU]=useState(null);const[busy,setBusy]=useState(false);const[gF,setGF]=useState(-1);
+  const tabD=SD_TABELA;
+  const lg=useMemo(()=>initLeague(SD_TIMES,t=>SD_INFO[t].elo,cfg),[cfg]);
+  const sdR=useMemo(()=>SD_TIMES.map(t=>{const i=lg.initAD(SD_INFO[t].elo);return{time:t,uf:SD_INFO[t].uf,elo:SD_INFO[t].elo,atk:i.atk,def:i.def,ad:i.atk/i.def};}).sort((a,b)=>b.elo-a.elo),[lg]);
+  const doMC=useCallback(()=>{setBusy(true);setTimeout(()=>{const{mc,mf}=getML(cfg,'D');const ct={};SD_TIMES.forEach(t=>{ct[t]={cl:0,ac:0,ch:0};});
+    for(let sim=0;sim<nS;sim++){const st={},el={},at={},df={};SD_TIMES.forEach(t=>{st[t]={P:0,J:0,V:0,E:0,D:0,GP:0,GC:0};el[t]=SD_INFO[t].elo;const i=lg.initAD(SD_INFO[t].elo);at[t]=i.atk;df[t]=i.def;});
+      for(const j of tabD){const{lC,lF}=calcL(at[j.casa],df[j.casa],at[j.fora],df[j.fora],el[j.casa],el[j.fora],mc,mf,cfg.homeAdv,eo);const gc=poissonRandom(lC),gf=poissonRandom(lF);st[j.casa].J++;st[j.fora].J++;st[j.casa].GP+=gc;st[j.casa].GC+=gf;st[j.fora].GP+=gf;st[j.fora].GC+=gc;if(gc>gf){st[j.casa].V++;st[j.casa].P+=3;st[j.fora].D++;}else if(gc===gf){st[j.casa].E++;st[j.fora].E++;st[j.casa].P++;st[j.fora].P++;}else{st[j.fora].V++;st[j.fora].P+=3;st[j.casa].D++;}updR(el,at,df,j.casa,j.fora,gc,gf,lC,lF,cfg,ak,eo);}
+      const gc=SD_GRUPOS.map(g=>g.map(t=>({time:t,...st[t],SG:st[t].GP-st[t].GC})).sort((a,b)=>b.P-a.P||b.V-a.V||b.SG-a.SG||b.GP-a.GP).slice(0,4).map(c=>c.time));gc.forEach(g=>g.forEach(t=>ct[t].cl++));
+      const s180=(a,b)=>{const{lC,lF}=eo?(()=>{const d=el[a]-el[b];const e=1/(1+Math.pow(10,-d/400));return{lC:2*cfg.mnMM*(0.5+e),lF:2*cfg.mnMM*(0.5+(1-e))};})():{lC:Math.max(0.2,2*cfg.mnMM*at[a]*df[b]),lF:Math.max(0.2,2*cfg.mnMM*at[b]*df[a])};const ga=poissonRandom(lC),gb=poissonRandom(lF);return ga>gb?a:gb>ga?b:Math.random()<0.5?a:b;};
+      let f2=[];for(const[gx,gy]of SD_PAIRS){f2.push(s180(gc[gx][0],gc[gy][3]));f2.push(s180(gc[gx][1],gc[gy][2]));f2.push(s180(gc[gy][0],gc[gx][3]));f2.push(s180(gc[gy][1],gc[gx][2]));}
+      let f3=[];for(const[p1,p2]of SD_SUPER)for(let j=0;j<4;j++)f3.push(s180(f2[p1*4+j],f2[p2*4+(3-j)]));
+      const r16=[...f3].sort((a,b)=>st[b].P-st[a].P||(st[b].GP-st[b].GC)-(st[a].GP-st[a].GC));const o8=[];for(let i=0;i<8;i++)o8.push(s180(r16[i],r16[15-i]));
+      const r8=[...o8].sort((a,b)=>st[b].P-st[a].P);const qW=[],qL=[];for(let i=0;i<4;i++){const w=s180(r8[i],r8[7-i]);qW.push(w);qL.push(w===r8[i]?r8[7-i]:r8[i]);}
+      qW.forEach(t=>ct[t].ac++);[s180(qL[0],qL[1]),s180(qL[2],qL[3])].forEach(t=>ct[t].ac++);ct[s180(s180(qW[0],qW[1]),s180(qW[2],qW[3]))].ch++;}
+    setRMC({probs:SD_TIMES.map(t=>({time:t,uf:SD_INFO[t].uf,elo:SD_INFO[t].elo,cl:ct[t].cl/nS*100,ac:ct[t].ac/nS*100,ch:ct[t].ch/nS*100})).sort((a,b)=>b.ac-a.ac||b.elo-a.elo),nSims:nS});setBusy(false);},100);},[nS,cfg,eo,ak,tabD,lg]);
+  const doSU=useCallback(()=>{const{mc,mf}=getML(cfg,'D');const st={},el={},at={},df={};SD_TIMES.forEach(t=>{st[t]={P:0,J:0,V:0,E:0,D:0,GP:0,GC:0};el[t]=SD_INFO[t].elo;const i=lg.initAD(SD_INFO[t].elo);at[t]=i.atk;df[t]=i.def;});
+    for(const j of tabD){const{lC,lF}=calcL(at[j.casa],df[j.casa],at[j.fora],df[j.fora],el[j.casa],el[j.fora],mc,mf,cfg.homeAdv,eo);const gc=poissonRandom(lC),gf=poissonRandom(lF);st[j.casa].J++;st[j.fora].J++;st[j.casa].GP+=gc;st[j.casa].GC+=gf;st[j.fora].GP+=gf;st[j.fora].GC+=gc;if(gc>gf){st[j.casa].V++;st[j.casa].P+=3;st[j.fora].D++;}else if(gc===gf){st[j.casa].E++;st[j.fora].E++;st[j.casa].P++;st[j.fora].P++;}else{st[j.fora].V++;st[j.fora].P+=3;st[j.casa].D++;}updR(el,at,df,j.casa,j.fora,gc,gf,lC,lF,cfg,ak,eo);}
+    const grupos=SD_GRUPOS.map((g,gi)=>({grupo:gi,times:g.map(t=>({time:t,...st[t],SG:st[t].GP-st[t].GC})).sort((a,b)=>b.P-a.P||b.V-a.V||b.SG-a.SG||b.GP-a.GP).map((c,i)=>({...c,pos:i+1}))}));
+    const s180=(a,b)=>{const{lC,lF}=eo?(()=>{const d=el[a]-el[b];const e=1/(1+Math.pow(10,-d/400));return{lC:2*cfg.mnMM*(0.5+e),lF:2*cfg.mnMM*(0.5+(1-e))};})():{lC:Math.max(0.2,2*cfg.mnMM*at[a]*df[b]),lF:Math.max(0.2,2*cfg.mnMM*at[b]*df[a])};const ga=poissonRandom(lC),gb=poissonRandom(lF);return{a,b,ga,gb,w:ga>gb?a:gb>ga?b:Math.random()<0.5?a:b,pen:ga===gb};};
+    const fases=[];const gc=grupos.map(g=>g.times.filter(t=>t.pos<=4).map(t=>t.time));
+    let f2=[];for(const[gx,gy]of SD_PAIRS){f2.push(s180(gc[gx][0],gc[gy][3]));f2.push(s180(gc[gx][1],gc[gy][2]));f2.push(s180(gc[gy][0],gc[gx][3]));f2.push(s180(gc[gy][1],gc[gx][2]));}fases.push({n:'2ª Fase ('+SD_MM_DATES.f2.join(' e ')+')',j:f2});
+    let f3=[];for(const[p1,p2]of SD_SUPER)for(let j=0;j<4;j++)f3.push(s180(f2[p1*4+j].w,f2[p2*4+(3-j)].w));fases.push({n:'3ª Fase ('+SD_MM_DATES.f3.join(' e ')+')',j:f3});
+    const r16=[...f3.map(x=>x.w)].sort((a,b)=>st[b].P-st[a].P||(st[b].GP-st[b].GC)-(st[a].GP-st[a].GC));let oit=[];for(let i=0;i<8;i++)oit.push(s180(r16[i],r16[15-i]));fases.push({n:'Oitavas ('+SD_MM_DATES.oit.join(' e ')+')',j:oit});
+    const r8=[...oit.map(x=>x.w)].sort((a,b)=>st[b].P-st[a].P);let qrt=[];for(let i=0;i<4;i++)qrt.push(s180(r8[i],r8[7-i]));fases.push({n:'Quartas ('+SD_MM_DATES.qrt.join(' e ')+')',j:qrt});
+    const qW=qrt.map(x=>x.w),qL=qrt.map(x=>x.w===x.a?x.b:x.a);let semi=[s180(qW[0],qW[1]),s180(qW[2],qW[3])];fases.push({n:'Semi ('+SD_MM_DATES.semi.join(' e ')+')',j:semi});
+    let po=[s180(qL[0],qL[1]),s180(qL[2],qL[3])];fases.push({n:'Playoff ('+SD_MM_DATES.po.join(' e ')+')',j:po});let fin=[s180(semi[0].w,semi[1].w)];fases.push({n:'Final ('+SD_MM_DATES.final+')',j:fin});
+    setRSU({grupos,fases,prom:[...new Set([...qW,...po.map(x=>x.w)])],ch:fin[0].w});setAba('simU');
+  },[cfg,eo,ak,tabD,lg]);
+  const gV=gF>=0?[gF]:SD_GRUPOS.map((_,i)=>i);
+  return(<div>
+    <div className="flex flex-wrap items-center justify-center gap-2 mb-3"><div className="flex items-center gap-1 bg-slate-800/60 rounded-lg px-2 py-1.5 border border-slate-700">{Object.entries(cfg.alphas).map(([k,a])=>(<button key={k} onClick={()=>{setAk(k);setRMC(null);setRSU(null);}} className={`px-2 py-0.5 rounded text-xs ${ak===k?'bg-emerald-600 text-white':'bg-slate-700 text-slate-300'}`}>{a.label}</button>))}</div><button onClick={()=>{setEo(!eo);setRMC(null);setRSU(null);}} className={`px-3 py-1 rounded-lg text-xs border ${eo?'bg-amber-600/30 border-amber-500 text-amber-300':'bg-slate-700 border-slate-600 text-slate-300'}`}>{eo?'ELO':'ATK/DEF'}</button><div className="flex items-center gap-1 bg-slate-800/60 rounded-lg px-2 py-1.5 border border-slate-700">{[200,500,1000].map(n=>(<button key={n} onClick={()=>setNS(n)} className={`px-2 py-0.5 rounded text-xs ${nS===n?'bg-emerald-600 text-white':'bg-slate-700 text-slate-300'}`}>{n}</button>))}</div><button onClick={doMC} disabled={busy} className="px-4 py-1.5 bg-gradient-to-r from-emerald-600 to-emerald-500 rounded-lg font-semibold text-xs disabled:opacity-50">{busy?'...':'MC'}</button><button onClick={doSU} className="px-4 py-1.5 bg-slate-700 rounded-lg text-xs border border-slate-600">1 Sim</button></div>
+    <div className="flex gap-1 mb-3 bg-slate-800/40 rounded-xl p-1">{[{id:'ratings',l:'Ratings'},{id:'jogos',l:'Jogos'},{id:'grupos',l:'Grupos'},{id:'mc',l:'Monte Carlo'},{id:'simU',l:'1 Sim'}].map(t=>(<button key={t.id} onClick={()=>setAba(t.id)} className={`flex-1 py-1.5 px-1 rounded-lg text-xs font-medium ${aba===t.id?'bg-emerald-600/80 text-white shadow':'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}>{t.l}</button>))}</div>
+    {aba==='ratings'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"><h2 className="text-base font-semibold text-emerald-300 mb-1">96 Times (spread={lg.spread.toFixed(2)})</h2><div className="overflow-x-auto max-h-[500px]"><table className="w-full text-xs"><thead className="sticky top-0 bg-slate-900"><tr className="text-slate-400 border-b border-slate-700"><th className="text-left py-1 w-6">#</th><th className="text-left py-1">Time</th><th className="text-center py-1">UF</th><th className="text-right py-1">ELO</th><th className="text-right py-1">ATK</th><th className="text-right py-1">DEF</th><th className="text-right py-1">A/D</th></tr></thead><tbody>{sdR.map((r,i)=>(<tr key={r.time} className="border-b border-slate-700/20 hover:bg-slate-700/30"><td className="py-0.5 pl-1 text-slate-500">{i+1}</td><td className="py-0.5 font-medium"><TN name={r.time}/></td><td className="text-center text-slate-400">{r.uf}</td><td className="text-right font-mono font-bold text-emerald-300">{r.elo}</td><td className={`text-right font-mono ${r.atk>1.1?'text-green-400':'text-slate-400'}`}>{r.atk.toFixed(2)}</td><td className={`text-right font-mono ${r.def<0.9?'text-green-400':'text-slate-400'}`}>{r.def.toFixed(2)}</td><td className="text-right font-mono font-bold text-slate-300">{r.ad.toFixed(2)}</td></tr>))}</tbody></table></div></div>}
+    {aba==='jogos'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"><div className="flex items-center justify-between mb-3"><h2 className="text-base font-semibold text-emerald-300">Jogos Grupos</h2><select value={gF} onChange={e=>setGF(Number(e.target.value))} className="bg-slate-700 text-white text-xs rounded-lg px-2 py-1 border border-slate-600"><option value={-1}>Todos</option>{SD_GRUPOS.map((_,i)=><option key={i} value={i}>{SD_GL[i]}</option>)}</select></div><div className="space-y-0.5 max-h-[500px] overflow-y-auto">{tabD.filter(j=>gF<0||j.grupo===gF).map((j,i)=>{const rc=sdR.find(x=>x.time===j.casa),rf=sdR.find(x=>x.time===j.fora);let prob=null;if(rc&&rf){const{mc:m1,mf:m2}=getML(cfg,'D');const{lC,lF}=calcL(rc.atk,rc.def,rf.atk,rf.def,rc.elo,rf.elo,m1,m2,cfg.homeAdv,eo);prob=calcProbs(lC,lF);}return(<div key={i} className="flex items-center justify-between p-1 rounded text-xs bg-slate-700/30">{j.data&&<span className="text-slate-600 w-12 text-[10px]">{j.data}</span>}<span className="text-slate-500 w-6 text-right font-mono">R{j.rodada}</span><span className="text-slate-600 w-10 text-center text-[10px]">{SD_GL[j.grupo].split('·')[0]}</span>{prob&&<span className="text-blue-400 w-7 text-right text-[10px] font-mono">{Math.round(prob.pH)}%</span>}<span className="flex-1 text-right truncate pr-1">{j.casa}</span><span className="mx-1 w-8 text-center text-slate-500 text-[10px]">{prob?Math.round(prob.pD)+'%':'vs'}</span><span className="flex-1 truncate pl-1">{j.fora}</span>{prob&&<span className="text-orange-400 w-7 text-[10px] font-mono">{Math.round(prob.pA)}%</span>}</div>);})}</div></div>}
+    {aba==='grupos'&&<div><div className="mb-3"><select value={gF} onChange={e=>setGF(Number(e.target.value))} className="bg-slate-700 text-white text-xs rounded-lg px-2 py-1 border border-slate-600"><option value={-1}>Todos</option>{SD_GRUPOS.map((_,i)=><option key={i} value={i}>{SD_GL[i]}</option>)}</select></div><div className="grid grid-cols-1 md:grid-cols-2 gap-3">{gV.map(gi=>(<div key={gi} className="bg-slate-800/40 rounded-xl p-3 border border-slate-700/50"><h3 className="text-xs font-bold text-emerald-300 mb-2">{SD_GL[gi]}</h3>{SD_GRUPOS[gi].map((t,ti)=>(<div key={t} className={`flex items-center justify-between text-xs p-1 rounded ${ti<4?'bg-blue-900/20':'bg-slate-700/20'}`}><span className="text-slate-500 w-4">{ti+1}</span><span className="flex-1 font-medium">{t}</span><span className="text-slate-400 text-[10px]">{SD_INFO[t].uf}</span><span className="text-emerald-400 font-mono w-12 text-right">{SD_INFO[t].elo}</span></div>))}</div>))}</div>
+      <details className="mt-3"><summary className="text-xs text-emerald-400 cursor-pointer hover:underline">Lógica de cruzamentos (mata-mata)</summary>
+      <div className="mt-2 text-xs text-slate-400 space-y-1 bg-slate-900/50 rounded-lg p-3">
+        <p className="text-slate-300 font-medium">Pareamento por fase:</p>
+        <p><span className="text-emerald-300">2ª Fase (64→32):</span> Cruzamento entre grupos pareados (A1×A2, A3×A4, ...A15×A16). 1°Gx × 4°Gy, 2°Gx × 3°Gy, 1°Gy × 4°Gx, 2°Gy × 3°Gx = 4 confrontos por par.</p>
+        <p><span className="text-emerald-300">3ª Fase (32→16):</span> Cruzamento entre super-grupos: pares (A1×A2)↔(A3×A4), (A5×A6)↔(A7×A8), (A9×A10)↔(A11×A12), (A13×A14)↔(A15×A16). Vencedor j do par1 × vencedor (3-j) do par2.</p>
+        <p><span className="text-emerald-300">Oitavas (16→8):</span> Reseed por campanha na fase de grupos (pts → vitórias → SG → GP). 1°×16°, 2°×15°, ..., 8°×9°.</p>
+        <p><span className="text-emerald-300">Quartas (8→4):</span> Reseed por campanha. 1°×8°, 2°×7°, 3°×6°, 4°×5°.</p>
+        <p><span className="text-emerald-300">Semi:</span> Chaveamento fixo: Q1×Q2, Q3×Q4.</p>
+        <p><span className="text-emerald-300">Playoff Acesso:</span> Eliminados das quartas: QP1×QP2, QP3×QP4 → 2 vagas extras.</p>
+        <p><span className="text-emerald-300">Final:</span> Vencedor Semi1 × Vencedor Semi2. Todos mata-mata = 180min neutro, empate = pênaltis.</p>
+        <p className="text-blue-300 font-medium mt-2">6 acessos à Série C: 4 semifinalistas + 2 vencedores playoff.</p>
+      </div></details>
+    </div>}
+    {aba==='mc'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50">{!rMC?<p className="text-slate-400 text-center py-8">Clique MC</p>:<div><h2 className="text-base font-semibold text-emerald-300 mb-3">{rMC.nSims} sims</h2><div className="overflow-x-auto max-h-[500px]"><table className="w-full text-xs"><thead className="sticky top-0 bg-slate-900"><tr className="text-slate-400 border-b border-slate-700"><th className="text-left py-1 w-6">#</th><th className="text-left py-1">Time</th><th className="text-center py-1">UF</th><th className="text-right py-1">ELO</th><th className="text-center py-1">Cl%</th><th className="text-center py-1">Ac%</th><th className="text-center py-1">T%</th></tr></thead><tbody>{rMC.probs.slice(0,48).map((p,i)=>(<tr key={p.time} className="border-b border-slate-700/20 hover:bg-slate-700/30"><td className="py-0.5 pl-1 text-slate-500">{i+1}</td><td className="py-0.5 font-medium"><TN name={p.time}/></td><td className="text-center text-slate-400">{p.uf}</td><td className="text-right font-mono text-emerald-300">{p.elo}</td><td className="text-center">{Math.round(p.cl)}%</td><td className="text-center font-bold text-blue-400">{p.ac.toFixed(1)}%</td><td className="text-center text-yellow-400">{p.ch<1&&p.ch>0?'<1':p.ch.toFixed(1)}%</td></tr>))}</tbody></table></div></div>}</div>}
+    {aba==='simU'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50">{!rSU?<p className="text-slate-400 text-center py-8">Clique 1 Sim</p>:<div><div className="mb-3 p-3 bg-emerald-900/30 rounded-xl border border-emerald-600/30 text-center"><span className="text-emerald-300 font-bold">Campeão: {rSU.ch}</span><span className="text-slate-400 mx-3">|</span><span className="text-blue-300 text-xs">Promovidos: {rSU.prom.join(', ')}</span></div><div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">{rSU.grupos.map((g,gi)=>(<div key={gi} className="bg-slate-900/30 rounded-lg p-2 border border-slate-700/30"><h4 className="text-[10px] font-bold text-emerald-300 mb-1">{SD_GL[gi]}</h4>{g.times.map(t=>(<div key={t.time} className={`flex text-[10px] gap-1 ${t.pos<=4?'text-blue-300':'text-slate-400'}`}><span className="w-3">{t.pos}</span><span className="flex-1">{t.time}</span><span className="font-mono w-4 text-right">{t.P}</span></div>))}</div>))}</div>{rSU.fases.map(f=>(<div key={f.n} className="mb-2"><h4 className="text-xs font-bold text-emerald-400 mb-1">{f.n}</h4><div className="space-y-0.5">{f.j.map((j,i)=>(<div key={i} className="flex items-center text-xs bg-slate-700/30 rounded p-1"><span className={`flex-1 text-right pr-1 ${j.w===j.a?'text-emerald-300 font-bold':'text-slate-400'}`}>{j.a}</span><span className="font-mono w-14 text-center">{j.ga}x{j.gb}{j.pen?' pen':''}</span><span className={`flex-1 pl-1 ${j.w===j.b?'text-emerald-300 font-bold':'text-slate-400'}`}>{j.b}</span></div>))}</div></div>))}</div>}</div>}
+  </div>);
+}
+
+// ============================================================================
+// COPA DO BRASIL — bracket 32 times, ida/volta + final neutra
+// ============================================================================
+function CopaBrasilSim({cfg,allElos}){
+  const[aba,setAba]=useState('ratings');const[nS,setNS]=useState(1000);const[eo,setEo]=useState(false);const[ak,setAk]=useState(cfg.defaultAlpha);
+  const[rMC,setRMC]=useState(null);const[rSU,setRSU]=useState(null);const[busy,setBusy]=useState(false);
+  const teams=CB_TEAMS;const elos=useMemo(()=>{const e={};teams.forEach(t=>e[t]=allElos[t]||CB_ELOS[t]||1340);return e;},[teams,allElos]);
+  const lg=useMemo(()=>initLeague(teams,t=>elos[t],cfg),[teams,elos,cfg]);
+  const ranks=useMemo(()=>teams.map(t=>{const i=lg.initAD(elos[t]);return{time:t,elo:elos[t],atk:i.atk,def:i.def,ad:i.atk/i.def};}).sort((a,b)=>b.elo-a.elo),[teams,elos,lg]);
+
+  // Simular confronto 2 jogos ida/volta
+  const sim2L=(a,b,at,df,el)=>{const{mc,mf}=getML(cfg,'CB');
+    const l1=calcL(at[a],df[a],at[b],df[b],el[a],el[b],mc,mf,cfg.homeAdv,eo);const g1a=poissonRandom(l1.lC),g1b=poissonRandom(l1.lF);
+    const l2=calcL(at[b],df[b],at[a],df[a],el[b],el[a],mc,mf,cfg.homeAdv,eo);const g2b=poissonRandom(l2.lC),g2a=poissonRandom(l2.lF);
+    const aa=g1a+g2a,ab=g1b+g2b;return{a,b,g1a,g1b,g2a,g2b,aa,ab,w:aa>ab?a:ab>aa?b:Math.random()<0.5?a:b,pen:aa===ab};};
+  // Final neutro (jogo único)
+  const simFin=(a,b,at,df,el)=>{const mn=cfg.mnMM;
+    const{lC,lF}=eo?(()=>{const d=el[a]-el[b];const e=1/(1+Math.pow(10,-d/400));return{lC:mn*(0.5+e),lF:mn*(0.5+(1-e))};})():{lC:Math.max(0.2,mn*at[a]*df[b]),lF:Math.max(0.2,mn*at[b]*df[a])};
+    const ga=poissonRandom(lC),gb=poissonRandom(lF);return{a,b,ga,gb,w:ga>gb?a:gb>ga?b:Math.random()<0.5?a:b,pen:ga===gb};};
+
+  const runBracket=(at,df,el)=>{
+    const r32=CB_R32.map(([ia,ib])=>sim2L(teams[ia],teams[ib],at,df,el));
+    const r16p=[];for(let i=0;i<r32.length;i+=2)r16p.push(sim2L(r32[i].w,r32[i+1].w,at,df,el));
+    const qfp=[];for(let i=0;i<r16p.length;i+=2)qfp.push(sim2L(r16p[i].w,r16p[i+1].w,at,df,el));
+    const sfp=[sim2L(qfp[0].w,qfp[1].w,at,df,el),sim2L(qfp[2].w,qfp[3].w,at,df,el)];
+    const fin=simFin(sfp[0].w,sfp[1].w,at,df,el);
+    return{r32,r16:r16p,qf:qfp,sf:sfp,fin,ch:fin.w};
+  };
+
+  const doMC=useCallback(()=>{setBusy(true);setTimeout(()=>{const ct={};teams.forEach(t=>ct[t]={r16:0,qf:0,sf:0,fin:0,ch:0});
+    for(let sim=0;sim<nS;sim++){const at={},df={},el={};teams.forEach(t=>{el[t]=elos[t];const i=lg.initAD(elos[t]);at[t]=i.atk;df[t]=i.def;});
+      const br=runBracket(at,df,el);br.r32.forEach(j=>{ct[j.w].r16++;});br.r16.forEach(j=>ct[j.w].qf++);br.qf.forEach(j=>ct[j.w].sf++);br.sf.forEach(j=>ct[j.w].fin++);ct[br.ch].ch++;}
+    setRMC({probs:teams.map(t=>({time:t,elo:elos[t],r16:ct[t].r16/nS*100,qf:ct[t].qf/nS*100,sf:ct[t].sf/nS*100,fin:ct[t].fin/nS*100,ch:ct[t].ch/nS*100})).sort((a,b)=>b.ch-a.ch||b.elo-a.elo),nSims:nS});setBusy(false);},100);},[nS,elos,cfg,eo,ak,lg,teams]);
+
+  const doSU=useCallback(()=>{const at={},df={},el={};teams.forEach(t=>{el[t]=elos[t];const i=lg.initAD(elos[t]);at[t]=i.atk;df[t]=i.def;});setRSU(runBracket(at,df,el));setAba('simU');},[elos,cfg,eo,ak,lg,teams]);
+
+  const MatchRow=({m,twoLeg})=>(<div className="flex items-center text-xs bg-slate-700/30 rounded p-1.5 mb-0.5">
+    <span className={`flex-1 text-right pr-1 truncate ${m.w===m.a?'text-emerald-300 font-bold':'text-slate-400'}`}>{m.a}</span>
+    {twoLeg?<span className="font-mono w-28 text-center text-[10px]">{m.g1a}-{m.g1b} / {m.g2a}-{m.g2b} ({m.aa}×{m.ab}{m.pen?' pen':''})</span>
+      :<span className="font-mono w-14 text-center">{m.ga}×{m.gb}{m.pen?' pen':''}</span>}
+    <span className={`flex-1 pl-1 truncate ${m.w===m.b?'text-emerald-300 font-bold':'text-slate-400'}`}>{m.b}</span></div>);
+
+  return(<div>
+    <div className="flex flex-wrap items-center justify-center gap-2 mb-3">
+      <div className="flex items-center gap-1 bg-slate-800/60 rounded-lg px-2 py-1.5 border border-slate-700">{Object.entries(cfg.alphas).map(([k,a])=>(<button key={k} onClick={()=>{setAk(k);setRMC(null);setRSU(null);}} className={`px-2 py-0.5 rounded text-xs ${ak===k?'bg-emerald-600 text-white':'bg-slate-700 text-slate-300'}`}>{a.label}</button>))}</div>
+      <button onClick={()=>{setEo(!eo);setRMC(null);setRSU(null);}} className={`px-3 py-1 rounded-lg text-xs border ${eo?'bg-amber-600/30 border-amber-500 text-amber-300':'bg-slate-700 border-slate-600 text-slate-300'}`}>{eo?'ELO':'ATK/DEF'}</button>
+      <div className="flex items-center gap-1 bg-slate-800/60 rounded-lg px-2 py-1.5 border border-slate-700">{[500,1000,3000].map(n=>(<button key={n} onClick={()=>setNS(n)} className={`px-2 py-0.5 rounded text-xs ${nS===n?'bg-emerald-600 text-white':'bg-slate-700 text-slate-300'}`}>{n>=1000?`${n/1000}k`:n}</button>))}</div>
+      <button onClick={doMC} disabled={busy} className="px-4 py-1.5 bg-gradient-to-r from-emerald-600 to-emerald-500 rounded-lg font-semibold text-xs disabled:opacity-50">{busy?'...':'MC'}</button>
+      <button onClick={doSU} className="px-4 py-1.5 bg-slate-700 rounded-lg text-xs border border-slate-600">1 Sim</button>
+    </div>
+    <div className="flex gap-1 mb-3 bg-slate-800/40 rounded-xl p-1">{[{id:'ratings',l:'Ratings'},{id:'jogos',l:'Bracket'},{id:'bracket',l:'Chaveamento'},{id:'mc',l:'Monte Carlo'},{id:'simU',l:'1 Sim'}].map(t=>(<button key={t.id} onClick={()=>setAba(t.id)} className={`flex-1 py-1.5 px-1 rounded-lg text-xs font-medium ${aba===t.id?'bg-emerald-600/80 text-white shadow':'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}>{t.l}</button>))}</div>
+
+    {aba==='ratings'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"><h2 className="text-base font-semibold text-emerald-300 mb-1">32 Times (spread={lg.spread.toFixed(2)})</h2><div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-slate-400 border-b border-slate-700 text-xs"><th className="text-left py-2 w-8">#</th><th className="text-left py-2">Time</th><th className="text-right py-2">ELO</th><th className="text-right py-2">ATK</th><th className="text-right py-2">DEF</th><th className="text-right py-2">A/D</th></tr></thead><tbody>{ranks.map((r,i)=>(<tr key={r.time} className="border-b border-slate-700/20 hover:bg-slate-700/30"><td className="py-1 pl-2 text-slate-500 font-bold">{i+1}</td><td className="py-1 font-medium"><TN name={r.time}/></td><td className="text-right font-mono font-bold">{r.elo}</td><td className={`text-right font-mono ${r.atk>1.05?'text-green-400':'text-slate-400'}`}>{r.atk.toFixed(2)}</td><td className={`text-right font-mono ${r.def<0.95?'text-green-400':'text-slate-400'}`}>{r.def.toFixed(2)}</td><td className="text-right font-mono font-bold text-slate-300">{r.ad.toFixed(2)}</td></tr>))}</tbody></table></div></div>}
+
+    {aba==='jogos'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"><h2 className="text-base font-semibold text-emerald-300 mb-3">Jogos Programados</h2>
+      {CB_R32.map(([ia,ib],i)=>(<div key={i} className="flex items-center justify-between p-1.5 rounded text-xs bg-slate-700/30 mb-0.5"><span className="text-slate-600 w-14 text-[10px]">{CB_DATES[0]}</span><span className="text-slate-500 w-4 font-mono">{i+1}</span><span className="flex-1 text-right truncate pr-1 font-medium">{teams[ia]}</span><span className="mx-1 w-8 text-center text-slate-600">vs</span><span className="flex-1 truncate pl-1 font-medium">{teams[ib]}</span></div>))}
+      <p className="text-xs text-slate-500 mt-3">R16: {CB_DATES[1]} | QF: {CB_DATES[2]} | SF: {CB_DATES[3]} | Final: {CB_DATES[4]}</p></div>}
+
+    {aba==='bracket'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"><h2 className="text-base font-semibold text-emerald-300 mb-3">Chaveamento — 32 times</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="bg-slate-900/40 rounded-xl p-3 border border-slate-700/30"><h3 className="text-xs font-bold text-blue-400 mb-2">Chave A (jogos 1-8)</h3>{CB_R32.slice(0,8).map(([ia,ib],i)=>(<div key={i} className="flex items-center text-xs mb-1 p-1 bg-slate-700/20 rounded"><span className="w-4 text-slate-500">{i+1}</span><span className="flex-1 font-medium">{teams[ia]} <span className="text-slate-500">({elos[teams[ia]]})</span></span><span className="text-slate-600 mx-1">vs</span><span className="flex-1 text-right">{teams[ib]} <span className="text-slate-500">({elos[teams[ib]]})</span></span></div>))}</div>
+        <div className="bg-slate-900/40 rounded-xl p-3 border border-slate-700/30"><h3 className="text-xs font-bold text-orange-400 mb-2">Chave B (jogos 9-16)</h3>{CB_R32.slice(8).map(([ia,ib],i)=>(<div key={i} className="flex items-center text-xs mb-1 p-1 bg-slate-700/20 rounded"><span className="w-4 text-slate-500">{i+9}</span><span className="flex-1 font-medium">{teams[ia]} <span className="text-slate-500">({elos[teams[ia]]})</span></span><span className="text-slate-600 mx-1">vs</span><span className="flex-1 text-right">{teams[ib]} <span className="text-slate-500">({elos[teams[ib]]})</span></span></div>))}</div>
+      </div>
+      <p className="text-xs text-slate-500 mt-3">R32 ida/volta → R16 → QF → SF → Final (jogo único neutro, λ=mnMM={cfg.mnMM})</p></div>}
+
+    {aba==='mc'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50">{!rMC?<p className="text-slate-400 text-center py-8">Clique MC</p>:<div><h2 className="text-base font-semibold text-emerald-300 mb-3">{rMC.nSims} sims</h2><div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-slate-400 border-b border-slate-700 text-xs"><th className="text-left py-2 w-8">#</th><th className="text-left py-2">Time</th><th className="text-right py-2">ELO</th><th className="text-center py-2">R16</th><th className="text-center py-2">QF</th><th className="text-center py-2">SF</th><th className="text-center py-2">Final</th><th className="text-center py-2">Título</th></tr></thead><tbody>{rMC.probs.map((p,i)=>(<tr key={p.time} className="border-b border-slate-700/30 hover:bg-slate-700/30"><td className="py-1 pl-2 text-slate-500 font-bold">{i+1}</td><td className="py-1 font-medium"><TN name={p.time}/></td><td className="text-right font-mono text-emerald-300">{p.elo}</td><td className="text-center text-xs">{Math.round(p.r16)}%</td><td className="text-center text-xs">{Math.round(p.qf)}%</td><td className="text-center text-xs">{Math.round(p.sf)}%</td><td className="text-center text-xs">{Math.round(p.fin)}%</td><td className="text-center"><div className="flex items-center gap-1"><div className="flex-1 h-3 bg-slate-700 rounded-full overflow-hidden"><div className="h-full bg-yellow-500 rounded-full" style={{width:`${Math.max(1,p.ch)}%`}}></div></div><span className="text-xs w-10 text-right">{p.ch<1&&p.ch>0?'<1':Math.round(p.ch)}%</span></div></td></tr>))}</tbody></table></div></div>}</div>}
+
+    {aba==='simU'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50">{!rSU?<p className="text-slate-400 text-center py-8">Clique 1 Sim</p>:<div>
+      <div className="mb-3 p-3 bg-emerald-900/30 rounded-xl border border-emerald-600/30 text-center"><span className="text-2xl">🏆</span> <span className="text-emerald-300 font-bold text-lg">{rSU.ch}</span></div>
+      <h3 className="text-sm font-semibold text-slate-300 mb-2">R32 — Ida e Volta ({CB_DATES[0]})</h3>{rSU.r32.map((m,i)=><MatchRow key={i} m={m} twoLeg/>)}
+      <h3 className="text-sm font-semibold text-slate-300 mt-3 mb-2">R16 ({CB_DATES[1]})</h3>{rSU.r16.map((m,i)=><MatchRow key={i} m={m} twoLeg/>)}
+      <h3 className="text-sm font-semibold text-slate-300 mt-3 mb-2">Quartas ({CB_DATES[2]})</h3>{rSU.qf.map((m,i)=><MatchRow key={i} m={m} twoLeg/>)}
+      <h3 className="text-sm font-semibold text-slate-300 mt-3 mb-2">Semi ({CB_DATES[3]})</h3>{rSU.sf.map((m,i)=><MatchRow key={i} m={m} twoLeg/>)}
+      <h3 className="text-sm font-semibold text-slate-300 mt-3 mb-2">Final ({CB_DATES[4]}) — Jogo Único Neutro</h3><MatchRow m={rSU.fin}/>
+    </div>}</div>}
+  </div>);
+}
+
+// ============================================================================
+// AO VIVO (filtro por série)
+// ============================================================================
+function LiveSim({cfg,allTeams}){
+  const[sC,setSC]=useState('A');const[sF,setSF]=useState('A');const[nC,setNC]=useState('Palmeiras');const[nF,setNF]=useState('Flamengo');
+  const[gC,setGC]=useState(0);const[gF,setGF]=useState(0);const[min,setMin]=useState(0);
+  const bS=useMemo(()=>{const m={};Object.entries(allTeams).forEach(([n,d])=>{if(!m[d.serie])m[d.serie]=[];m[d.serie].push(n);});Object.values(m).forEach(a=>a.sort());return m;},[allTeams]);
+  const res=useMemo(()=>{const tc=allTeams[nC]||{atk:1,def:1};const tf=allTeams[nF]||{atk:1,def:1};const MC=1.63,MF=0.87,n0=3,TOT=100;
+    const lc90=Math.max(0.2,MC*tc.atk*tf.def),lf90=Math.max(0.15,MF*tf.atk*tc.def);const fr=Math.min(min,TOT)/TOT,rest=1-fr;
+    const lcP=fr>0?(n0*lc90+gC)/(n0+fr):lc90,lfP=fr>0?(n0*lf90+gF)/(n0+fr):lf90;const lcR=Math.max(0.01,lcP*rest),lfR=Math.max(0.01,lfP*rest);
+    let pC=0,pE=0,pF=0;for(let s=0;s<10000;s++){const gc=gC+poissonRandom(lcR),gf=gF+poissonRandom(lfR);if(gc>gf)pC++;else if(gc===gf)pE++;else pF++;}
+    return{pC:pC/10000,pE:pE/10000,pF:pF/10000,lcR,lfR};},[nC,nF,gC,gF,min,allTeams]);
+  return(<div className="space-y-4">
+    <div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"><div className="grid grid-cols-2 gap-4">
+      <div><label className="text-xs text-blue-400 mb-1 block">Mandante</label><select value={sC} onChange={e=>{setSC(e.target.value);setNC((bS[e.target.value]||[])[0]||'');}} className="w-full bg-slate-700 text-white text-xs rounded-lg px-2 py-1 mb-1 border border-slate-600">{['A','B','C','D'].map(s=><option key={s} value={s}>Série {s}</option>)}</select><select value={nC} onChange={e=>setNC(e.target.value)} className="w-full bg-slate-700 text-white text-sm rounded-lg px-3 py-2 border border-blue-500/50">{(bS[sC]||[]).map(t=><option key={t} value={t}>{t}</option>)}</select></div>
+      <div><label className="text-xs text-orange-400 mb-1 block">Visitante</label><select value={sF} onChange={e=>{setSF(e.target.value);setNF((bS[e.target.value]||[])[0]||'');}} className="w-full bg-slate-700 text-white text-xs rounded-lg px-2 py-1 mb-1 border border-slate-600">{['A','B','C','D'].map(s=><option key={s} value={s}>Série {s}</option>)}</select><select value={nF} onChange={e=>setNF(e.target.value)} className="w-full bg-slate-700 text-white text-sm rounded-lg px-3 py-2 border border-orange-500/50">{(bS[sF]||[]).map(t=><option key={t} value={t}>{t}</option>)}</select></div>
+    </div></div>
+    <div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50">
+      <div className="flex items-center justify-center gap-4 mb-4"><div className="text-center"><div className="text-xs text-blue-400 mb-1">{nC}</div><div className="flex items-center gap-2"><button onClick={()=>setGC(Math.max(0,gC-1))} className="w-8 h-8 bg-slate-700 rounded-lg text-lg">−</button><span className="text-3xl font-bold w-10 text-center">{gC}</span><button onClick={()=>setGC(gC+1)} className="w-8 h-8 bg-slate-700 rounded-lg text-lg">+</button></div></div><span className="text-2xl text-slate-500">×</span><div className="text-center"><div className="text-xs text-orange-400 mb-1">{nF}</div><div className="flex items-center gap-2"><button onClick={()=>setGF(Math.max(0,gF-1))} className="w-8 h-8 bg-slate-700 rounded-lg text-lg">−</button><span className="text-3xl font-bold w-10 text-center">{gF}</span><button onClick={()=>setGF(gF+1)} className="w-8 h-8 bg-slate-700 rounded-lg text-lg">+</button></div></div></div>
+      <div className="flex items-center gap-2"><span className="text-xs text-slate-400 w-8">Min:</span><input type="range" min={0} max={100} value={min} onChange={e=>setMin(Number(e.target.value))} className="flex-1 h-2 bg-slate-700 rounded-lg accent-emerald-500"/><span className="text-xs text-emerald-300 w-8 text-right font-mono">{min}'</span></div>
+    </div>
+    <div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50">
+      <div className="flex h-8 rounded-full overflow-hidden mb-2"><div className="bg-blue-600 flex items-center justify-center text-xs font-bold" style={{width:`${res.pC*100}%`}}>{(res.pC*100).toFixed(1)}%</div><div className="bg-slate-500 flex items-center justify-center text-xs font-bold" style={{width:`${res.pE*100}%`}}>{(res.pE*100).toFixed(1)}%</div><div className="bg-orange-600 flex items-center justify-center text-xs font-bold" style={{width:`${res.pF*100}%`}}>{(res.pF*100).toFixed(1)}%</div></div>
+      <div className="flex justify-between text-xs text-slate-400"><span className="text-blue-400">{nC}</span><span>Empate</span><span className="text-orange-400">{nF}</span></div>
+    </div>
+  </div>);
+}
+
+// ============================================================================
+// APP PRINCIPAL
+// ============================================================================
+function SimuladorUnificado(){
+  const[cfg,setCfg]=useState(DEFAULT_CFG);const[tab,setTab]=useState('serieA');
+  const[dash,setDash]=useState(null);const[dashBusy,setDashBusy]=useState(false);const[dashN,setDashN]=useState(1000);
+  const SAT=useMemo(()=>parseTab(SA_TAB,SA_NM,SA_DATES),[]);const SBT=useMemo(()=>parseTab(SB_TAB,SB_NM,SB_DATES),[]);const SCT=useMemo(()=>parseTab(SC_TAB,SC_NM,SC_DATES),[]);
+  const allTeams=useMemo(()=>{const db={};const add=(ts,rk,s)=>{const l=initLeague(Object.keys(rk),t=>rk[t].elo,cfg);Object.keys(rk).forEach(t=>{const i=l.initAD(rk[t].elo);db[t]={atk:i.atk,def:i.def,elo:rk[t].elo,serie:s};});};
+    add(Object.keys(SA_RANKING),SA_RANKING,'A');add(Object.keys(SB_RANKING),SB_RANKING,'B');add(Object.keys(SC_RANKING),SC_RANKING,'C');
+    const dl=initLeague(SD_TIMES,t=>SD_INFO[t].elo,cfg);SD_TIMES.forEach(t=>{const i=dl.initAD(SD_INFO[t].elo);db[t]={atk:i.atk,def:i.def,elo:SD_INFO[t].elo,serie:'D'};});return db;},[cfg]);
+  const allElos=useMemo(()=>{const e={};Object.entries(allTeams).forEach(([n,d])=>e[n]=d.elo);return e;},[allTeams]);
+
+  const runAll=useCallback(()=>{setDashBusy(true);setTimeout(()=>{const ak=cfg.defaultAlpha;
+    const rA=simMC(Object.keys(SA_RANKING),SA_RANKING,SAT,SA_RES,cfg,'A',dashN,ak,false);
+    const rB=simMC(Object.keys(SB_RANKING),SB_RANKING,SBT,SB_RES,cfg,'B',dashN,ak,false);
+    const rC=simMC(Object.keys(SC_RANKING),SC_RANKING,SCT,SC_RES,cfg,'C',dashN,ak,false);
+    const rD=simMC_D(cfg,dashN,ak,false);
+    const rCB=simMC_CB(cfg,dashN,ak,false,allElos);
+    setDash({A:rA,B:rB,C:rC,D:rD,CB:rCB,n:dashN});setDashBusy(false);},100);},[cfg,dashN,SAT,SBT,SCT,allElos]);
+
+  const tabs=[{id:'serieA',l:'Série A',e:'🏆'},{id:'serieB',l:'Série B',e:'🥈'},{id:'serieC',l:'Série C',e:'🥉'},{id:'serieD',l:'Série D',e:'🏟️'},{id:'copaBR',l:'Copa BR',e:'🏅'},{id:'aoVivo',l:'Ao Vivo',e:'⚡'},{id:'config',l:'Config',e:'⚙️'}];
+  return(<div style={{fontFamily:"'Outfit',sans-serif"}} className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 text-white p-3 sm:p-6">
+    
+    <div className="max-w-6xl mx-auto">
+      <div className="text-center mb-4">
+        <div className="flex items-center justify-center gap-3 mb-1"><svg width="40" height="40" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#064e3b" stroke="#34d399" strokeWidth="3"/><text x="50" y="58" textAnchor="middle" fontSize="36" fill="white" fontWeight="bold">⚽</text></svg><h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-emerald-300 via-white to-emerald-300 bg-clip-text text-transparent">Brasileirão 2026</h1></div>
+        <p className="text-slate-400 text-xs mt-1">Motor unificado | Poisson + ELO + ATK/DEF | Config: total+pesoCasa</p>
+        <div className="flex items-center justify-center gap-2 mt-2">
+          <div className="flex items-center gap-1 bg-slate-800/60 rounded-lg px-2 py-1 border border-slate-700">{[500,1000,3000].map(n=>(<button key={n} onClick={()=>setDashN(n)} className={`px-2 py-0.5 rounded text-xs ${dashN===n?'bg-emerald-600 text-white':'bg-slate-700 text-slate-300'}`}>{n>=1000?`${n/1000}k`:n}</button>))}</div>
+          <button onClick={runAll} disabled={dashBusy} className="px-4 py-1.5 bg-gradient-to-r from-amber-600 to-amber-500 rounded-lg font-semibold text-xs disabled:opacity-50 shadow-lg shadow-amber-600/20">{dashBusy?'Simulando...':'⚡ Simular Tudo (A+B+C+D+Copa)'}</button>
+        </div>
+      </div>
+      {dash&&<div className="mb-4 bg-slate-800/40 rounded-2xl p-4 border border-amber-600/30">
+        <h3 className="text-sm font-bold text-amber-300 mb-3">Dashboard — {dash.n} simulações</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          {[{k:'A',l:'Série A',c:'text-yellow-300',f:'pts'},{k:'B',l:'Série B',c:'text-blue-300',f:'pts'},{k:'C',l:'Série C',c:'text-emerald-300',f:'pts'},{k:'D',l:'Série D',c:'text-purple-300',f:'ac'},{k:'CB',l:'Copa BR',c:'text-amber-300',f:'ch'}].map(s=>{const d=dash[s.k];if(!d)return null;return(<div key={s.k} className="bg-slate-900/50 rounded-xl p-3 border border-slate-700/30">
+            <h4 className={`text-xs font-bold ${s.c} mb-2`}>{s.l}</h4>
+            <div className="space-y-0.5">{d.probs.slice(0,5).map((p,i)=>(<div key={p.time} className="flex items-center justify-between text-xs"><span className="text-slate-500 w-4">{i+1}</span><span className="flex-1 font-medium truncate"><TN name={p.time}/></span>{s.f==='pts'?<><span className="font-mono text-emerald-300 w-10 text-right">{p.mediaPts.toFixed(0)}</span><span className="font-mono text-yellow-400 w-10 text-right">{Math.round(p.titulo)}%</span></>:s.f==='ac'?<span className="font-mono text-blue-400 w-12 text-right">{p.ac.toFixed(1)}%</span>:<span className="font-mono text-yellow-400 w-12 text-right">{p.ch.toFixed(1)}%</span>}</div>))}</div>
+            {d.cortes&&<div className="mt-2 text-[10px] text-slate-500">T:{d.cortes.titulo.p50} G4:{d.cortes.g4.p50} Z4:{d.cortes.z4.p50}</div>}
+          </div>);})}
+        </div>
+      </div>}
+      <div className="flex gap-0.5 mb-4 bg-slate-800/60 rounded-2xl p-1 border border-slate-700/50 overflow-x-auto">{tabs.map(t=>(<button key={t.id} onClick={()=>setTab(t.id)} className={`flex-1 py-2 px-0.5 rounded-xl text-[11px] sm:text-sm font-medium whitespace-nowrap ${tab===t.id?'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg':'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}><span className="mr-0.5">{t.e}</span>{t.l}</button>))}</div>
+      {tab==='serieA'&&<LeagueSim times={Object.keys(SA_RANKING)} ranking={SA_RANKING} tabela={SAT} res={SA_RES} meta={SA_META} cfg={cfg}/>}
+      {tab==='serieB'&&<LeagueSim times={Object.keys(SB_RANKING)} ranking={SB_RANKING} tabela={SBT} res={SB_RES} meta={SB_META} cfg={cfg}/>}
+      {tab==='serieC'&&<LeagueSim times={Object.keys(SC_RANKING)} ranking={SC_RANKING} tabela={SCT} res={SC_RES} meta={SC_META} cfg={cfg}/>}
+      {tab==='serieD'&&<SerieDSim cfg={cfg}/>}
+      {tab==='copaBR'&&<CopaBrasilSim cfg={cfg} allElos={allElos}/>}
+      {tab==='aoVivo'&&<LiveSim cfg={cfg} allTeams={allTeams}/>}
+      {tab==='config'&&<SettingsTab cfg={cfg} setCfg={setCfg}/>}
+      <div className="mt-4 text-center text-slate-500 text-xs"><p>A:{SA_RES.length} jogos | B:{SB_RES.length} | C:início 05/04 | D:96 times | Copa BR:32 times | v4</p></div>
+    </div>
+  </div>);
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<SimuladorUnificado/>);
+</script>
+</body>
+</html>
