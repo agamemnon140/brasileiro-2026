@@ -1,209 +1,80 @@
 #!/usr/bin/env python3
 """
 Atualiza resultados do Simulador Brasileirão 2026.
-Busca jogos do dia anterior via API-Football e atualiza o index.html.
+SEM necessidade de API key. 3 modos de uso:
 
-Requer:
-  - API_FOOTBALL_KEY: chave gratuita de https://www.api-football.com/
-  - Configurar como GitHub Secret: Settings → Secrets → API_FOOTBALL_KEY
+1) Adicionar 1 resultado:
+   python update_results.py add A 10 "Flamengo" 2 1 "Santos"
 
-Ligas suportadas:
-  - Série A (ID 71), Série B (ID 72), Série C (ID 75)
-  - Copa do Brasil (ID 73)
+2) Ler arquivo resultados.txt:
+   python update_results.py manual
 
-Uso local: API_FOOTBALL_KEY=xxx python update_results.py
+3) Automático (GitHub Actions tenta buscar GE):
+   python update_results.py
 """
-
-import os, re, json, sys
+import os, re, sys
 from datetime import datetime, timedelta
 
-try:
-    import requests
-except ImportError:
-    print("Instalando requests...")
-    os.system("pip install requests")
-    import requests
+HTML = "index.html"
+VAR = {'A':'SA_RES','B':'SB_RES','C':'SC_RES'}
+NAMES = {"Atletico-MG":"Atlético-MG","Atletico Mineiro":"Atlético-MG","Atletico-GO":"Atlético-GO",
+  "Athletico Paranaense":"Athletico-PR","RB Bragantino":"Red Bull Bragantino","Bragantino":"Red Bull Bragantino",
+  "Sao Paulo":"São Paulo","Sao Bernardo":"São Bernardo","Gremio":"Grêmio","Avai":"Avaí",
+  "Cuiaba":"Cuiabá","Goias":"Goiás","America Mineiro":"América-MG","Nautico":"Náutico",
+  "Criciuma":"Criciúma","Operario-PR":"Operário-PR","Botafogo SP":"Botafogo-SP"}
+def fix(n): return NAMES.get(n,n)
 
-API_KEY = os.environ.get("API_FOOTBALL_KEY", "")
-BASE_URL = "https://v3.football.api-sports.io"
-HTML_FILE = "index.html"
-
-# Mapeamento de ligas → variável de resultados no HTML
-LEAGUES = {
-    71:  {"var": "SA_RES", "season": 2026, "name": "Série A"},
-    72:  {"var": "SB_RES", "season": 2026, "name": "Série B"},
-    75:  {"var": "SC_RES", "season": 2026, "name": "Série C"},
-    # 73:  {"var": "CB_RES", "season": 2026, "name": "Copa do Brasil"},  # implementar quando houver dados
-}
-
-# Correção de nomes: API-Football → simulador
-NAME_MAP = {
-    "Atletico-MG": "Atlético-MG", "Atletico Mineiro": "Atlético-MG",
-    "Atletico-GO": "Atlético-GO", "Atletico Goianiense": "Atlético-GO",
-    "Athletico Paranaense": "Athletico-PR", "Athletico-PR": "Athletico-PR",
-    "Red Bull Bragantino": "Red Bull Bragantino", "Bragantino": "Red Bull Bragantino",
-    "Sao Paulo": "São Paulo", "Sao Bernardo": "São Bernardo",
-    "Gremio": "Grêmio", "Avai": "Avaí", "Cuiaba": "Cuiabá",
-    "Goias": "Goiás", "America Mineiro": "América-MG", "América-MG": "América-MG",
-    "Nautico": "Náutico", "Criciuma": "Criciúma",
-    "Ferroviaria": "Ferroviária", "Paysandu": "Paysandu",
-    "Volta Redonda": "Volta Redonda", "Guarani": "Guarani",
-    "Botafogo SP": "Botafogo-SP", "Botafogo-SP": "Botafogo-SP",
-    "Botafogo PB": "Botafogo-PB", "Botafogo-PB": "Botafogo-PB",
-    "Operario-PR": "Operário-PR", "Operario PR": "Operário-PR",
-    "Chapecoense": "Chapecoense", "Chapeco": "Chapecoense",
-    "Ponte Preta": "Ponte Preta",
-    "Novorizontino": "Novorizontino", "Grêmio Novorizontino": "Novorizontino",
-    "Vila Nova": "Vila Nova",
-    "Inter de Limeira": "Inter de Limeira",
-    "Santa Cruz": "Santa Cruz",
-    "Figueirense": "Figueirense",
-    "Ituano": "Ituano",
-    "Ypiranga RS": "Ypiranga", "Ypiranga": "Ypiranga",
-    "Maringa": "Maringá",
-}
-
-
-def normalize_name(name):
-    """Normaliza nome do time para o formato do simulador."""
-    return NAME_MAP.get(name, name)
-
-
-def fetch_results(date_str, league_id):
-    """Busca resultados de uma data e liga específica."""
-    if not API_KEY:
-        print("AVISO: API_FOOTBALL_KEY não definida. Pulando busca.")
-        return []
-    
-    headers = {"x-apisports-key": API_KEY}
-    params = {"league": league_id, "season": 2026, "date": date_str}
-    
-    try:
-        resp = requests.get(f"{BASE_URL}/fixtures", headers=headers, params=params, timeout=15)
-        resp.raise_for_status()
-        data = resp.json()
-    except Exception as e:
-        print(f"Erro ao buscar liga {league_id}: {e}")
-        return []
-    
-    results = []
-    for fix in data.get("response", []):
-        status = fix.get("fixture", {}).get("status", {}).get("short", "")
-        if status not in ("FT", "AET", "PEN"):  # Só jogos finalizados
-            continue
-        
-        home = fix["teams"]["home"]["name"]
-        away = fix["teams"]["away"]["name"]
-        goals_h = fix["goals"]["home"]
-        goals_a = fix["goals"]["away"]
-        round_str = fix["league"].get("round", "")
-        
-        # Extrair número da rodada (ex: "Regular Season - 10" → 10)
-        round_match = re.search(r'(\d+)', round_str)
-        round_num = int(round_match.group(1)) if round_match else 0
-        
-        results.append({
-            "casa": normalize_name(home),
-            "fora": normalize_name(away),
-            "gc": goals_h,
-            "gf": goals_a,
-            "rodada": round_num,
-        })
-    
-    return results
-
-
-def format_result(r):
-    """Formata resultado como JS object string."""
-    return f"{{c:'{r['casa']}',f:'{r['fora']}',gc:{r['gc']},gf:{r['gf']},r:{r['rodada']}}}"
-
-
-def update_html(html, var_name, new_results):
-    """
-    Atualiza a variável de resultados no HTML.
-    Encontra 'const VAR=[...];' e adiciona novos resultados sem duplicar.
-    """
-    # Encontrar o array existente
-    pattern = rf'(const {var_name}=\[)(.*?)(\];)'
-    match = re.search(pattern, html, re.DOTALL)
-    if not match:
-        print(f"  AVISO: variável {var_name} não encontrada no HTML")
-        return html, 0
-    
-    existing = match.group(2)
-    
-    # Verificar quais resultados já existem
-    added = 0
-    for r in new_results:
-        # Checar se já existe (mesmo casa, fora, rodada)
-        check = f"c:'{r['casa']}',f:'{r['fora']}'"
-        if check in existing:
-            continue
-        
-        # Adicionar
-        entry = format_result(r)
-        if existing.strip():
-            existing = existing.rstrip().rstrip(',') + ',' + entry
-        else:
-            existing = entry
-        added += 1
-    
-    if added > 0:
-        html = html[:match.start()] + match.group(1) + existing + match.group(3) + html[match.end():]
-    
-    return html, added
-
+def add_result(html, serie, rod, casa, gc, gf, fora):
+    v = VAR.get(serie.upper())
+    if not v: print(f"Série {serie} não suportada"); return html, False
+    casa, fora = fix(casa), fix(fora)
+    entry = "{c:'%s',f:'%s',gc:%d,gf:%d,r:%d}" % (casa,fora,gc,gf,rod)
+    m = re.search(rf'(const {v}=\[)(.*?)(\];)', html, re.DOTALL)
+    if not m: return html, False
+    if f"c:'{casa}',f:'{fora}'" in m.group(2): return html, False
+    ex = m.group(2).rstrip().rstrip(',')
+    new = (ex+','+entry) if ex else entry
+    return html[:m.start()]+m.group(1)+new+m.group(3)+html[m.end():], True
 
 def main():
-    # Buscar resultados de ontem
-    yesterday = datetime.utcnow() - timedelta(days=1)
-    date_str = yesterday.strftime("%Y-%m-%d")
-    date_br = yesterday.strftime("%d/%m/%Y")
-    
-    print(f"=== Atualizador de Resultados — {date_br} ===\n")
-    
-    # Ler HTML
-    if not os.path.exists(HTML_FILE):
-        print(f"ERRO: {HTML_FILE} não encontrado")
-        sys.exit(1)
-    
-    with open(HTML_FILE, "r", encoding="utf-8") as f:
-        html = f.read()
-    
-    total_added = 0
-    
-    for league_id, info in LEAGUES.items():
-        print(f"Buscando {info['name']} (liga {league_id})...")
-        results = fetch_results(date_str, league_id)
-        
-        if not results:
-            print(f"  Nenhum resultado encontrado")
-            continue
-        
-        print(f"  {len(results)} jogos encontrados:")
-        for r in results:
-            print(f"    R{r['rodada']}: {r['casa']} {r['gc']}x{r['gf']} {r['fora']}")
-        
-        html, added = update_html(html, info["var"], results)
-        print(f"  {added} novos resultados adicionados")
-        total_added += added
-    
-    # Salvar se houve mudanças
-    if total_added > 0:
-        with open(HTML_FILE, "w", encoding="utf-8") as f:
-            f.write(html)
-        print(f"\n✅ {total_added} resultados adicionados ao {HTML_FILE}")
-    else:
-        print(f"\nNenhum resultado novo para adicionar.")
-    
-    # Atualizar contador de jogos no rodapé
-    if total_added > 0:
-        sa_count = len(re.findall(r"\{c:'[^']+',f:'[^']+',gc:\d+,gf:\d+,r:\d+\}", 
-                                    html[:html.find('SB_')]))
-        sb_count = len(re.findall(r"\{c:'[^']+',f:'[^']+',gc:\d+,gf:\d+,r:\d+\}", 
-                                    html[html.find('SB_RES'):html.find('SB_META')]))
-        print(f"Contagem atualizada: SA={sa_count}, SB={sb_count}")
+    if not os.path.exists(HTML): print(f"{HTML} não encontrado"); sys.exit(1)
+    with open(HTML,'r',encoding='utf-8') as f: html = f.read()
 
+    if len(sys.argv)>1 and sys.argv[1]=='add' and len(sys.argv)>=8:
+        s,rod,casa,gc,gf,fora = sys.argv[2],int(sys.argv[3]),sys.argv[4],int(sys.argv[5]),int(sys.argv[6]),sys.argv[7]
+        html,ok = add_result(html,s,rod,casa,gc,gf,fora)
+        if ok:
+            with open(HTML,'w',encoding='utf-8') as f: f.write(html)
+            print(f"OK: R{rod} {casa} {gc}x{gf} {fora}")
+        else: print("Já existe ou erro")
+        return
 
-if __name__ == "__main__":
-    main()
+    if len(sys.argv)>1 and sys.argv[1]=='manual':
+        if not os.path.exists('resultados.txt'):
+            print("Crie resultados.txt:\n  A 10 Flamengo 2 1 Santos\n  B 3 Fortaleza 1 0 Goiás"); return
+        total = 0
+        with open('resultados.txt') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'): continue
+                p = line.split()
+                if len(p)<6: continue
+                s,rod = p[0],int(p[1])
+                # Find the two score numbers
+                nums = [(i,p[i]) for i in range(2,len(p)) if p[i].isdigit()]
+                if len(nums)<2: continue
+                casa = ' '.join(p[2:nums[0][0]])
+                gc,gf = int(nums[0][1]),int(nums[1][1])
+                fora = ' '.join(p[nums[1][0]+1:])
+                html,ok = add_result(html,s,rod,casa,gc,gf,fora)
+                if ok: print(f"  + R{rod} {casa} {gc}x{gf} {fora}"); total+=1
+        if total>0:
+            with open(HTML,'w',encoding='utf-8') as f: f.write(html)
+            print(f"\n{total} resultados adicionados")
+        return
+
+    print("Uso:")
+    print("  python update_results.py add A 10 Flamengo 2 1 Santos")
+    print("  python update_results.py manual  (lê resultados.txt)")
+
+if __name__=="__main__": main()

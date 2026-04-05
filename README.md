@@ -1,88 +1,46 @@
 # ⚽ Simulador Brasileirão 2026
 
-Simulador Monte Carlo do Campeonato Brasileiro 2026 com motor Poisson + ELO + ATK/DEF.
+Simulador Monte Carlo: Séries A, B, C, D + Copa do Brasil + Ao Vivo.
 
-**[Acessar Simulador →](https://seuuser.github.io/brasileirao-2026/)**
+## Deploy no GitHub Pages
 
-## Competições
+1. Crie um repositório no GitHub (ex: `brasileirao-2026`)
+2. Suba os arquivos: `index.html`, `icon-180.png`, `update_results.py`
+3. Settings → Pages → Source: `main` / `root` → Save
+4. Acesse: `https://seuuser.github.io/brasileirao-2026/`
 
-| Competição | Times | Formato | Status |
-|---|---|---|---|
-| Série A | 20 | Pontos corridos 38R | 85 jogos reais |
-| Série B | 20 | Pontos corridos 38R | 20 jogos reais |
-| Série C | 20 | 1ª Fase 19R + Quadrangular | Início 05/04 |
-| Série D | 96 | 16 grupos + mata-mata | Não iniciou |
-| Copa do Brasil | 32 | Bracket ida/volta + final neutra | Não iniciou |
+**⚠️ A pasta `.github` não sobe pelo upload web do GitHub.**
+Para o workflow funcionar, crie manualmente:
+1. No repositório, clique "Add file" → "Create new file"
+2. Nome: `.github/workflows/daily-update.yml`
+3. Cole o conteúdo do arquivo `daily-update.yml`
 
-## Funcionalidades
+## Salvar no iPhone
 
-- **Monte Carlo** — simula N campeonatos e calcula probabilidades de título, acesso/G4, rebaixamento
-- **Pontos de corte** — p10/p50/p90 de pontos para cada posição
-- **Matriz de posições** — frequência completa de cada time em cada posição
-- **1 Simulação** — simula um campeonato completo com todos os resultados
-- **Ao Vivo** — Bayesian update em tempo real durante jogos
-- **Configuração** — todos os parâmetros editáveis: alphas, lambdas, spread, etc.
-- **Escudos** — badges dos times via CDN com fallback para iniciais
-- **Simular Tudo** — roda A+B+C+D+Copa de uma vez com dashboard
+1. Abra o link no Safari
+2. Toque em Compartilhar (⬆️) → "Adicionar à Tela de Início"
+3. O app abre em tela cheia com o ícone ⚽
 
-## Modelo
+## Atualizar Resultados
 
-Motor Poisson com ELO + ATK/DEF:
-
-```
-λ_casa = total × pesoCasa × ATK_casa × DEF_fora
-λ_fora = total × (1-pesoCasa) × ATK_fora × DEF_casa
-```
-
-- **Spread dinâmico**: `log(targetRatio) / log(maxELO/minELO)`, capped em `maxSpread`
-- **Suavização**: `sign(s) · log(1 + |s|)` (assimétrica)
-- **Alpha**: atk ≠ def (ataque e defesa atualizam em ritmos diferentes)
-- **ELO**: K variável por perfil (16/32/48)
-
-## Deploy (GitHub Pages)
-
-1. Fork este repositório
-2. Em **Settings → Pages → Source**: selecione `main` / `root`
-3. Acesse em `https://seuuser.github.io/brasileirao-2026/`
-
-## Atualização Automática de Resultados
-
-O workflow GitHub Actions roda diariamente às 05:00 BRT e busca resultados via API-Football.
-
-### Setup:
-
-1. Crie uma conta gratuita em [api-football.com](https://www.api-football.com/)
-2. Copie sua API key
-3. No repositório, vá em **Settings → Secrets → Actions → New repository secret**
-4. Nome: `API_FOOTBALL_KEY`, valor: sua chave
-5. O workflow roda automaticamente todo dia
-
-### Rodar manualmente:
+Sem API key. 3 opções:
 
 ```bash
-export API_FOOTBALL_KEY=sua_chave_aqui
-python update_results.py
+# Opção 1: Adicionar 1 jogo
+python update_results.py add A 10 "Flamengo" 2 1 "Santos"
+
+# Opção 2: Arquivo com vários jogos
+echo "A 10 Flamengo 2 1 Santos" >> resultados.txt
+echo "A 10 Palmeiras 3 0 Grêmio" >> resultados.txt
+python update_results.py manual
+
+# Opção 3: Via GitHub (crie resultados.txt no repo, rode o workflow)
 ```
 
-## Estrutura
-
+Formato do `resultados.txt`:
 ```
-brasileirao-2026/
-├── index.html              # App completo (standalone)
-├── update_results.py       # Script de atualização diária
-├── .github/workflows/
-│   └── daily-update.yml    # GitHub Actions cron job
-└── README.md
+# Serie Rodada Casa GolsCasa GolsFora Fora
+A 10 Flamengo 2 1 Santos
+A 10 Palmeiras 3 0 Grêmio
+B 3 Fortaleza 1 0 Goiás
 ```
-
-## Tecnologias
-
-- React 18 (CDN)
-- Tailwind CSS (CDN)
-- Babel standalone (CDN)
-- Python 3 + requests (para atualização)
-- GitHub Actions (CI/CD)
-
-## Licença
-
-MIT — use como quiser.

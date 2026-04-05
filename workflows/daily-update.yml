@@ -1,0 +1,41 @@
+name: Atualizar Resultados Diários
+
+on:
+  schedule:
+    # Roda todo dia às 08:00 UTC (05:00 BRT) — após os jogos do dia anterior
+    - cron: '0 8 * * *'
+  workflow_dispatch: # Permite rodar manualmente
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Instalar dependências
+        run: pip install requests
+
+      - name: Buscar resultados e atualizar
+        env:
+          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+        run: python update_results.py
+
+      - name: Commit e push se houve mudanças
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git add index.html
+          if git diff --cached --quiet; then
+            echo "Nenhum resultado novo encontrado."
+          else
+            HOJE=$(date -u -d '-1 day' +%d/%m/%Y)
+            git commit -m "Resultados atualizados: ${HOJE}"
+            git push
+          fi
