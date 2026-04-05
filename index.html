@@ -11,22 +11,24 @@ const poissonRandom = (l) => { if(l<=0) return 0; const L=Math.exp(-l); let k=0,
 const suavLog = (s) => Math.sign(s)*Math.log1p(Math.abs(s));
 
 
-// === ESCUDOS ===
-const BADGE_CDN = 'https://api.sofascore.app/api/v1/team/';
-const TEAM_IDS = {'Flamengo':1961,'Palmeiras':1963,'Cruzeiro':1954,'Botafogo':1958,'Fluminense':1962,'Bahia':1955,'São Paulo':1981,'Internacional':1966,'Grêmio':5926,'Santos':1968,'Corinthians':1957,'Vasco':1974,'Atlético-MG':1977,'Vitória':2017,'Coritiba':7768,'Athletico-PR':1960,'Chapecoense':7315,'Fortaleza':1965,'Ceará':2025,'Sport':1999,'Juventude':7316,'Criciúma':7702,'Goiás':1959,'CRB':7696,'Avaí':7698,'Cuiabá':7770,'Vila Nova':7697,'América-MG':7699,'Náutico':7700,'Ponte Preta':7703,'Londrina':7766,'Novorizontino':80370,'Paysandu':7704,'Guarani':7774,'Figueirense':7695,'Brusque':211251,'Ituano':7907,'Botafogo-PB':7772,'Amazonas':394078,'Volta Redonda':7769,'Santa Cruz':7701,'Mirassol':7773,'Red Bull Bragantino':1999,'Remo':7705};
+// === ESCUDOS REAIS (Sofascore CDN + iniciais como fallback via onError DOM) ===
+const TEAM_COLORS = {'Flamengo':'#8C1D18','Palmeiras':'#006437','Cruzeiro':'#003DA5','Botafogo':'#000','Fluminense':'#880038','Bahia':'#004A94','São Paulo':'#E40613','Internacional':'#E30613','Grêmio':'#0A6EB4','Santos':'#000','Corinthians':'#000','Vasco':'#000','Atlético-MG':'#000','Vitória':'#C8102E','Coritiba':'#006B3F','Athletico-PR':'#B71C1C','Chapecoense':'#006B3F','Remo':'#003DA5','Mirassol':'#FFD700','Red Bull Bragantino':'#E30613','Fortaleza':'#C8102E','Ceará':'#000','Sport':'#C8102E','Juventude':'#006B3F','Criciúma':'#FFD700','Goiás':'#006B3F','CRB':'#C8102E','Avaí':'#003DA5','Cuiabá':'#006B3F','Vila Nova':'#C8102E','América-MG':'#006B3F','Náutico':'#C8102E','Ponte Preta':'#000','Londrina':'#003DA5','Novorizontino':'#FFD700','Botafogo-SP':'#C8102E','Athletic':'#000','São Bernardo':'#003DA5','Operário-PR':'#000','Atlético-GO':'#C8102E','Paysandu':'#003DA5','Guarani':'#006B3F','Figueirense':'#000','Brusque':'#FFD700','Ituano':'#C8102E','Volta Redonda':'#FFD700','Santa Cruz':'#C8102E','Amazonas':'#006B3F','Ferroviária':'#8B0000','Caxias':'#8B0000','Maringá':'#003DA5','Confiança':'#003DA5','Ypiranga':'#006B3F','Botafogo-PB':'#000'};
+const TEAM_IDS = {'Flamengo':1961,'Palmeiras':1963,'Cruzeiro':1954,'Botafogo':1958,'Fluminense':1962,'Bahia':1955,'São Paulo':1981,'Internacional':1966,'Grêmio':5926,'Santos':1968,'Corinthians':1957,'Vasco':1974,'Atlético-MG':1977,'Vitória':2017,'Coritiba':7768,'Athletico-PR':1960,'Chapecoense':7315,'Remo':7705,'Mirassol':7773,'Red Bull Bragantino':7710,'Fortaleza':1965,'Ceará':2025,'Sport':1999,'Juventude':7316,'Criciúma':7702,'Goiás':1959,'CRB':7696,'Avaí':7698,'Cuiabá':7770,'Vila Nova':7697,'América-MG':7699,'Náutico':7700,'Ponte Preta':7703,'Londrina':7766,'Novorizontino':80370,'Botafogo-SP':7771,'Operário-PR':7767,'Atlético-GO':7706,'Paysandu':7704,'Guarani':7774,'Figueirense':7695,'Brusque':211251,'Ituano':7907,'Volta Redonda':7769,'Santa Cruz':7701,'Amazonas':394078,'Ferroviária':7909,'Caxias':7708,'Botafogo-PB':7772,'Confiança':7775,'Athletic':363380,'São Bernardo':211252,'Maringá':211254,'Ypiranga':7776};
 const Badge = ({name, size}) => {
-  const [err, setErr] = useState(false);
+  const s = size || 18;
   const tid = TEAM_IDS[name];
-  if (tid && !err) {
-    return <img src={BADGE_CDN+tid+'/image'} alt="" width={size||18} height={size||18} className="inline-block rounded-sm" style={{marginRight:3,verticalAlign:'middle'}} onError={()=>setErr(true)} loading="lazy"/>;
-  }
   const ab = (name||'').replace(/-[A-Z]{2}$/,'').split(/[\s-]/).map(function(w){return w[0]||'';}).join('').slice(0,3).toUpperCase();
-  let h = 0; for(let i=0;i<(name||'').length;i++) h = (name||'').charCodeAt(i) + ((h<<5)-h);
-  return <span className="inline-flex items-center justify-center rounded-sm text-white font-bold" style={{width:size||18,height:size||18,fontSize:(size||18)*0.38,marginRight:3,verticalAlign:'middle',background:'hsl('+(Math.abs(h)%360)+',45%,35%)'}}>{ab}</span>;
+  const bg = TEAM_COLORS[name] || (()=>{let h=0;for(let i=0;i<(name||'').length;i++)h=(name||'').charCodeAt(i)+((h<<5)-h);return 'hsl('+(Math.abs(h)%360)+',40%,32%)';})();
+  const txt = bg==='#FFD700'?'#000':'#fff';
+  const bdr = bg==='#FFD700'?'#8B6914':bg==='#000'?'#444':bg;
+  return (<span className="inline-block relative flex-shrink-0" style={{width:s,height:s,marginRight:3,verticalAlign:'middle'}}>
+    <span className="absolute inset-0 inline-flex items-center justify-center rounded-full font-bold" style={{background:bg,color:txt,border:'1.5px solid '+bdr,fontSize:s*0.34,lineHeight:1}}>{ab}</span>
+    {tid&&<img src={'https://api.sofascore.app/api/v1/team/'+tid+'/image'} width={s} height={s}
+      className="absolute inset-0 rounded-full object-contain bg-white" style={{border:'1.5px solid #555'}}
+      onError={function(e){e.target.style.display='none';}} loading="lazy"/>}
+  </span>);
 };
-const TN = ({name}) => {
-  return <span className="inline-flex items-center gap-0"><Badge name={name} size={18}/>{name}</span>;
-};
+const TN = ({name}) => (<span className="inline-flex items-center gap-0"><Badge name={name} size={18}/>{name}</span>);
 
 // === CONFIG DEFAULT ===
 const DEFAULT_CFG = {
@@ -85,7 +87,7 @@ const simMC = (times,ranking,tab,res,cfg,sk,nS,ak,eo) => {
   for(let sim=0;sim<nS;sim++){const st={},el={},at={},df={};
     times.forEach(t=>{st[t]={P:0,J:0,V:0,E:0,D:0,GP:0,GC:0};el[t]=ranking[t].elo;const i=lg.initAD(ranking[t].elo);at[t]=i.atk;df[t]=i.def;});
     for(const j of tab){const{casa:c,fora:f,rodada:rd}=j;if(!st[c]||!st[f])continue;
-      const real=res.find(r=>r.c===c&&r.f===f&&r.r===rd);let gc,gf;
+      const real=res.find(r=>r.c===c&&r.f===f&&(r.r===rd||r.r===0));let gc,gf;
       if(real){gc=real.gc;gf=real.gf;}else{const{lC,lF}=calcL(at[c],df[c],at[f],df[f],el[c],el[f],mc,mf,cfg.homeAdv,eo);gc=poissonRandom(lC);gf=poissonRandom(lF);}
       st[c].J++;st[f].J++;st[c].GP+=gc;st[c].GC+=gf;st[f].GP+=gf;st[f].GC+=gc;
       if(gc>gf){st[c].V++;st[c].P+=3;st[f].D++;}else if(gc===gf){st[c].E++;st[f].E++;st[c].P++;st[f].P++;}else{st[f].V++;st[f].P+=3;st[c].D++;}
@@ -103,7 +105,7 @@ const simUnica = (times,ranking,tab,res,cfg,sk,ak,eo) => {
   const st={},el={},at={},df={};times.forEach(t=>{st[t]={P:0,J:0,V:0,E:0,D:0,GP:0,GC:0};el[t]=ranking[t].elo;const i=lg.initAD(ranking[t].elo);at[t]=i.atk;df[t]=i.def;});
   const jogos=[];
   for(const j of tab){const{casa:c,fora:f,rodada:rd}=j;if(!st[c]||!st[f])continue;
-    const real=res.find(r=>r.c===c&&r.f===f&&r.r===rd);let gc,gf;
+    const real=res.find(r=>r.c===c&&r.f===f&&(r.r===rd||r.r===0));let gc,gf;
     if(real){gc=real.gc;gf=real.gf;}else{const{lC,lF}=calcL(at[c],df[c],at[f],df[f],el[c],el[f],mc,mf,cfg.homeAdv,eo);gc=poissonRandom(lC);gf=poissonRandom(lF);}
     jogos.push({casa:c,fora:f,gc,gf,rodada:rd,real:!!real,data:j.data||''});
     st[c].J++;st[f].J++;st[c].GP+=gc;st[c].GC+=gf;st[f].GP+=gf;st[f].GC+=gc;
@@ -134,15 +136,15 @@ const simMC_D=(cfg,nS,ak,eo)=>{
 };
 // === MC COPA DO BRASIL ===
 const simMC_CB=(cfg,nS,ak,eo,teamElos)=>{
-  const teams=CB_TEAMS;const elos={};teams.forEach(t=>elos[t]=teamElos[t]||CB_ELOS[t]||1340);
+  const teams=CB_TEAMS;const elos={};teams.forEach(t=>elos[t]=teamElos[t]||CB_ELOS[t]||1200);
   const lg=initLeague(teams,t=>elos[t],cfg);const ct={};teams.forEach(t=>ct[t]={r16:0,qf:0,sf:0,fin:0,ch:0});
   for(let sim=0;sim<nS;sim++){const at2={},df2={},el2={};teams.forEach(t=>{el2[t]=elos[t];const i=lg.initAD(elos[t]);at2[t]=i.atk;df2[t]=i.def;});
     const s2L=(a,b)=>{const{mc:m1,mf:m2}=getML(cfg,'CB');const l1=calcL(at2[a],df2[a],at2[b],df2[b],el2[a],el2[b],m1,m2,cfg.homeAdv,eo);const g1a=poissonRandom(l1.lC),g1b=poissonRandom(l1.lF);const l2=calcL(at2[b],df2[b],at2[a],df2[a],el2[b],el2[a],m1,m2,cfg.homeAdv,eo);const g2b=poissonRandom(l2.lC),g2a=poissonRandom(l2.lF);const aa=g1a+g2a,ab2=g1b+g2b;return aa>ab2?a:ab2>aa?b:Math.random()<0.5?a:b;};
     const sFin=(a,b)=>{const mn=cfg.mnMM;const r2=eo?(()=>{const d=el2[a]-el2[b];const e=1/(1+Math.pow(10,-d/400));return{lC:mn*(0.5+e),lF:mn*(0.5+(1-e))};})():{lC:Math.max(0.2,mn*at2[a]*df2[b]),lF:Math.max(0.2,mn*at2[b]*df2[a])};const ga=poissonRandom(r2.lC),gb=poissonRandom(r2.lF);return ga>gb?a:gb>ga?b:Math.random()<0.5?a:b;};
     const r32=CB_R32.map(([ia,ib])=>s2L(teams[ia],teams[ib]));
-    const r16p=[];for(let i=0;i<r32.length;i+=2)r16p.push(s2L(r32[i],r32[i+1]));
-    const qfp=[];for(let i=0;i<r16p.length;i+=2)qfp.push(s2L(r16p[i],r16p[i+1]));
-    const sfp=[s2L(qfp[0],qfp[1]),s2L(qfp[2],qfp[3])];
+    const sh16=shuffle(r32);const r16p=[];for(let i=0;i<sh16.length;i+=2)r16p.push(s2L(sh16[i],sh16[i+1]));
+    const sh8=shuffle(r16p);const qfp=[];for(let i=0;i<sh8.length;i+=2)qfp.push(s2L(sh8[i],sh8[i+1]));
+    const sh4=shuffle(qfp);const sfp=[s2L(sh4[0],sh4[1]),s2L(sh4[2],sh4[3])];
     const fin=sFin(sfp[0],sfp[1]);
     r32.forEach(w=>ct[w].r16++);r16p.forEach(w=>ct[w].qf++);qfp.forEach(w=>ct[w].sf++);sfp.forEach(w=>ct[w].fin++);ct[fin].ch++;}
   return{probs:teams.map(t=>({time:t,elo:elos[t],r16:ct[t].r16/nS*100,qf:ct[t].qf/nS*100,sf:ct[t].sf/nS*100,fin:ct[t].fin/nS*100,ch:ct[t].ch/nS*100})).sort((a,b)=>b.ch-a.ch||b.elo-a.elo),nSims:nS};
@@ -193,11 +195,13 @@ const genGrpTab=(g)=>{const n=g.length,j=[],t=[...g],rds=[];for(let r=0;r<n-1;r+
 // === COPA DO BRASIL 2026 ===
 // 32 times: 20 Série A (seeds 1-20) + 12 classificados divisões inferiores
 // R32 ida/volta → R16 → Quartas → Semi → Final (jogo único neutro)
-const CB_TEAMS=['Flamengo','Palmeiras','Cruzeiro','Mirassol','Fluminense','Botafogo','Bahia','São Paulo','Internacional','Grêmio','Atlético-MG','Santos','Corinthians','Vasco','Red Bull Bragantino','Vitória','Coritiba','Athletico-PR','Chapecoense','Remo','Fortaleza','Ceará','Sport','Juventude','Goiás','Novorizontino','CRB','Ponte Preta','Ferroviária','Amazonas','Paysandu','Volta Redonda'];
-const CB_ELOS={};CB_TEAMS.forEach(t=>{CB_ELOS[t]=(SA_RANKING[t]&&SA_RANKING[t].elo)||(SB_RANKING[t]&&SB_RANKING[t].elo)||(SC_RANKING[t]&&SC_RANKING[t].elo)||1340;});
-// Bracket (seed 1v32, distribuído para que 1-4 não se cruzem até semi)
-const CB_R32=[[0,31],[15,16],[7,24],[8,23],[3,28],[12,19],[4,27],[11,20],[1,30],[14,17],[6,25],[9,22],[2,29],[13,18],[5,26],[10,21]];
-const CB_ROUND_NAMES=['Oitavas (R32)','Quartas de Final','Semifinal','Final'];
+const CB_TEAMS=['Atlético-MG','Ceará','Goiás','Cruzeiro','Athletico-PR','Atlético-GO','Flamengo','Vitória','Grêmio','Confiança','Paysandu','Vasco','Fortaleza','CRB','Bahia','Remo','Botafogo','Chapecoense','Red Bull Bragantino','Mirassol','Barra-SC','Corinthians','Operário-PR','Fluminense','Palmeiras','Jacuipense','Athletic','Internacional','Santos','Coritiba','São Paulo','Juventude'];
+const CB_ELOS={};CB_TEAMS.forEach(t=>{CB_ELOS[t]=(SA_RANKING[t]&&SA_RANKING[t].elo)||(SB_RANKING[t]&&SB_RANKING[t].elo)||(SC_RANKING[t]&&SC_RANKING[t].elo)||1200;});
+CB_ELOS['Barra-SC']=1180;CB_ELOS['Jacuipense']=1180;
+// R32: confrontos oficiais CBF 2026 (Equipe1 vs Equipe2)
+const CB_R32=[[0,1],[2,3],[4,5],[6,7],[8,9],[10,11],[12,13],[14,15],[16,17],[18,19],[20,21],[22,23],[24,25],[26,27],[28,29],[30,31]];
+const shuffle=(arr)=>{const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+const CB_ROUND_NAMES=['R32 (ida/volta)','R16 (sorteio)','Quartas (sorteio)','Semifinal (sorteio)','Final (jogo único)'];
 const CB_DATES=['30/04','21/05','13/08','17/09','29/10'];
 
 // ============================================================================
@@ -260,17 +264,17 @@ function SettingsTab({cfg,setCfg}){
 // ============================================================================
 // SIMULADOR DE LIGA (A/B/C) — 5 sub-abas
 // ============================================================================
-function LeagueSim({times,ranking,tabela,res,meta,cfg}){
+function LeagueSim({times,ranking,tabela,res,meta,cfg,extraRes}){
   const[aba,setAba]=useState('ratings');const[nS,setNS]=useState(1000);const[ak,setAk]=useState(cfg.defaultAlpha);const[eo,setEo]=useState(false);
   const[rMC,setRMC]=useState(null);const[rSU,setRSU]=useState(null);const[busy,setBusy]=useState(false);const[rF,setRF]=useState(0);
   const[userRes,setUserRes]=useState([]);
-  const allRes=useMemo(()=>[...res,...userRes],[res,userRes]);
+  const allRes=useMemo(()=>[...res,...(extraRes||[]),...userRes],[res,extraRes,userRes]);
   const setScore=(casa,fora,rodada,gc,gf)=>{setUserRes(prev=>{const without=prev.filter(r=>!(r.c===casa&&r.f===fora&&r.r===rodada));if(gc===null)return without;return[...without,{c:casa,f:fora,gc,gf,r:rodada}];});setRMC(null);setRSU(null);};
   const lg=useMemo(()=>initLeague(times,t=>ranking[t].elo,cfg),[times,ranking,cfg]);
   const cl=useMemo(()=>calcClassif(times,allRes),[times,allRes]);const maxR=Math.max(0,...allRes.map(r=>r.r));
   const ranks=useMemo(()=>{const{mc,mf}=getML(cfg,meta.key);const el={},at={},df={};
     times.forEach(t=>{el[t]=ranking[t].elo;const i=lg.initAD(ranking[t].elo);at[t]=i.atk;df[t]=i.def;});
-    for(const j of tabela){const real=allRes.find(r=>r.c===j.casa&&r.f===j.fora&&r.r===j.rodada);if(!real)continue;
+    for(const j of tabela){const real=allRes.find(r=>r.c===j.casa&&r.f===j.fora&&(r.r===j.rodada||r.r===0));if(!real)continue;
       const{lC,lF}=calcL(at[j.casa],df[j.casa],at[j.fora],df[j.fora],el[j.casa],el[j.fora],mc,mf,cfg.homeAdv,eo);updR(el,at,df,j.casa,j.fora,real.gc,real.gf,lC,lF,cfg,ak,eo);}
     return times.map(t=>({time:t,elo:Math.round(el[t]),dE:Math.round(el[t]-ranking[t].elo),atk:at[t],def:df[t],ad:at[t]/df[t]})).sort((a,b)=>b.elo-a.elo);
   },[times,ranking,tabela,allRes,cfg,ak,eo,lg,meta.key]);
@@ -291,7 +295,7 @@ function LeagueSim({times,ranking,tabela,res,meta,cfg}){
     {aba==='ratings'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"><h2 className="text-base font-semibold text-emerald-300 mb-1">ELO + ATK/DEF{eo&&' (ELO puro)'}</h2><p className="text-xs text-slate-500 mb-3">Spread={lg.spread.toFixed(2)} | {(()=>{const{mc,mf}=getML(cfg,meta.key);return`λ=${mc.toFixed(2)}+${mf.toFixed(2)}`;})()}</p>
       <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-slate-400 border-b border-slate-700 text-xs"><th className="text-left py-2 w-8">#</th><th className="text-left py-2">Time</th><th className="text-right py-2">ELO</th><th className="text-right py-2">Δ</th><th className="text-right py-2">ATK</th><th className="text-right py-2">DEF</th><th className="text-right py-2">A/D</th></tr></thead><tbody>{ranks.map((r,i)=>(<tr key={r.time} className="border-b border-slate-700/20 hover:bg-slate-700/30"><td className="py-1 pl-2 text-slate-500 font-bold">{i+1}</td><td className="py-1 font-medium"><TN name={r.time}/></td><td className="text-right font-mono font-bold">{r.elo}</td><td className={`text-right font-mono text-xs ${r.dE>0?'text-green-400':r.dE<0?'text-red-400':'text-slate-500'}`}>{r.dE>0?'+':''}{r.dE}</td><td className={`text-right font-mono ${r.atk>1.05?'text-green-400':r.atk<0.95?'text-red-400':'text-slate-400'}`}>{r.atk.toFixed(2)}</td><td className={`text-right font-mono ${r.def<0.95?'text-green-400':r.def>1.05?'text-red-400':'text-slate-400'}`}>{r.def.toFixed(2)}</td><td className={`text-right font-mono font-bold ${r.ad>1.2?'text-emerald-400':r.ad<0.8?'text-red-400':'text-slate-300'}`}>{r.ad.toFixed(2)}</td></tr>))}</tbody></table></div></div>}
     {aba==='jogos'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"><div className="flex items-center justify-between mb-3"><h2 className="text-base font-semibold text-emerald-300">Jogos</h2><select value={rF} onChange={e=>setRF(Number(e.target.value))} className="bg-slate-700 text-white text-xs rounded-lg px-2 py-1 border border-slate-600"><option value={0}>Próxima</option>{Array.from({length:meta.nR},(_,i)=>i+1).map(r=>{const dt=(tabela.find(j=>j.rodada===r)||{}).data||'';return (<option key={r} value={r}>{'R'+r+(dt?' ('+dt+')':'')}</option>);})}</select></div>
-      <div className="space-y-0.5 max-h-[500px] overflow-y-auto">{jVis.map((j,i)=>{const builtIn=res.find(r=>r.c===j.casa&&r.f===j.fora&&r.r===j.rodada);const user=userRes.find(r=>r.c===j.casa&&r.f===j.fora&&r.r===j.rodada);const rl=builtIn||user;let prob=null;if(!rl){const rc=ranks.find(x=>x.time===j.casa),rf=ranks.find(x=>x.time===j.fora);if(rc&&rf){const{mc:m1,mf:m2}=getML(cfg,meta.key);const{lC,lF}=calcL(rc.atk,rc.def,rf.atk,rf.def,rc.elo,rf.elo,m1,m2,cfg.homeAdv,eo);prob=calcProbs(lC,lF);}}return <GameRow key={i} j={j} real={rl} prob={prob} isUser={!!user&&!builtIn} onScore={builtIn?null:setScore}/>;})}</div>
+      <div className="space-y-0.5 max-h-[500px] overflow-y-auto">{jVis.map((j,i)=>{const builtIn=res.find(r=>r.c===j.casa&&r.f===j.fora&&r.r===j.rodada);const user=userRes.find(r=>r.c===j.casa&&r.f===j.fora&&(r.r===j.rodada||r.r===0));const fetched=(extraRes||[]).find(r=>r.c===j.casa&&r.f===j.fora&&(r.r===j.rodada||r.r===0));const rl=builtIn||user||fetched;const isFetched=!!fetched&&!builtIn&&!user;let prob=null;if(!rl){const rc=ranks.find(x=>x.time===j.casa),rf=ranks.find(x=>x.time===j.fora);if(rc&&rf){const{mc:m1,mf:m2}=getML(cfg,meta.key);const{lC,lF}=calcL(rc.atk,rc.def,rf.atk,rf.def,rc.elo,rf.elo,m1,m2,cfg.homeAdv,eo);prob=calcProbs(lC,lF);}}return <GameRow key={i} j={j} real={rl} prob={prob} isUser={!!(user||isFetched)&&!builtIn} onScore={builtIn?null:setScore}/>;})}</div>
       {userRes.length>0&&<div className="mt-2 flex items-center justify-between"><span className="text-xs text-amber-400">{userRes.length} resultado(s) inserido(s) manualmente</span><button onClick={()=>{setUserRes([]);setRMC(null);setRSU(null);}} className="text-xs text-red-400 hover:text-red-300">Limpar todos</button></div>}</div>}
     {aba==='classif'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"><h2 className="text-base font-semibold text-emerald-300 mb-3">{maxR>0?`Após R${maxR}`:'Pré-temporada'} — {allRes.length} jogos{userRes.length>0?` (${userRes.length} manuais)`:''}</h2><CT data={cl}/><div className="flex gap-3 mt-3 text-xs text-slate-500 flex-wrap">{meta.zonas.g4L&&<span className="flex items-center gap-1"><span className="w-3 h-3 bg-blue-400 rounded-sm"></span>{meta.zonas.g4L}</span>}{meta.zonas.g6L&&<span className="flex items-center gap-1"><span className="w-3 h-3 bg-sky-500 rounded-sm"></span>{meta.zonas.g6L}</span>}{meta.zonas.g8L&&<span className="flex items-center gap-1"><span className="w-3 h-3 bg-teal-600 rounded-sm"></span>{meta.zonas.g8L}</span>}{meta.zonas.z4&&<span className="flex items-center gap-1"><span className="w-3 h-3 bg-red-500 rounded-sm"></span>Rebaixamento</span>}</div></div>}
     {aba==='mc'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50">{!rMC?<p className="text-slate-400 text-center py-8">Clique "Monte Carlo"</p>:<div><h2 className="text-base font-semibold text-emerald-300 mb-3">{rMC.nSims.toLocaleString()} sims{eo&&' (ELO)'}</h2>
@@ -369,8 +373,9 @@ function SerieDSim({cfg}){
 // ============================================================================
 function CopaBrasilSim({cfg,allElos}){
   const[aba,setAba]=useState('ratings');const[nS,setNS]=useState(1000);const[eo,setEo]=useState(false);const[ak,setAk]=useState(cfg.defaultAlpha);
+  const[cbScores,setCbScores]=useState({});
   const[rMC,setRMC]=useState(null);const[rSU,setRSU]=useState(null);const[busy,setBusy]=useState(false);
-  const teams=CB_TEAMS;const elos=useMemo(()=>{const e={};teams.forEach(t=>e[t]=allElos[t]||CB_ELOS[t]||1340);return e;},[teams,allElos]);
+  const teams=CB_TEAMS;const elos=useMemo(()=>{const e={};teams.forEach(t=>e[t]=allElos[t]||CB_ELOS[t]||1200);return e;},[teams,allElos]);
   const lg=useMemo(()=>initLeague(teams,t=>elos[t],cfg),[teams,elos,cfg]);
   const ranks=useMemo(()=>teams.map(t=>{const i=lg.initAD(elos[t]);return{time:t,elo:elos[t],atk:i.atk,def:i.def,ad:i.atk/i.def};}).sort((a,b)=>b.elo-a.elo),[teams,elos,lg]);
 
@@ -384,21 +389,25 @@ function CopaBrasilSim({cfg,allElos}){
     const{lC,lF}=eo?(()=>{const d=el[a]-el[b];const e=1/(1+Math.pow(10,-d/400));return{lC:mn*(0.5+e),lF:mn*(0.5+(1-e))};})():{lC:Math.max(0.2,mn*at[a]*df[b]),lF:Math.max(0.2,mn*at[b]*df[a])};
     const ga=poissonRandom(lC),gb=poissonRandom(lF);return{a,b,ga,gb,w:ga>gb?a:gb>ga?b:Math.random()<0.5?a:b,pen:ga===gb};};
 
-  const runBracket=(at,df,el)=>{
-    const r32=CB_R32.map(([ia,ib])=>sim2L(teams[ia],teams[ib],at,df,el));
-    const r16p=[];for(let i=0;i<r32.length;i+=2)r16p.push(sim2L(r32[i].w,r32[i+1].w,at,df,el));
-    const qfp=[];for(let i=0;i<r16p.length;i+=2)qfp.push(sim2L(r16p[i].w,r16p[i+1].w,at,df,el));
-    const sfp=[sim2L(qfp[0].w,qfp[1].w,at,df,el),sim2L(qfp[2].w,qfp[3].w,at,df,el)];
+  const runBracket=(at,df,el,useCbScores)=>{
+    const r32=CB_R32.map(([ia,ib],idx)=>{
+      const a=teams[ia],b=teams[ib];
+      if(useCbScores){const sc=cbScores[idx];if(sc&&sc.g1a!==null&&sc.g1b!==null&&sc.g2a!==null&&sc.g2b!==null){const aa=sc.g1a+sc.g2a,ab=sc.g1b+sc.g2b;return{a,b,g1a:sc.g1a,g1b:sc.g1b,g2a:sc.g2a,g2b:sc.g2b,aa,ab,w:aa>ab?a:ab>aa?b:Math.random()<0.5?a:b,pen:aa===ab};}}
+      return sim2L(a,b,at,df,el);
+    });
+    const sh16=shuffle(r32.map(m=>m.w));const r16p=[];for(let i=0;i<sh16.length;i+=2)r16p.push(sim2L(sh16[i],sh16[i+1],at,df,el));
+    const sh8=shuffle(r16p.map(m=>m.w));const qfp=[];for(let i=0;i<sh8.length;i+=2)qfp.push(sim2L(sh8[i],sh8[i+1],at,df,el));
+    const sh4=shuffle(qfp.map(m=>m.w));const sfp=[sim2L(sh4[0],sh4[1],at,df,el),sim2L(sh4[2],sh4[3],at,df,el)];
     const fin=simFin(sfp[0].w,sfp[1].w,at,df,el);
     return{r32,r16:r16p,qf:qfp,sf:sfp,fin,ch:fin.w};
   };
 
   const doMC=useCallback(()=>{setBusy(true);setTimeout(()=>{const ct={};teams.forEach(t=>ct[t]={r16:0,qf:0,sf:0,fin:0,ch:0});
     for(let sim=0;sim<nS;sim++){const at={},df={},el={};teams.forEach(t=>{el[t]=elos[t];const i=lg.initAD(elos[t]);at[t]=i.atk;df[t]=i.def;});
-      const br=runBracket(at,df,el);br.r32.forEach(j=>{ct[j.w].r16++;});br.r16.forEach(j=>ct[j.w].qf++);br.qf.forEach(j=>ct[j.w].sf++);br.sf.forEach(j=>ct[j.w].fin++);ct[br.ch].ch++;}
-    setRMC({probs:teams.map(t=>({time:t,elo:elos[t],r16:ct[t].r16/nS*100,qf:ct[t].qf/nS*100,sf:ct[t].sf/nS*100,fin:ct[t].fin/nS*100,ch:ct[t].ch/nS*100})).sort((a,b)=>b.ch-a.ch||b.elo-a.elo),nSims:nS});setBusy(false);},100);},[nS,elos,cfg,eo,ak,lg,teams]);
+      const br=runBracket(at,df,el,true);br.r32.forEach(j=>{ct[j.w].r16++;});br.r16.forEach(j=>ct[j.w].qf++);br.qf.forEach(j=>ct[j.w].sf++);br.sf.forEach(j=>ct[j.w].fin++);ct[br.ch].ch++;}
+    setRMC({probs:teams.map(t=>({time:t,elo:elos[t],r16:ct[t].r16/nS*100,qf:ct[t].qf/nS*100,sf:ct[t].sf/nS*100,fin:ct[t].fin/nS*100,ch:ct[t].ch/nS*100})).sort((a,b)=>b.ch-a.ch||b.elo-a.elo),nSims:nS});setBusy(false);},100);},[nS,elos,cfg,eo,ak,lg,teams,cbScores]);
 
-  const doSU=useCallback(()=>{const at={},df={},el={};teams.forEach(t=>{el[t]=elos[t];const i=lg.initAD(elos[t]);at[t]=i.atk;df[t]=i.def;});setRSU(runBracket(at,df,el));setAba('simU');},[elos,cfg,eo,ak,lg,teams]);
+  const doSU=useCallback(()=>{const at={},df={},el={};teams.forEach(t=>{el[t]=elos[t];const i=lg.initAD(elos[t]);at[t]=i.atk;df[t]=i.def;});setRSU(runBracket(at,df,el,true));setAba('simU');},[elos,cfg,eo,ak,lg,teams,cbScores]);
 
   const MatchRow=({m,twoLeg})=>(<div className="flex items-center text-xs bg-slate-700/30 rounded p-1.5 mb-0.5">
     <span className={`flex-1 text-right pr-1 truncate ${m.w===m.a?'text-emerald-300 font-bold':'text-slate-400'}`}><TN name={m.a}/></span>
@@ -414,20 +423,41 @@ function CopaBrasilSim({cfg,allElos}){
       <button onClick={doMC} disabled={busy} className="px-4 py-1.5 bg-gradient-to-r from-emerald-600 to-emerald-500 rounded-lg font-semibold text-xs disabled:opacity-50">{busy?'...':'MC'}</button>
       <button onClick={doSU} className="px-4 py-1.5 bg-slate-700 rounded-lg text-xs border border-slate-600">1 Sim</button>
     </div>
-    <div className="flex gap-1 mb-3 bg-slate-800/40 rounded-xl p-1">{[{id:'ratings',l:'Ratings'},{id:'jogos',l:'Bracket'},{id:'bracket',l:'Chaveamento'},{id:'mc',l:'Monte Carlo'},{id:'simU',l:'1 Sim'}].map(t=>(<button key={t.id} onClick={()=>setAba(t.id)} className={`flex-1 py-1.5 px-1 rounded-lg text-xs font-medium ${aba===t.id?'bg-emerald-600/80 text-white shadow':'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}>{t.l}</button>))}</div>
+    <div className="flex gap-1 mb-3 bg-slate-800/40 rounded-xl p-1">{[{id:'ratings',l:'Ratings'},{id:'jogos',l:'R32'},{id:'bracket',l:'Formato'},{id:'mc',l:'Monte Carlo'},{id:'simU',l:'1 Sim'}].map(t=>(<button key={t.id} onClick={()=>setAba(t.id)} className={`flex-1 py-1.5 px-1 rounded-lg text-xs font-medium ${aba===t.id?'bg-emerald-600/80 text-white shadow':'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}>{t.l}</button>))}</div>
 
     {aba==='ratings'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"><h2 className="text-base font-semibold text-emerald-300 mb-1">32 Times (spread={lg.spread.toFixed(2)})</h2><div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-slate-400 border-b border-slate-700 text-xs"><th className="text-left py-2 w-8">#</th><th className="text-left py-2">Time</th><th className="text-right py-2">ELO</th><th className="text-right py-2">ATK</th><th className="text-right py-2">DEF</th><th className="text-right py-2">A/D</th></tr></thead><tbody>{ranks.map((r,i)=>(<tr key={r.time} className="border-b border-slate-700/20 hover:bg-slate-700/30"><td className="py-1 pl-2 text-slate-500 font-bold">{i+1}</td><td className="py-1 font-medium"><TN name={r.time}/></td><td className="text-right font-mono font-bold">{r.elo}</td><td className={`text-right font-mono ${r.atk>1.05?'text-green-400':'text-slate-400'}`}>{r.atk.toFixed(2)}</td><td className={`text-right font-mono ${r.def<0.95?'text-green-400':'text-slate-400'}`}>{r.def.toFixed(2)}</td><td className="text-right font-mono font-bold text-slate-300">{r.ad.toFixed(2)}</td></tr>))}</tbody></table></div></div>}
 
-    {aba==='jogos'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"><h2 className="text-base font-semibold text-emerald-300 mb-3">Jogos Programados</h2>
-      {CB_R32.map(([ia,ib],i)=>(<div key={i} className="flex items-center justify-between p-1.5 rounded text-xs bg-slate-700/30 mb-0.5"><span className="text-slate-600 w-14 text-[10px]">{CB_DATES[0]}</span><span className="text-slate-500 w-4 font-mono">{i+1}</span><span className="flex-1 text-right truncate pr-1 font-medium"><TN name={teams[ia]}/></span><span className="mx-1 w-8 text-center text-slate-600">vs</span><span className="flex-1 truncate pl-1 font-medium"><TN name={teams[ib]}/></span></div>))}
-      <p className="text-xs text-slate-500 mt-3">R16: {CB_DATES[1]} | QF: {CB_DATES[2]} | SF: {CB_DATES[3]} | Final: {CB_DATES[4]}</p></div>}
+    {aba==='jogos'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"><h2 className="text-base font-semibold text-emerald-300 mb-3">R32 — Chave Definida ({CB_DATES[0]})</h2>
+      <p className="text-[10px] text-slate-500 mb-2">Insira placares (ida + volta) para fixar resultados na simulação</p>
+      <div className="space-y-1">{CB_R32.map(([ia,ib],idx)=>{const sc=cbScores[idx]||{};const a=teams[ia],b=teams[ib];const done=sc.g1a!==undefined&&sc.g1a!==null&&sc.g1b!==undefined&&sc.g1b!==null&&sc.g2a!==undefined&&sc.g2a!==null&&sc.g2b!==undefined&&sc.g2b!==null;
+        const upd=(k,v)=>{setCbScores(prev=>({...prev,[idx]:{...prev[idx],[k]:v===''?null:Math.max(0,parseInt(v)||0)}}));setRMC(null);setRSU(null);};
+        const SInput=({k})=>(<input type="number" min="0" max="20" value={sc[k]===null||sc[k]===undefined?'':sc[k]} onChange={e=>upd(k,e.target.value)}
+          className="w-6 h-5 bg-slate-600 text-center text-[10px] rounded border border-slate-500 font-mono [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"/>);
+        const aa=(sc.g1a||0)+(sc.g2a||0),ab2=(sc.g1b||0)+(sc.g2b||0);
+        return(<div key={idx} className={`p-1.5 rounded text-xs ${done?'bg-emerald-900/20 border-l-2 border-emerald-500':'bg-slate-700/30'}`}>
+          <div className="flex items-center gap-1">
+            <span className="text-slate-500 w-4 font-mono text-[10px]">{idx+1}</span>
+            <span className="flex-1 text-right truncate pr-1 font-medium text-[11px]"><TN name={a}/></span>
+            <span className="text-[9px] text-slate-500">ida</span><SInput k="g1a"/><span className="text-slate-600">x</span><SInput k="g1b"/>
+            <span className="text-[9px] text-slate-500 ml-1">vta</span><SInput k="g2b"/><span className="text-slate-600">x</span><SInput k="g2a"/>
+            <span className="flex-1 truncate pl-1 font-medium text-[11px]"><TN name={b}/></span>
+            {done&&<span className={`text-[10px] font-bold ml-1 ${aa>ab2?'text-blue-400':ab2>aa?'text-orange-400':'text-yellow-400'}`}>{aa}×{ab2}{aa===ab2?' pen':''}</span>}
+            {done&&<button onClick={()=>{setCbScores(prev=>{const n={...prev};delete n[idx];return n;});setRMC(null);setRSU(null);}} className="text-red-400 text-[10px] ml-1">✕</button>}
+          </div>
+        </div>);})}</div>
+      {Object.keys(cbScores).length>0&&<div className="mt-2 flex justify-between"><span className="text-xs text-amber-400">{Object.values(cbScores).filter(s=>s.g1a!==null&&s.g1a!==undefined&&s.g1b!==null&&s.g1b!==undefined&&s.g2a!==null&&s.g2a!==undefined&&s.g2b!==null&&s.g2b!==undefined).length} de 16 jogos definidos</span><button onClick={()=>{setCbScores({});setRMC(null);setRSU(null);}} className="text-xs text-red-400">Limpar</button></div>}
+      <p className="text-xs text-slate-500 mt-2">ida: mandante 1° jogo = time da esquerda | volta: mandante = time da direita</p></div>}
 
-    {aba==='bracket'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"><h2 className="text-base font-semibold text-emerald-300 mb-3">Chaveamento — 32 times</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="bg-slate-900/40 rounded-xl p-3 border border-slate-700/30"><h3 className="text-xs font-bold text-blue-400 mb-2">Chave A (jogos 1-8)</h3>{CB_R32.slice(0,8).map(([ia,ib],i)=>(<div key={i} className="flex items-center text-xs mb-1 p-1 bg-slate-700/20 rounded"><span className="w-4 text-slate-500">{i+1}</span><span className="flex-1 font-medium"><TN name={teams[ia]}/> <span className="text-slate-500">({elos[teams[ia]]})</span></span><span className="text-slate-600 mx-1">vs</span><span className="flex-1 text-right"><TN name={teams[ib]}/> <span className="text-slate-500">({elos[teams[ib]]})</span></span></div>))}</div>
-        <div className="bg-slate-900/40 rounded-xl p-3 border border-slate-700/30"><h3 className="text-xs font-bold text-orange-400 mb-2">Chave B (jogos 9-16)</h3>{CB_R32.slice(8).map(([ia,ib],i)=>(<div key={i} className="flex items-center text-xs mb-1 p-1 bg-slate-700/20 rounded"><span className="w-4 text-slate-500">{i+9}</span><span className="flex-1 font-medium"><TN name={teams[ia]}/> <span className="text-slate-500">({elos[teams[ia]]})</span></span><span className="text-slate-600 mx-1">vs</span><span className="flex-1 text-right"><TN name={teams[ib]}/> <span className="text-slate-500">({elos[teams[ib]]})</span></span></div>))}</div>
-      </div>
-      <p className="text-xs text-slate-500 mt-3">R32 ida/volta → R16 → QF → SF → Final (jogo único neutro, λ=mnMM={cfg.mnMM})</p></div>}
+    {aba==='bracket'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"><h2 className="text-base font-semibold text-emerald-300 mb-3">Formato Copa do Brasil 2026</h2>
+      <div className="text-xs text-slate-400 space-y-2 bg-slate-900/50 rounded-lg p-3">
+        <p><span className="text-emerald-300 font-bold">R32 (32→16):</span> Chave definida pela CBF (seed 1×32, 2×31, etc). Ida e volta. Empate no agregado = pênaltis.</p>
+        <p><span className="text-amber-300 font-bold">R16 em diante: SORTEIO</span> a cada fase — os classificados são pareados aleatoriamente.</p>
+        <p><span className="text-emerald-300 font-bold">R16 (16→8):</span> 16 classificados sorteados em 8 confrontos. Ida e volta.</p>
+        <p><span className="text-emerald-300 font-bold">Quartas (8→4):</span> Sorteio. Ida e volta.</p>
+        <p><span className="text-emerald-300 font-bold">Semifinal (4→2):</span> Sorteio. Ida e volta.</p>
+        <p><span className="text-emerald-300 font-bold">Final:</span> Jogo único em campo neutro (λ = MN_MM = {cfg.mnMM}). Empate = pênaltis.</p>
+        <p className="text-amber-300 mt-2 font-medium">Cada simulação (MC e única) realiza um sorteio independente da R16 em diante.</p>
+      </div></div>}
 
     {aba==='mc'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50">{!rMC?<p className="text-slate-400 text-center py-8">Clique MC</p>:<div><h2 className="text-base font-semibold text-emerald-300 mb-3">{rMC.nSims} sims</h2><div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-slate-400 border-b border-slate-700 text-xs"><th className="text-left py-2 w-8">#</th><th className="text-left py-2">Time</th><th className="text-right py-2">ELO</th><th className="text-center py-2">R16</th><th className="text-center py-2">QF</th><th className="text-center py-2">SF</th><th className="text-center py-2">Final</th><th className="text-center py-2">Título</th></tr></thead><tbody>{rMC.probs.map((p,i)=>(<tr key={p.time} className="border-b border-slate-700/30 hover:bg-slate-700/30"><td className="py-1 pl-2 text-slate-500 font-bold">{i+1}</td><td className="py-1 font-medium"><TN name={p.time}/></td><td className="text-right font-mono text-emerald-300">{p.elo}</td><td className="text-center text-xs">{Math.round(p.r16)}%</td><td className="text-center text-xs">{Math.round(p.qf)}%</td><td className="text-center text-xs">{Math.round(p.sf)}%</td><td className="text-center text-xs">{Math.round(p.fin)}%</td><td className="text-center"><div className="flex items-center gap-1"><div className="flex-1 h-3 bg-slate-700 rounded-full overflow-hidden"><div className="h-full bg-yellow-500 rounded-full" style={{width:`${Math.max(1,p.ch)}%`}}></div></div><span className="text-xs w-10 text-right">{p.ch<1&&p.ch>0?'<1':Math.round(p.ch)}%</span></div></td></tr>))}</tbody></table></div></div>}</div>}
 
@@ -471,11 +501,118 @@ function LiveSim({cfg,allTeams}){
 }
 
 // ============================================================================
+// BUSCA DE RESULTADOS VIA CLAUDE + WEB SEARCH
+// ============================================================================
+function SearchPanel({onResults}) {
+  const[busy,setBusy]=useState(false);const[found,setFound]=useState(null);const[err,setErr]=useState('');
+  const[apiKey,setApiKey]=useState('');const[showKey,setShowKey]=useState(false);
+
+  // Pre-fill: compute which series had games yesterday
+  const hoje=new Date();const ontem=new Date(hoje);ontem.setDate(ontem.getDate()-1);
+  const ddmm=(d)=>(d.getDate()<10?'0':'')+d.getDate()+'/'+(d.getMonth()<9?'0':'')+(d.getMonth()+1);
+  const dm=ddmm(ontem);
+  const series=[];
+  if(SA_DATES.includes(dm))series.push('A');
+  if(SB_DATES.includes(dm))series.push('B');
+  if(SC_DATES.includes(dm))series.push('C');
+  const defaultQ=series.length>0
+    ?'Resultados Brasileirão Série '+series.join(', ')+' de '+ontem.toLocaleDateString('pt-BR')
+    :'Resultados Brasileirão '+ontem.toLocaleDateString('pt-BR');
+  const[query,setQuery]=useState(defaultQ);
+
+  const buscar=async()=>{
+    const q=query||defaultQ;setBusy(true);setErr('');setFound(null);
+    const prompt='Busque na web os resultados FINAIS (com placar) do '+q+'. Procure em sites como ge.globo.com, espn.com.br, uol.com.br. Para cada jogo finalizado informe a série (A, B ou C), a rodada, o time mandante, gols do mandante, gols do visitante e time visitante.\n\nRetorne SOMENTE um array JSON, nada mais:\n[{"serie":"A","rodada":10,"casa":"Flamengo","gc":2,"gf":1,"fora":"Santos"}]\nVazio se nada: []\nNomes oficiais: Atlético-MG, São Paulo, Red Bull Bragantino, Athletico-PR, Operário-PR, Criciúma, Novorizontino, Goiás, Avaí, etc.';
+    const body={model:'claude-sonnet-4-20250514',max_tokens:3000,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]};
+    const headers={'Content-Type':'application/json'};
+    if(apiKey)headers['x-api-key']=apiKey;
+    try{
+      const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers,body:JSON.stringify(body)});
+      if(!resp.ok){
+        const errBody=await resp.text().catch(()=>'');
+        if(resp.status===401||resp.status===403){setShowKey(true);setErr('API key necessária');setBusy(false);return;}
+        setErr('Erro '+resp.status+': '+(errBody.slice(0,100)));setBusy(false);return;
+      }
+      const data=await resp.json();
+      // Extract text from all content blocks (skip tool_use/web_search blocks)
+      let text='';
+      for(const block of (data.content||[])){
+        if(block.type==='text')text+=block.text;
+      }
+      text=text.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim();
+      let results=[];
+      // Try parsing the full text as JSON
+      try{results=JSON.parse(text);}catch(e){
+        // Try finding JSON array in text
+        const m=text.match(/\[[\s\S]*?\]/);
+        if(m)try{results=JSON.parse(m[0]);}catch(e2){}
+      }
+      if(!Array.isArray(results))results=[];
+      if(results.length===0&&text.length>0){setErr('Nenhum resultado parseado. Resposta: '+text.slice(0,150));}
+      else{setFound(results);}
+    }catch(e){setErr('Erro de rede: '+e.message);}
+    setBusy(false);
+  };
+
+  const[applied,setApplied]=useState(false);
+  const aplicar=()=>{if(found&&found.length>0){onResults(found);setApplied(true);setTimeout(()=>{setFound(null);setApplied(false);},2000);}};
+
+  return(<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50">
+    <h3 className="text-sm font-bold text-emerald-300 mb-2">🔍 Buscar Resultados</h3>
+    <div className="flex gap-2 mb-2">
+      <input value={query} onChange={e=>setQuery(e.target.value)}
+        className="flex-1 bg-slate-700 text-white text-xs rounded-lg px-3 py-2 border border-slate-600" onKeyDown={e=>{if(e.key==='Enter')buscar();}}/>
+      <button onClick={buscar} disabled={busy} className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-emerald-500 rounded-lg font-semibold text-xs disabled:opacity-50 whitespace-nowrap">{busy?'Buscando...':'Buscar'}</button>
+    </div>
+    {showKey&&<div className="flex gap-2 mb-2"><input value={apiKey} onChange={e=>setApiKey(e.target.value)} placeholder="sk-ant-..." type="password"
+      className="flex-1 bg-slate-700 text-white text-xs rounded-lg px-3 py-2 border border-amber-600/50"/><button onClick={buscar} disabled={busy} className="px-3 py-2 bg-amber-600 rounded-lg text-xs font-bold">OK</button></div>}
+    {err&&<p className="text-xs text-red-400 mb-2">{err}</p>}
+    {found&&found.length>0&&<div>
+      <p className="text-xs text-emerald-400 mb-2">{found.length} resultado(s) encontrado(s):</p>
+      <div className="space-y-0.5 mb-2">{found.map((r,i)=>(<div key={i} className="flex items-center justify-between p-1.5 rounded text-xs bg-emerald-900/20 border-l-2 border-emerald-500">
+        <span className="text-slate-400 w-10 text-[10px]">S{r.serie} R{r.rodada}</span>
+        <span className="flex-1 text-right truncate pr-1 font-medium">{r.casa}</span>
+        <span className="font-mono font-bold w-12 text-center text-emerald-300">{r.gc} x {r.gf}</span>
+        <span className="flex-1 truncate pl-1 font-medium">{r.fora}</span>
+      </div>))}</div>
+      <button onClick={aplicar} disabled={applied} className={`w-full py-2 rounded-lg text-xs font-bold ${applied?'bg-emerald-800 text-emerald-300':'bg-emerald-600 hover:bg-emerald-500'}`}>{applied?'✅ Aplicado!':'✅ Aplicar '+found.length+' resultado(s)'}</button>
+    </div>}
+    {found&&found.length===0&&<p className="text-xs text-yellow-400">Nenhum resultado encontrado para esta busca.</p>}
+  </div>);
+}
+
+// ============================================================================
 // APP PRINCIPAL
 // ============================================================================
 function SimuladorUnificado(){
   const[cfg,setCfg]=useState(DEFAULT_CFG);const[tab,setTab]=useState('serieA');
   const[dash,setDash]=useState(null);const[dashBusy,setDashBusy]=useState(false);const[dashN,setDashN]=useState(1000);const[dashAk,setDashAk]=useState(cfg.defaultAlpha);const[dashEo,setDashEo]=useState(false);
+  const[fetchedRes,setFetchedRes]=useState({A:[],B:[],C:[]});
+  const[showSearch,setShowSearch]=useState(false);
+  // Normalizar nomes de times (busca → simulador)
+  const normName=(n)=>{const map={'Atletico-MG':'Atlético-MG','Atletico Mineiro':'Atlético-MG','Atletico-GO':'Atlético-GO','Atletico Goianiense':'Atlético-GO','Athletico Paranaense':'Athletico-PR','Athletico PR':'Athletico-PR','RB Bragantino':'Red Bull Bragantino','Bragantino':'Red Bull Bragantino','Sao Paulo':'São Paulo','Sao Bernardo':'São Bernardo','Gremio':'Grêmio','Avai':'Avaí','Cuiaba':'Cuiabá','Goias':'Goiás','America-MG':'América-MG','America Mineiro':'América-MG','Nautico':'Náutico','Criciuma':'Criciúma','Operario-PR':'Operário-PR','Botafogo SP':'Botafogo-SP','Botafogo PB':'Botafogo-PB','Novorizontino':'Novorizontino','Grêmio Novorizontino':'Novorizontino','Vasco da Gama':'Vasco','Atletico-CE':'Atlético-CE'};return map[n]||n;};
+  // Inferir rodada pela tabela
+  const findRod=(casa,fora,serie)=>{const tab=serie==='A'?SAT:serie==='B'?SBT:serie==='C'?SCT:null;if(!tab)return 0;const j=tab.find(g=>g.casa===casa&&g.fora===fora);return j?j.rodada:0;};
+  const handleSearchResults=(results)=>{
+    const byS={A:[],B:[],C:[]};let added=0;
+    results.forEach(r=>{
+      const s=(r.serie||'').toUpperCase();
+      if(!byS[s])return;
+      const casa=normName(String(r.casa||'').trim());
+      const fora=normName(String(r.fora||'').trim());
+      const gc=parseInt(r.gc)||0;const gf=parseInt(r.gf)||0;
+      let rod=parseInt(r.rodada)||0;
+      if(!casa||!fora)return;
+      if(!rod)rod=findRod(casa,fora,s);
+      byS[s].push({c:casa,f:fora,gc,gf,r:rod});added++;
+    });
+    if(added>0){
+      setFetchedRes(prev=>{
+        const dedup=(arr,add)=>{const out=[...arr];add.forEach(n=>{if(!out.some(e=>e.c===n.c&&e.f===n.f))out.push(n);});return out;};
+        return{A:dedup(prev.A,byS.A),B:dedup(prev.B,byS.B),C:dedup(prev.C,byS.C)};
+      });
+    }
+  };
   const SAT=useMemo(()=>parseTab(SA_TAB,SA_NM,SA_DATES),[]);const SBT=useMemo(()=>parseTab(SB_TAB,SB_NM,SB_DATES),[]);const SCT=useMemo(()=>parseTab(SC_TAB,SC_NM,SC_DATES),[]);
   const allTeams=useMemo(()=>{const db={};const add=(ts,rk,s)=>{const l=initLeague(Object.keys(rk),t=>rk[t].elo,cfg);Object.keys(rk).forEach(t=>{const i=l.initAD(rk[t].elo);db[t]={atk:i.atk,def:i.def,elo:rk[t].elo,serie:s};});};
     add(Object.keys(SA_RANKING),SA_RANKING,'A');add(Object.keys(SB_RANKING),SB_RANKING,'B');add(Object.keys(SC_RANKING),SC_RANKING,'C');
@@ -502,8 +639,10 @@ function SimuladorUnificado(){
           <button onClick={()=>setDashEo(!dashEo)} className={`px-3 py-1 rounded-lg text-xs font-medium border ${dashEo?'bg-amber-600/30 border-amber-500 text-amber-300':'bg-slate-700 border-slate-600 text-slate-300'}`}>{dashEo?'ELO puro':'ATK/DEF'}</button>
           <div className="flex items-center gap-1 bg-slate-800/60 rounded-lg px-2 py-1 border border-slate-700">{[500,1000,3000].map(n=>(<button key={n} onClick={()=>setDashN(n)} className={`px-2 py-0.5 rounded text-xs ${dashN===n?'bg-amber-600 text-white':'bg-slate-700 text-slate-300'}`}>{n>=1000?`${n/1000}k`:n}</button>))}</div>
           <button onClick={runAll} disabled={dashBusy} className="px-4 py-1.5 bg-gradient-to-r from-amber-600 to-amber-500 rounded-lg font-semibold text-xs disabled:opacity-50 shadow-lg shadow-amber-600/20">{dashBusy?'Simulando...':'⚡ Simular Tudo'}</button>
+          <button onClick={()=>setShowSearch(!showSearch)} className={`px-4 py-1.5 rounded-lg text-xs font-semibold border ${showSearch?'bg-emerald-600 border-emerald-500 text-white':'bg-slate-700 border-slate-600 text-slate-300'}`}>🔍 Buscar</button>
         </div>
       </div>
+      {showSearch&&<div className="mb-4"><SearchPanel onResults={handleSearchResults}/>{(fetchedRes.A.length+fetchedRes.B.length+fetchedRes.C.length)>0&&<div className="mt-2 flex items-center justify-between bg-emerald-900/20 rounded-lg p-2 border border-emerald-600/30"><span className="text-xs text-emerald-300">{fetchedRes.A.length+fetchedRes.B.length+fetchedRes.C.length} resultado(s) buscado(s) (A:{fetchedRes.A.length} B:{fetchedRes.B.length} C:{fetchedRes.C.length})</span><button onClick={()=>setFetchedRes({A:[],B:[],C:[]})} className="text-xs text-red-400 hover:text-red-300">Limpar</button></div>}</div>}
       {dash&&<div className="mb-4 bg-slate-800/40 rounded-2xl p-4 border border-amber-600/30">
         <h3 className="text-sm font-bold text-amber-300 mb-3">Dashboard — {dash.n} sims | {cfg.alphas[dash.ak||'base'].label} | {dash.eo?'ELO puro':'ATK/DEF'}</h3>
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
@@ -515,9 +654,9 @@ function SimuladorUnificado(){
         </div>
       </div>}
       <div className="flex gap-0.5 mb-4 bg-slate-800/60 rounded-2xl p-1 border border-slate-700/50 overflow-x-auto">{tabs.map(t=>(<button key={t.id} onClick={()=>setTab(t.id)} className={`flex-1 py-2 px-0.5 rounded-xl text-[11px] sm:text-sm font-medium whitespace-nowrap ${tab===t.id?'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg':'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}><span className="mr-0.5">{t.e}</span>{t.l}</button>))}</div>
-      {tab==='serieA'&&<LeagueSim times={Object.keys(SA_RANKING)} ranking={SA_RANKING} tabela={SAT} res={SA_RES} meta={SA_META} cfg={cfg}/>}
-      {tab==='serieB'&&<LeagueSim times={Object.keys(SB_RANKING)} ranking={SB_RANKING} tabela={SBT} res={SB_RES} meta={SB_META} cfg={cfg}/>}
-      {tab==='serieC'&&<LeagueSim times={Object.keys(SC_RANKING)} ranking={SC_RANKING} tabela={SCT} res={SC_RES} meta={SC_META} cfg={cfg}/>}
+      {tab==='serieA'&&<LeagueSim times={Object.keys(SA_RANKING)} ranking={SA_RANKING} tabela={SAT} res={SA_RES} meta={SA_META} cfg={cfg} extraRes={fetchedRes.A}/>}
+      {tab==='serieB'&&<LeagueSim times={Object.keys(SB_RANKING)} ranking={SB_RANKING} tabela={SBT} res={SB_RES} meta={SB_META} cfg={cfg} extraRes={fetchedRes.B}/>}
+      {tab==='serieC'&&<LeagueSim times={Object.keys(SC_RANKING)} ranking={SC_RANKING} tabela={SCT} res={SC_RES} meta={SC_META} cfg={cfg} extraRes={fetchedRes.C}/>}
       {tab==='serieD'&&<SerieDSim cfg={cfg}/>}
       {tab==='copaBR'&&<CopaBrasilSim cfg={cfg} allElos={allElos}/>}
       {tab==='aoVivo'&&<LiveSim cfg={cfg} allTeams={allTeams}/>}
