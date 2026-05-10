@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background squircle — gradient emerald escuro tipo o app -->
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#022c22"/>
+      <stop offset="55%" stop-color="#064e3b"/>
+      <stop offset="100%" stop-color="#022c22"/>
+    </linearGradient>
+    <linearGradient id="text-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#a7f3d0"/>
+    </linearGradient>
+    <linearGradient id="star-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fde047"/>
+      <stop offset="100%" stop-color="#eab308"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.35"/>
+      <stop offset="60%" stop-color="#10b981" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#10b981" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Squircle background -->
+  <rect x="0" y="0" width="512" height="512" rx="115" ry="115" fill="url(#bg)"/>
+
+  <!-- Soft glow center -->
+  <rect x="0" y="0" width="512" height="512" rx="115" ry="115" fill="url(#glow)"/>
+
+  <!-- 4 anéis concêntricos representando Séries A/B/C/D -->
+  <g opacity="0.5">
+    <circle cx="256" cy="256" r="220" fill="none" stroke="#34d399" stroke-width="2" stroke-dasharray="3 5"/>
+    <circle cx="256" cy="256" r="195" fill="none" stroke="#10b981" stroke-width="1.5" stroke-dasharray="2 6"/>
+    <circle cx="256" cy="256" r="170" fill="none" stroke="#059669" stroke-width="1" stroke-dasharray="1 7"/>
+    <circle cx="256" cy="256" r="145" fill="none" stroke="#047857" stroke-width="1" stroke-dasharray="1 9"/>
+  </g>
+
+  <!-- Pequenos rótulos das séries A B C D ao longo do anel externo (suaves) -->
+  <g fill="#10b981" opacity="0.65" font-family="'Outfit', system-ui, sans-serif" font-weight="700" font-size="22" text-anchor="middle">
+    <text x="256" y="36">A</text>
+    <text x="479" y="265">B</text>
+    <text x="256" y="496">C</text>
+    <text x="33" y="265">D</text>
+  </g>
+
+  <!-- Estrela do campeão (canto sup direito) -->
+  <g transform="translate(380,128) scale(0.85)">
+    <polygon points="0,-30 8.8,-9.3 31,-9.3 13.1,4 19.7,25.5 0,12.4 -19.7,25.5 -13.1,4 -31,-9.3 -8.8,-9.3"
+             fill="url(#star-grad)" stroke="#854d0e" stroke-width="1.5"/>
+  </g>
+
+  <!-- "B 26" - tipografia em destaque, centro -->
+  <g text-anchor="middle">
+    <text x="256" y="290"
+          font-family="'Outfit', system-ui, sans-serif"
+          font-size="240" font-weight="800"
+          fill="url(#text-grad)"
+          letter-spacing="-8">
+      B<tspan font-size="120" baseline-shift="50">26</tspan>
+    </text>
+  </g>
+
+  <!-- "BRASILEIRÃO" linha curva embaixo -->
+  <defs>
+    <path id="arc-text" d="M 78,378 Q 256,460 434,378" fill="none"/>
+  </defs>
+  <text font-family="'Outfit', system-ui, sans-serif"
+        font-size="34" font-weight="600"
+        fill="#a7f3d0" letter-spacing="13" opacity="0.95">
+    <textPath href="#arc-text" startOffset="50%" text-anchor="middle">BRASILEIRÃO</textPath>
+  </text>
+</svg>
