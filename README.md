@@ -13,6 +13,21 @@ PWA (Progressive Web App) do simulador Monte Carlo do Campeonato Brasileiro 2026
 - **Drift estocástico** opcional para refletir evolução real do nível dos times ao longo do campeonato
 - **Funciona offline** após primeira carga (service worker)
 
+## Versão standalone (`brasileirao-2026.html`)
+
+Há também um arquivo **`brasileirao-2026.html`** na raiz que é uma versão *self-contained*: todo o JSX, o loader e os ícones essenciais estão inline. Vantagens:
+
+- **Funciona sem servidor**: dá pra abrir direto no Finder/Explorer (`file://`) — não precisa nem de `python -m http.server`.
+- **Backup completo**: 1 arquivo de ~327 KB que carrega o app inteiro.
+- **Fácil distribuição**: mandar por email, AirDrop, USB.
+
+Limitações da versão standalone:
+- Sem service worker (não funciona offline em PWA install).
+- Sem manifest (não dá pra "instalar" como app — abre como página normal).
+- Babel sempre transpila no cliente (não há cache offline persistente).
+
+A versão "completa" (`index.html` + `app.jsx` + `manifest.json` + service worker + ícones) é a recomendada pra deploy no GitHub Pages e instalação no iPhone.
+
 ## Deploy
 
 ### GitHub Pages
@@ -52,10 +67,13 @@ Para forçar atualização imediata no iPhone:
 
 ```
 brasileirao-2026/
-├── index.html              # Entry point — carrega React, Babel, Tailwind, app.jsx
-├── app.jsx                 # Código React do simulador (~2300 linhas)
+├── index.html              # Entry point (carrega app.transpiled.js)
+├── app.jsx                 # Código React fonte (~2350 linhas)
+├── app.transpiled.js       # Versão JS pura (gerada por build.sh — É o que o browser usa)
+├── brasileirao-2026.html   # Versão standalone (tudo embutido, abre em file://)
 ├── manifest.json           # Web App Manifest (PWA config)
 ├── service-worker.js       # Cache offline (network-first)
+├── build.sh                # Regera app.transpiled.js e brasileirao-2026.html
 ├── icons/
 │   ├── logo.svg            # Logo master (com squircle)
 │   ├── logo-square.svg     # Versão quadrada (iOS apple-touch-icon)
@@ -72,15 +90,30 @@ brasileirao-2026/
 
 ## Detalhes técnicos
 
-- **React 18** via UMD (sem build step)
-- **Babel standalone** transpila JSX no browser (overhead ~1-2s na primeira carga; depois fica cacheado)
-- **Tailwind CSS** via CDN
+- **React 18** via UMD (sem build step de bundler)
+- **JSX pré-transpilado**: `build.sh` roda `@babel/preset-env` + `preset-react` localmente para gerar `app.transpiled.js`. O browser nunca executa Babel em runtime — o app carrega em <1s.
+- **Tailwind CSS** via CDN (JIT mode, observa o DOM)
 - **Fonte**: Outfit (Google Fonts)
 - **Motor de simulação**: Poisson para gols + atualização de ratings ATK/DEF + Elo (K configurável)
 
 ## Atualizando os dados
 
-O simulador armazena os resultados reais hardcoded no `app.jsx` em arrays `SA_RES`, `SB_RES`, `SC_RES`, `SD_RES`. Para adicionar uma nova rodada, edite o arquivo correspondente e incremente a versão no header (linha 1) — isso força o service worker a invalidar o cache antigo.
+O simulador armazena os resultados reais hardcoded no `app.jsx` em arrays `SA_RES`, `SB_RES`, `SC_RES`, `SD_RES`. Workflow:
+
+1. Edita `app.jsx` (adiciona novos jogos; incrementa o número da versão no header)
+2. Atualiza `VERSION` em `service-worker.js` (ex: `v4.15.1` → `v4.16.0`)
+3. Roda `./build.sh` (gera `app.transpiled.js` e `brasileirao-2026.html` atualizados)
+4. `git add . && git commit && git push`
+
+Cada usuário pega a nova versão automaticamente no próximo open quando online.
+
+### Pré-requisitos do build
+
+```bash
+npm install --no-save @babel/core @babel/preset-react @babel/preset-env
+```
+
+(Apenas se for regerar os ícones a partir dos SVGs também: `pip install cairosvg pillow`)
 
 ## Licença
 

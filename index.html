@@ -25,9 +25,6 @@
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-<!-- Babel standalone para transpilar JSX no browser -->
-<script src="https://unpkg.com/@babel/standalone@7.24.4/babel.min.js"></script>
-
 <!-- Fonte Outfit (usada no app) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -45,7 +42,7 @@
     font-family: 'Outfit', system-ui, -apple-system, sans-serif;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
-  /* Loader inicial enquanto Babel transpila o app — alguns segundos no mobile */
+  /* Loader inicial enquanto o app carrega */
   .boot {
     position: fixed; inset: 0;
     display: flex; flex-direction: column;
@@ -98,8 +95,8 @@
 
 <div id="root"></div>
 
-<!-- O Babel standalone interceptará scripts tipo "text/babel" e transpilará -->
-<script type="text/babel" data-presets="react" src="app.jsx"></script>
+<!-- App pré-transpilado (JS puro, sem dependência de Babel runtime) -->
+<script src="app.transpiled.js"></script>
 
 <script>
   // Esconde o loader quando o React tiver montado em #root

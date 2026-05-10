@@ -3,13 +3,14 @@
 // dados (resultados) é atualizada com frequência — preferimos servir a versão
 // mais nova quando o usuário tem rede, mas mantemos o app funcional offline.
 
-const VERSION = 'v4.15.0';
+const VERSION = 'v4.15.1';
 const CACHE_NAME = `brasileirao-2026-${VERSION}`;
 
 // Arquivos do app shell — pré-cacheados na instalação
 const APP_SHELL = [
   './',
   './index.html',
+  './app.transpiled.js',
   './app.jsx',
   './manifest.json',
   './icons/icon-192.png',
