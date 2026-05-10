@@ -2,51 +2,85 @@
 
 PWA (Progressive Web App) do simulador Monte Carlo do Campeonato Brasileiro 2026. Cobre Séries A, B, C, D e Copa do Brasil. Motor Poisson + ELO + ATK/DEF com drift estocástico opcional.
 
-## Funcionalidades
+## Como funciona o build
 
-- **Tabelas e simulações** das 4 séries + Copa do Brasil
-- **Probabilidades** de título, acesso/Libertadores, rebaixamento (Z4)
-- **Aba Evolução**: mostra como a probabilidade de cada time evoluiu rodada-a-rodada
-- **Aba Ao Vivo**: simulação de partidas com placar parcial
-- **Cruzamentos**: probabilidade de confrontos por fase
-- **Preset α global** (Conservador / Base / Agressivo) controla sensibilidade do motor
-- **Drift estocástico** opcional para refletir evolução real do nível dos times ao longo do campeonato
-- **Funciona offline** após primeira carga (service worker)
+O **único arquivo fonte** é `simulador_unificado.jsx` (com `import React, ... from 'react'` e `export default`). Funciona em qualquer bundler React (Vite, Webpack, Create React App, artifact do Claude, etc.).
 
-## Versão standalone (`brasileirao-2026.html`)
+O script `./build.sh` lê esse arquivo e gera 3 artefatos:
 
-Há também um arquivo **`brasileirao-2026.html`** na raiz que é uma versão *self-contained*: todo o JSX, o loader e os ícones essenciais estão inline. Vantagens:
+```
+simulador_unificado.jsx  (fonte — você edita só esse)
+     |
+     | build.sh
+     v
++---------------------+  +-------------+  +-------------------------+
+| app.transpiled.js   |  | tailwind.css|  | brasileirao-2026.html   |
+| (JS puro p/ browser)|  | (utilitários|  | (standalone com tudo    |
+|                     |  | usados)     |  | inline — abre file://)  |
++---------------------+  +-------------+  +-------------------------+
+```
 
-- **Funciona sem servidor**: dá pra abrir direto no Finder/Explorer (`file://`) — não precisa nem de `python -m http.server`.
-- **Backup completo**: 1 arquivo de ~327 KB que carrega o app inteiro.
-- **Fácil distribuição**: mandar por email, AirDrop, USB.
+**Versão PWA** (`index.html` + `app.transpiled.js` + `tailwind.css` + ícones + service worker + manifest) → o que vai pro GitHub Pages e instala no iPhone.
 
-Limitações da versão standalone:
-- Sem service worker (não funciona offline em PWA install).
-- Sem manifest (não dá pra "instalar" como app — abre como página normal).
-- Babel sempre transpila no cliente (não há cache offline persistente).
+**Versão standalone** (`brasileirao-2026.html`, ~600 KB único arquivo com React, ReactDOM, Tailwind, app, ícones — tudo inline) → abre direto em `file://` sem servidor.
 
-A versão "completa" (`index.html` + `app.jsx` + `manifest.json` + service worker + ícones) é a recomendada pra deploy no GitHub Pages e instalação no iPhone.
+## Pré-requisitos (1x)
 
-## Deploy
+```bash
+cd brasileirao-2026
+npm install --no-save @babel/core @babel/preset-react @babel/preset-env \
+                       tailwindcss@3 react@18 react-dom@18
+```
 
-### GitHub Pages
+## Fluxo de edição
 
-1. Crie repositório `brasileirao-2026` (público) e faça push deste conteúdo.
-2. Em Settings → Pages, escolha branch `main` (ou `gh-pages`) e diretório `/` (root).
-3. Aguarde o deploy (1-2 min). O app fica disponível em `https://<seu-user>.github.io/brasileirao-2026/`.
+1. Edita `simulador_unificado.jsx` (adiciona resultados, ajusta motor, etc.)
+2. Atualiza `VERSION` em `service-worker.js` (ex: `v4.15.2` → `v4.16.0`) — invalida o cache antigo nos browsers dos usuários
+3. Roda `./build.sh`
+4. `git add . && git commit -m "atualização dd/mm" && git push`
 
-### Outros provedores
+GitHub Pages serve a versão nova automaticamente em 1-2 min após o push.
 
-Funciona em qualquer host estático: Netlify, Vercel, Cloudflare Pages, Firebase Hosting. Basta servir o diretório como HTML estático com HTTPS (obrigatório pra service worker).
+## O que carregar no git
+
+**Tudo do repo, exceto `node_modules/`** (que está no `.gitignore`). Mais especificamente:
+
+| Arquivo | Origem | Comitar? |
+|---|---|---|
+| `simulador_unificado.jsx` | fonte (você edita) | ✅ |
+| `app.transpiled.js` | gerado por build.sh | ✅ (GitHub Pages precisa) |
+| `tailwind.css` | gerado por build.sh | ✅ (GitHub Pages precisa) |
+| `brasileirao-2026.html` | gerado por build.sh | ✅ (versão standalone) |
+| `index.html` | mantido manualmente | ✅ |
+| `service-worker.js` | mantido manualmente | ✅ |
+| `manifest.json` | mantido manualmente | ✅ |
+| `build.sh` | script de build | ✅ |
+| `icons/*.png`, `icons/*.svg` | gerados 1x dos SVG masters | ✅ |
+| `README.md`, `.gitignore` | — | ✅ |
+| `node_modules/` | npm install local | ❌ (ignorado) |
+
+Resumindo: depois de `npm install` + `./build.sh`, faça `git add .` e os arquivos certos vão automaticamente (o .gitignore cuida do que não deve ir).
+
+## Deploy no GitHub Pages
+
+```bash
+cd brasileirao-2026
+git init -b main
+git add .
+git commit -m "Initial commit"
+git remote add origin git@github.com:<seu-user>/brasileirao-2026.git
+git push -u origin main
+```
+
+Depois em **GitHub → Settings → Pages**: source = `main`, folder = `/ (root)`. Aguarda 1-2 min. App fica em `https://<seu-user>.github.io/brasileirao-2026/`.
 
 ## Instalação no iPhone
 
 1. Abra a URL no **Safari** (não funciona em Chrome no iOS pra "Adicionar à Tela de Início").
-2. Toque no botão **Compartilhar** (quadrado com seta apontando pra cima).
-3. Role para baixo e toque em **"Adicionar à Tela de Início"** (Add to Home Screen).
+2. Toque no botão **Compartilhar** (quadrado com seta pra cima).
+3. Role para baixo e toque em **"Adicionar à Tela de Início"**.
 4. Confirme o nome ("Brasileirão 26") e toque em **Adicionar**.
-5. O ícone aparece na tela inicial. Ao abrir, roda em modo standalone (sem barra do navegador).
+5. O ícone aparece na tela inicial. Abre em modo standalone (sem barra do navegador).
 
 ## Instalação em Android
 
@@ -54,66 +88,52 @@ Funciona em qualquer host estático: Netlify, Vercel, Cloudflare Pages, Firebase
 2. Menu (3 pontinhos) → **"Adicionar à tela inicial"** ou **"Instalar app"**.
 3. Confirme.
 
-## Atualizações
-
-O simulador é atualizado regularmente com novos resultados. O service worker usa estratégia **network-first**: quando online, sempre tenta carregar a versão mais recente; se offline, usa o cache.
-
-Para forçar atualização imediata no iPhone:
-1. Abra o app.
-2. Mantenha pressionado e arraste de cima pra baixo (puxe pra atualizar) — funciona no Safari standalone mode.
-3. Ou simplesmente feche e reabra após estar online.
-
 ## Estrutura do repositório
 
 ```
 brasileirao-2026/
-├── index.html              # Entry point (carrega app.transpiled.js)
-├── app.jsx                 # Código React fonte (~2350 linhas)
-├── app.transpiled.js       # Versão JS pura (gerada por build.sh — É o que o browser usa)
-├── brasileirao-2026.html   # Versão standalone (tudo embutido, abre em file://)
-├── manifest.json           # Web App Manifest (PWA config)
-├── service-worker.js       # Cache offline (network-first)
-├── build.sh                # Regera app.transpiled.js e brasileirao-2026.html
+├── simulador_unificado.jsx  # FONTE — único arquivo que você edita
+├── build.sh                 # Gera os arquivos abaixo
+├── app.transpiled.js        # [gerado] JS puro pro browser
+├── tailwind.css             # [gerado] CSS utilitário
+├── brasileirao-2026.html    # [gerado] Standalone (tudo inline)
+├── index.html               # Entry point da PWA
+├── manifest.json            # Web App Manifest (PWA config)
+├── service-worker.js        # Cache offline (network-first)
 ├── icons/
-│   ├── logo.svg            # Logo master (com squircle)
-│   ├── logo-square.svg     # Versão quadrada (iOS apple-touch-icon)
-│   ├── logo-maskable.svg   # Versão com safe zone (Android maskable)
-│   ├── icon-192.png        # PWA Android 192x192
-│   ├── icon-512.png        # PWA Android 512x512
-│   ├── icon-maskable-192.png
-│   ├── icon-maskable-512.png
-│   ├── apple-touch-icon.png  # 180x180 iOS
-│   ├── favicon-32.png
-│   └── favicon-16.png
-└── README.md
+│   ├── logo.svg
+│   ├── logo-square.svg
+│   ├── logo-maskable.svg
+│   ├── icon-{192,512}.png
+│   ├── icon-maskable-{192,512}.png
+│   ├── apple-touch-icon.png   # 180x180 iOS
+│   └── favicon-{16,32}.png
+├── README.md
+└── .gitignore
 ```
+
+## Funcionalidades do app
+
+- **Tabelas e simulações** das 4 séries + Copa do Brasil
+- **Probabilidades** de título, acesso/Libertadores, rebaixamento (Z4)
+- **Aba Evolução**: como a probabilidade de cada time evoluiu rodada-a-rodada
+- **Aba Ao Vivo**: simulação de partidas com placar parcial
+- **Cruzamentos**: probabilidade de confrontos por fase
+- **Preset α global** (Conservador / Base / Agressivo) controla sensibilidade do motor
+- **Drift estocástico** opcional para refletir evolução do nível dos times ao longo do campeonato
+- **Funciona offline** após primeira carga (service worker)
 
 ## Detalhes técnicos
 
-- **React 18** via UMD (sem build step de bundler)
-- **JSX pré-transpilado**: `build.sh` roda `@babel/preset-env` + `preset-react` localmente para gerar `app.transpiled.js`. O browser nunca executa Babel em runtime — o app carrega em <1s.
-- **Tailwind CSS** via CDN (JIT mode, observa o DOM)
-- **Fonte**: Outfit (Google Fonts)
+- **React 18** via UMD inline (sem CDN — máxima compatibilidade)
+- **JSX pré-transpilado**: `build.sh` roda `@babel/preset-env` + `preset-react` localmente. O browser nunca executa Babel — o app carrega em <1s.
+- **Tailwind CSS** gerado com `tailwindcss` CLI escaneando o JSX → apenas as classes usadas (~25 KB)
+- **Fonte**: stack `'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif`
 - **Motor de simulação**: Poisson para gols + atualização de ratings ATK/DEF + Elo (K configurável)
 
 ## Atualizando os dados
 
-O simulador armazena os resultados reais hardcoded no `app.jsx` em arrays `SA_RES`, `SB_RES`, `SC_RES`, `SD_RES`. Workflow:
-
-1. Edita `app.jsx` (adiciona novos jogos; incrementa o número da versão no header)
-2. Atualiza `VERSION` em `service-worker.js` (ex: `v4.15.1` → `v4.16.0`)
-3. Roda `./build.sh` (gera `app.transpiled.js` e `brasileirao-2026.html` atualizados)
-4. `git add . && git commit && git push`
-
-Cada usuário pega a nova versão automaticamente no próximo open quando online.
-
-### Pré-requisitos do build
-
-```bash
-npm install --no-save @babel/core @babel/preset-react @babel/preset-env
-```
-
-(Apenas se for regerar os ícones a partir dos SVGs também: `pip install cairosvg pillow`)
+Os resultados reais estão hardcoded em `simulador_unificado.jsx` nos arrays `SA_RES`, `SB_RES`, `SC_RES`, `SD_RES`. Workflow padrão descrito acima.
 
 ## Licença
 

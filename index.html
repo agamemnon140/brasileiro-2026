@@ -19,13 +19,15 @@
 <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
 
 <!-- Tailwind via CDN -->
-<script src="https://cdn.tailwindcss.com"></script>
 
-<!-- React 18 (UMD) -->
+<!-- React 18 (UMD via CDN — fallback automático ao cache em offline) -->
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-<!-- Fonte Outfit (usada no app) -->
+<!-- Tailwind CSS pre-built (offline) -->
+<link rel="stylesheet" href="tailwind.css">
+
+<!-- Fonte Outfit (Google Fonts — opcional, fallback a system-ui se offline) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -101,15 +103,15 @@
 <script>
   // Esconde o loader quando o React tiver montado em #root
   const boot = document.getElementById('boot');
-  const root = document.getElementById('root');
+  const bootRoot = document.getElementById('root');
   const obs = new MutationObserver(() => {
-    if (root.children.length > 0) {
+    if (bootRoot.children.length > 0) {
       boot.classList.add('hide');
       setTimeout(() => boot.remove(), 500);
       obs.disconnect();
     }
   });
-  obs.observe(root, { childList: true });
+  obs.observe(bootRoot, { childList: true });
   // Fallback: se algo der errado, esconde depois de 30s
   setTimeout(() => { boot.classList.add('hide'); }, 30000);
 

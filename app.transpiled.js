@@ -15138,6 +15138,5 @@ function SimuladorUnificado() {
   }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R13 completa, R4 com 3 jogos adiados) | B:", SB_RES.length, " (R6 completa) | C:", SC_RES.length, " (R4 completa) | D:", SD_RES.length, " (R4 completa, 48/48) | Copa BR: 32 times + R32 ida (16 jogos) | v4.26 \u2014 fixture completa CBF da S\xE9rie C (todas 19 rodadas oficiais, 190 pares \xFAnicos sem duplica\xE7\xF5es)"))));
 }
 
-// === Mount ===
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(React.createElement(SimuladorUnificado));
+// === Mount (anexado pelo build) ===
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(SimuladorUnificado));
