@@ -4304,6 +4304,24 @@ const SB_RES = [{
   gc: 0,
   gf: 0,
   r: 11
+}, {
+  c: 'Operário-PR',
+  f: 'Juventude',
+  gc: 2,
+  gf: 1,
+  r: 12
+}, {
+  c: 'Criciúma',
+  f: 'Londrina',
+  gc: 1,
+  gf: 0,
+  r: 12
+}, {
+  c: 'CRB',
+  f: 'São Bernardo',
+  gc: 2,
+  gf: 3,
+  r: 12
 }];
 const SB_META = {
   key: 'B',
@@ -8061,6 +8079,152 @@ const SD_RES = [
   gc: 0,
   gf: 1,
   r: 9
+},
+// R10 (04-05/04 - parcial)
+{
+  c: 'Gama',
+  f: 'Aparecidense',
+  gc: 2,
+  gf: 2,
+  r: 10
+}, {
+  c: 'Primavera',
+  f: 'Brasiliense',
+  gc: 1,
+  gf: 2,
+  r: 10
+}, {
+  c: 'Luverdense',
+  f: 'Inhumas',
+  gc: 4,
+  gf: 0,
+  r: 10
+}, {
+  c: 'Mixto',
+  f: 'Ceilândia',
+  gc: 1,
+  gf: 1,
+  r: 10
+}, {
+  c: 'Goiatuba',
+  f: 'Operário-MT',
+  gc: 1,
+  gf: 0,
+  r: 10
+}, {
+  c: 'Capital',
+  f: 'União-MT',
+  gc: 2,
+  gf: 0,
+  r: 10
+}, {
+  c: 'Trem',
+  f: 'Águia de Marabá',
+  gc: 2,
+  gf: 0,
+  r: 10
+}, {
+  c: 'Tocantinópolis',
+  f: 'Oratório',
+  gc: 7,
+  gf: 1,
+  r: 10
+}, {
+  c: 'Imperatriz',
+  f: 'Tuna Luso',
+  gc: 4,
+  gf: 0,
+  r: 10
+}, {
+  c: 'Sampaio Corrêa',
+  f: 'Iguatu',
+  gc: 0,
+  gf: 1,
+  r: 10
+}, {
+  c: 'Parnahyba',
+  f: 'Moto Club',
+  gc: 1,
+  gf: 0,
+  r: 10
+}, {
+  c: 'Maracanã',
+  f: 'IAPE',
+  gc: 2,
+  gf: 0,
+  r: 10
+}, {
+  c: 'Portuguesa-SP',
+  f: 'Portuguesa-RJ',
+  gc: 2,
+  gf: 0,
+  r: 10
+}, {
+  c: 'America-RJ',
+  f: 'Água Santa',
+  gc: 1,
+  gf: 0,
+  r: 10
+}, {
+  c: 'Madureira',
+  f: 'Pouso Alegre',
+  gc: 1,
+  gf: 0,
+  r: 10
+}, {
+  c: 'Nova Iguaçu',
+  f: 'XV de Piracicaba',
+  gc: 1,
+  gf: 0,
+  r: 10
+}, {
+  c: 'Noroeste',
+  f: 'Sampaio Corrêa-RJ',
+  gc: 1,
+  gf: 0,
+  r: 10
+}, {
+  c: 'Velo Clube',
+  f: 'Maricá',
+  gc: 3,
+  gf: 1,
+  r: 10
+}, {
+  c: 'Santa Catarina',
+  f: 'FC Cascavel',
+  gc: 1,
+  gf: 0,
+  r: 10
+}, {
+  c: 'São Luiz-RS',
+  f: 'Joinville',
+  gc: 3,
+  gf: 1,
+  r: 10
+}, {
+  c: 'Guarany de Bagé',
+  f: 'Cianorte',
+  gc: 0,
+  gf: 1,
+  r: 10
+}, {
+  c: 'São Joseense',
+  f: 'Marcílio Dias',
+  gc: 0,
+  gf: 0,
+  r: 10
+}, {
+  c: 'Blumenau',
+  f: 'São José-RS',
+  gc: 0,
+  gf: 1,
+  r: 10
+}, {
+  c: 'Azuriz',
+  f: 'Brasil-RS',
+  gc: 1,
+  gf: 1,
+  r: 10
 }];
 const SD_GRP_DATES = ['05/04', '12/04', '19/04', '26/04', '03/05', '10/05', '17/05', '24/05', '31/05', '14/06'];
 const SD_MM_DATES = {
@@ -13140,7 +13304,7 @@ function UpdaterPanel({
       setStatus('Lendo o PDF com o Claude…');
       const prompt = 'Este PDF é a Tabela Detalhada da CBF de uma série do Brasileirão 2026 (A, B, C ou D — veja o cabeçalho). Extraia TODOS os jogos que JÁ têm placar (finalizados). Retorne SOMENTE um array JSON, nada mais: [{"serie":"A","rodada":18,"casa":"Flamengo","gc":3,"gf":0,"fora":"Coritiba"}]. Use nomes oficiais com sufixo de UF quando houver (Atlético-MG, Athletico-PR, Operário-PR, Botafogo-SP, Botafogo-PB, São Paulo, São Bernardo, Red Bull Bragantino, Ponte Preta, Vila Nova, etc.). Para a Série D, use exatamente os nomes que aparecem no PDF.';
       const body = {
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 16000,
         messages: [{
           role: 'user',
@@ -17183,7 +17347,7 @@ function SearchPanel({
     setFound(null);
     const prompt = 'Busque na web os resultados FINAIS (com placar) do ' + q + '. Procure em sites como ge.globo.com, espn.com.br, uol.com.br. Para cada jogo finalizado informe a série (A, B ou C), a rodada, o time mandante, gols do mandante, gols do visitante e time visitante.\n\nRetorne SOMENTE um array JSON, nada mais:\n[{"serie":"A","rodada":10,"casa":"Flamengo","gc":2,"gf":1,"fora":"Santos"}]\nVazio se nada: []\nNomes oficiais: Atlético-MG, São Paulo, Red Bull Bragantino, Athletico-PR, Operário-PR, Criciúma, Novorizontino, Goiás, Avaí, etc.';
     const body = {
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 3000,
       tools: [{
         type: 'web_search_20250305',
@@ -17496,6 +17660,23 @@ function SimuladorUnificado() {
       });
     }
   };
+  // AUTO-LOAD: resultados publicados pela GitHub Action (results.json, mesmo domínio do Pages).
+  // Reaproveita TODO o pipeline de handleSearchResults (normalização, dedup, inferência de rodada).
+  useEffect(() => {
+    let cancelled = false;
+    fetch('results.json?t=' + Date.now(), {
+      cache: 'no-store'
+    }).then(function (r) {
+      return r.ok ? r.json() : null;
+    }).then(function (d) {
+      if (cancelled || !d) return; // 404 no 1º deploy => no-op
+      var arr = Array.isArray(d) ? d : d && d.results;
+      if (Array.isArray(arr) && arr.length) handleSearchResults(arr);
+    }).catch(function () {}); // rede/JSON quebrado => no-op
+    return function () {
+      cancelled = true;
+    };
+  }, []);
   const SAT = useMemo(() => parseTab(SA_TAB, SA_NM, SA_DATES), []);
   const SBT = useMemo(() => parseTab(SB_TAB, SB_NM, SB_DATES), []);
   const SCT = useMemo(() => parseTab(SC_TAB, SC_NM, SC_DATES), []);

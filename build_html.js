@@ -1,14 +1,14 @@
 // build_html.js — gera brasileirao-2026.html standalone a partir do .jsx
 const babel = require('@babel/core');
 const fs = require('fs');
+const path = require('path');
 
-const SRC = '/home/claude/simulador_unificado.jsx';
-const OUT = '/mnt/user-data/outputs/brasileirao-2026.html';
+const SRC = path.join(__dirname, 'simulador_unificado.jsx');
+const OUT = path.join(__dirname, 'brasileirao-2026.html');
 
 let code = fs.readFileSync(SRC, 'utf8');
 
 // 0) identidade visual / ícones (gerados por make_icon.py -> icon_b64.json, mesma pasta deste script)
-const path = require('path');
 let iconHead = `<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">`;
 try {
   const ic = JSON.parse(fs.readFileSync(path.join(__dirname, 'icon_b64.json'), 'utf8'));
