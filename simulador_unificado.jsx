@@ -1,9 +1,15 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.44
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.47
 // Motor único | Config: total+pesoCasa | Copa do Brasil | Datas por rodada
 // Dados atualizados até 08/06/2026 | A:R18 | B:R12 parc. | C:R9 | D:R10 parc. | CB:R16 (editável)
+// v4.47: Série D › Chaves ganha toggle "Confrontos | Por Estado". A nova visão "Por Estado"
+//        mostra, por UF, a distribuição CONJUNTA P(exatamente k times do estado chegam a cada
+//        fase: F2…Acesso). Os contadores saem do MESMO loop de Monte Carlo (simMC_D_single
+//        acumula ufAcc[uf][fase][k] por simulação; finalize emite rMC.ufDist ordenado por
+//        E[acesso]). Recalcula a cada "Simular Tudo", refletindo resultados atualizados via
+//        prepareSerieDState/extraRes. Custo desprezível (27 UF × 7 fases × ~7 contagens).
 // v4.46: porta para o .jsx o auto-load do results.json (useEffect após handleSearchResults) que
 //        antes era injetado só no HTML; agora o rebuild a partir do .jsx preserva o carregamento
 //        automático dos resultados publicados pela GitHub Action.
@@ -547,7 +553,7 @@ const prepareSerieDState=(cfg,eo,ak,extra)=>{
 // Corpo de 1 simulação completa da Série D (grupos + mata-mata).
 // Recebe snap, tabD, ct (acumuladores); muta ct.
 // ct[t] deve ter: {cl, grupoTop1, f2, f3, oit, qf, sf, fin, ac, ch, elFinalSum}
-const simMC_D_single=(cfg,ak,eo,snap,tabD,ct,mc,mf,gpts)=>{
+const simMC_D_single=(cfg,ak,eo,snap,tabD,ct,mc,mf,gpts,ufAcc,ufTeams)=>{
   const{el,at,df,st}=cloneSDState(snap);
   let lastDR=0;for(const j of tabD){if(snap.jogados.has(pairKey(j.casa,j.fora,j.rodada)))continue;
     if(j.rodada>lastDR&&j.rodada>snap.maxRR&&cfg.drift>0){lastDR=j.rodada;applyDrift(SD_TIMES,el,at,df,cfg.drift);}
@@ -614,9 +620,29 @@ const simMC_D_single=(cfg,ak,eo,snap,tabD,ct,mc,mf,gpts)=>{
   // Final
   bumpMu(sf1,'fin',sf2);bumpMu(sf2,'fin',sf1);
   const champ=s180(sf1,sf2);ct[champ].ch++;
+  // === Distribuição CONJUNTA por estado (v4.47) ===
+  // Para cada fase, conta quantos times de cada UF chegaram e incrementa o
+  // histograma ufAcc[uf][fase][k]. Os conjuntos abaixo já têm times únicos:
+  // f2=top-4 (64), f3=winF2 (32), oit=winF3 (16), qf=winOit (8), sf=qW (4),
+  // fin=2 finalistas, ac=4 semifinalistas + 2 do playoff (6 vagas de acesso).
+  if(ufAcc){
+    const phaseSets={f2:gruposTop4.flat(),f3:winF2,oit:winF3,qf:winOit,sf:qW,fin:[sf1,sf2],ac:[...qW,...playoff]};
+    for(const ph in phaseSets){
+      const cnt={};for(const t of phaseSets[ph]){const u=SD_INFO[t].uf;cnt[u]=(cnt[u]||0)+1;}
+      for(const u in ufTeams)ufAcc[u][ph][cnt[u]||0]++;
+    }
+  }
+};
+// Fases rastreadas na distribuição por estado (mesma semântica "chegou à fase").
+const SD_UF_PHASES=['f2','f3','oit','qf','sf','fin','ac'];
+// Constrói ufTeams (UF→[times]) e ufAcc (histogramas zerados) para uma rodada de sims.
+const buildUfAcc=()=>{
+  const ufTeams={};SD_TIMES.forEach(t=>{const u=SD_INFO[t].uf;(ufTeams[u]=ufTeams[u]||[]).push(t);});
+  const ufAcc={};Object.keys(ufTeams).forEach(u=>{ufAcc[u]={};SD_UF_PHASES.forEach(p=>{ufAcc[u][p]=new Array(ufTeams[u].length+1).fill(0);});});
+  return{ufTeams,ufAcc};
 };
 
-const simMC_D_finalize=(snap,ct,nS,gpts)=>{
+const simMC_D_finalize=(snap,ct,nS,gpts,ufAcc,ufTeams)=>{
   // Normaliza matchups do time: {adv: count} por fase → array [{adv, pct, count}] desc.
   const normMu=(mu)=>{const out={};for(const fase in mu){const m=mu[fase];const total=Object.values(m).reduce((s,v)=>s+v,0);out[fase]=Object.entries(m).map(([adv,c])=>({adv,pct:total>0?c/total*100:0,count:c})).sort((a,b)=>b.pct-a.pct);}return out;};
   const pctl=(arr,q)=>{if(!arr||!arr.length)return 0;const s=[...arr].sort((a,b)=>a-b);return s[Math.floor(s.length*q)]||0;};
@@ -641,7 +667,17 @@ const simMC_D_finalize=(snap,ct,nS,gpts)=>{
     p90Pts:pctl(ct[t].ptsSamples,0.9),
     mediaPts:ct[t].ptsSamples&&ct[t].ptsSamples.length?ct[t].ptsSamples.reduce((s,p)=>s+p,0)/ct[t].ptsSamples.length:0,
     matchups:normMu(ct[t].matchups)
-  })).sort((a,b)=>b.ac-a.ac||b.elo-a.elo),nSims:nS,ptsCutsByGroup};
+  })).sort((a,b)=>b.ac-a.ac||b.elo-a.elo),nSims:nS,ptsCutsByGroup,ufDist:buildUfDist(ufAcc,ufTeams,nS)};
+};
+// Normaliza ufAcc em ufDist: por UF e fase, {pcts:[P(k)%], E:nº esperado}.
+// Ordenado por E[acesso] desc (mesma lógica do ranking principal). null se ausente.
+const buildUfDist=(ufAcc,ufTeams,nS)=>{
+  if(!ufAcc)return null;
+  return Object.keys(ufAcc).map(u=>{
+    const o={uf:u,n:ufTeams[u].length};
+    SD_UF_PHASES.forEach(p=>{const arr=ufAcc[u][p];o[p]={pcts:arr.map(c=>c/nS*100),E:arr.reduce((s,c,k)=>s+c*k,0)/nS};});
+    return o;
+  }).sort((a,b)=>b.ac.E-a.ac.E);
 };
 
 const simMC_D=(cfg,nS,ak,eo)=>{
@@ -652,8 +688,9 @@ const simMC_D=(cfg,nS,ak,eo)=>{
   // gpts[gIdx][pos]: amostras de pontuação dos times que terminaram na (pos+1)ª
   // posição do grupo gIdx, ao longo das nS simulações. pos: 0-3 (1º-4º).
   const gpts=SD_GRUPOS.map(()=>[[],[],[],[]]);
-  for(let sim=0;sim<nS;sim++)simMC_D_single(cfg,ak,eo,snap,tabD,ct,mc,mf,gpts);
-  return simMC_D_finalize(snap,ct,nS,gpts);
+  const{ufTeams,ufAcc}=buildUfAcc();
+  for(let sim=0;sim<nS;sim++)simMC_D_single(cfg,ak,eo,snap,tabD,ct,mc,mf,gpts,ufAcc,ufTeams);
+  return simMC_D_finalize(snap,ct,nS,gpts,ufAcc,ufTeams);
 };
 
 const simMC_D_async=(cfg,nS,ak,eo,onProgress,onDone)=>{
@@ -662,13 +699,14 @@ const simMC_D_async=(cfg,nS,ak,eo,onProgress,onDone)=>{
   const{mc,mf}=getML(cfg,'D');
   const ct={};SD_TIMES.forEach(t=>{ct[t]={grupoTop1:0,posGr:[0,0,0,0,0,0],f2:0,f3:0,oit:0,qf:0,sf:0,fin:0,ac:0,ch:0,elFinalSum:0,atSum:0,dfSum:0,ptsSamples:[],matchups:{}};});
   const gpts=SD_GRUPOS.map(()=>[[],[],[],[]]);
+  const{ufTeams,ufAcc}=buildUfAcc();
   const chunk=Math.max(10,Math.floor(nS/30));let done=0;
   const run=()=>{
     const end=Math.min(done+chunk,nS);
-    for(;done<end;done++)simMC_D_single(cfg,ak,eo,snap,tabD,ct,mc,mf,gpts);
+    for(;done<end;done++)simMC_D_single(cfg,ak,eo,snap,tabD,ct,mc,mf,gpts,ufAcc,ufTeams);
     onProgress(done,nS);
     if(done<nS)requestAnimationFrame(run);
-    else onDone(simMC_D_finalize(snap,ct,nS,gpts));
+    else onDone(simMC_D_finalize(snap,ct,nS,gpts,ufAcc,ufTeams));
   };
   requestAnimationFrame(run);
 };
@@ -1286,6 +1324,43 @@ const MatchupsView=({probs,phases,topN=3,probFloor=2,sortKey})=>{
   </div>);
 };
 
+// Distribuição CONJUNTA por estado (Série D). Recebe rMC.ufDist (gerado no MC)
+// e mostra, para a fase selecionada, P(exatamente k times da UF chegam) com
+// heatmap por intensidade + nº esperado E. Ordena por E da fase escolhida.
+const SD_STATE_PHASES=[{key:'f2',label:'2ª Fase'},{key:'f3',label:'3ª Fase'},{key:'oit',label:'Oitavas'},{key:'qf',label:'Quartas'},{key:'sf',label:'Semi'},{key:'fin',label:'Final'},{key:'ac',label:'Acesso'}];
+const sdHeat=(p)=>p<=0?'transparent':`rgba(16,185,129,${(0.06+Math.min(1,p/100)*0.55).toFixed(3)})`;
+const SerieDStateView=({ufDist,nSims})=>{
+  const[phase,setPhase]=useState('ac');
+  if(!ufDist||!ufDist.length)return(<p className="text-slate-400 text-center py-8">Rode "⚡ Simular Tudo" novamente para gerar a distribuição por estado.</p>);
+  const maxK=ufDist.reduce((m,r)=>Math.max(m,(r[phase]?.pcts.length||1)-1),0);
+  const rows=[...ufDist].sort((a,b)=>(b[phase]?.E||0)-(a[phase]?.E||0));
+  const ks=Array.from({length:maxK+1},(_,k)=>k);
+  return(<div>
+    <div className="flex items-center gap-2 mb-3 flex-wrap">
+      <span className="text-xs text-slate-400">Fase:</span>
+      <select value={phase} onChange={e=>setPhase(e.target.value)} className="bg-slate-700 text-white text-xs rounded-lg px-2 py-1 border border-slate-600">
+        {SD_STATE_PHASES.map(p=><option key={p.key} value={p.key}>{p.label}</option>)}
+      </select>
+      <span className="text-[10px] text-slate-500 italic">P(exatamente k times da UF chegam à fase){nSims?' · '+nSims.toLocaleString()+' sims':''}</span>
+    </div>
+    <div className="overflow-x-auto max-h-[520px]"><table className="w-full text-xs">
+      <thead className="sticky top-0 bg-slate-900"><tr className="border-b border-slate-700">
+        <th className="text-left py-1 px-2 text-slate-400">UF</th>
+        <th className="text-right py-1 px-1 text-slate-500" title="times do estado na Série D">n</th>
+        {ks.map(k=><th key={k} className="text-right py-1 px-2 text-slate-400">{k}</th>)}
+        <th className="text-right py-1 px-2 text-emerald-300" title="número esperado de times">E</th>
+      </tr></thead>
+      <tbody>{rows.map(r=>(<tr key={r.uf} className="border-b border-slate-800/40">
+        <td className="py-1 px-2 font-semibold text-slate-200">{r.uf}</td>
+        <td className="py-1 px-1 text-right text-slate-500">{r.n}</td>
+        {ks.map(k=>{const p=r[phase]?.pcts[k];const v=p==null?0:p;return(<td key={k} className="py-1 px-2 text-right font-mono text-slate-200" style={{background:sdHeat(v)}}>{p==null?'·':v<=0?'·':v<0.05?'~0':v.toFixed(1)}</td>);})}
+        <td className="py-1 px-2 text-right font-mono text-emerald-300">{(r[phase]?.E||0).toFixed(2)}</td>
+      </tr>))}</tbody>
+    </table></div>
+    <p className="text-[10px] text-slate-500 mt-2 italic">Distribuição conjunta: P(k) = fração de simulações em que exatamente k times do estado chegaram à fase. Acesso = 6 vagas (4 semifinalistas + 2 vencedores do playoff). · = 0%, ~0 = &lt;0,05%.</p>
+  </div>);
+};
+
 
 const GameRow=({j,real,prob,isUser,onScore})=>{const hasScore=real||j.gc!==undefined;const gc=real?real.gc:j.gc;const gf=real?real.gf:j.gf;
   const[eGC,setEGC]=useState(null);const[eGF,setEGF]=useState(null);
@@ -1731,7 +1806,7 @@ function LeagueSim({times,ranking,tabela,res,meta,cfg,extraRes,initialMC,initial
 // SÉRIE D — idêntico v3 (resumido)
 // ============================================================================
 function SerieDSim({cfg,initialMC,initialAk,initialEo,initialDrift,extraRes}){
-  const[aba,setAba]=useState('ratings');const[nS,setNS]=useState(500);const[eo,setEo]=useState(initialEo||false);const[ak,setAk]=useState(initialAk||cfg.defaultAlpha);
+  const[aba,setAba]=useState('ratings');const[nS,setNS]=useState(500);const[eo,setEo]=useState(initialEo||false);const[ak,setAk]=useState(initialAk||cfg.defaultAlpha);const[cruzView,setCruzView]=useState('confrontos');
   const[rMC,setRMC]=useState(initialMC||null);const[rSU,setRSU]=useState(null);const[busy,setBusy]=useState(false);const[gF,setGF]=useState(-1);const[rF,setRF]=useState(0);const[gView,setGView]=useState('now');const[expSD,setExpSD]=useState({});
   const effCfg=useMemo(()=>({...cfg,drift:initialDrift!==undefined?initialDrift:cfg.drift||0}),[cfg,initialDrift]);
   useEffect(()=>{if(initialMC){setRMC(initialMC);if(initialAk)setAk(initialAk);if(initialEo!==undefined)setEo(initialEo);}},[initialMC,initialAk,initialEo]);
@@ -2025,28 +2100,33 @@ function SerieDSim({cfg,initialMC,initialAk,initialEo,initialDrift,extraRes}){
     </div>}</div>}
     {aba==='chaves'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50">{!rMC?<p className="text-slate-400 text-center py-8">Rode "⚡ Simular Tudo" no dashboard acima para ver os cruzamentos.</p>:<div>
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <h2 className="text-base font-semibold text-emerald-300">Cruzamentos mais prováveis <span className="text-slate-500 text-xs italic">· {rMC.nSims.toLocaleString()} sims</span></h2>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400">Grupo:</span>
+        <h2 className="text-base font-semibold text-emerald-300">{cruzView==='estados'?'Distribuição por estado':'Cruzamentos mais prováveis'} <span className="text-slate-500 text-xs italic">· {rMC.nSims.toLocaleString()} sims</span></h2>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex gap-1 bg-slate-900/40 rounded-lg p-0.5">
+            {[{id:'confrontos',l:'Confrontos'},{id:'estados',l:'Por Estado'}].map(v=>(<button key={v.id} onClick={()=>setCruzView(v.id)} className={`py-1 px-2.5 rounded-md text-xs font-medium ${cruzView===v.id?'bg-emerald-600/80 text-white':'text-slate-400 hover:text-white'}`}>{v.l}</button>))}
+          </div>
+          {cruzView==='confrontos'&&<><span className="text-xs text-slate-400">Grupo:</span>
           <select value={gF} onChange={e=>setGF(Number(e.target.value))} className="bg-slate-700 text-white text-xs rounded-lg px-2 py-1 border border-slate-600">
             <option value={-1}>Todos (96 times)</option>
             {SD_GRUPOS.map((_,i)=><option key={i} value={i}>{SD_GL[i]}</option>)}
-          </select>
+          </select></>}
         </div>
       </div>
-      <MatchupsView
-        probs={rMC.probs.filter(p=>(p.f2||0)>=1&&(gF<0||p.grupo===gF))}
-        phases={[
-          {key:'f2',label:'2ª Fase',probKey:'f2'},
-          {key:'f3',label:'3ª Fase',probKey:'f3'},
-          {key:'oit',label:'Oitavas',probKey:'oit'},
-          {key:'qf',label:'Quartas',probKey:'qf'},
-          {key:'sf',label:'Semi',probKey:'sf'},
-          {key:'po',label:'Playoff',probKey:'ac'},
-          {key:'fin',label:'Final',probKey:'fin'}
-        ]}
-        sortKey="ac"
-      />
+      {cruzView==='estados'
+        ?<SerieDStateView ufDist={rMC.ufDist} nSims={rMC.nSims}/>
+        :<MatchupsView
+          probs={rMC.probs.filter(p=>(p.f2||0)>=1&&(gF<0||p.grupo===gF))}
+          phases={[
+            {key:'f2',label:'2ª Fase',probKey:'f2'},
+            {key:'f3',label:'3ª Fase',probKey:'f3'},
+            {key:'oit',label:'Oitavas',probKey:'oit'},
+            {key:'qf',label:'Quartas',probKey:'qf'},
+            {key:'sf',label:'Semi',probKey:'sf'},
+            {key:'po',label:'Playoff',probKey:'ac'},
+            {key:'fin',label:'Final',probKey:'fin'}
+          ]}
+          sortKey="ac"
+        />}
     </div>}</div>}
     {aba==='simU'&&<div className="bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50">{!rSU?<p className="text-slate-400 text-center py-8">Clique 1 Sim</p>:<div><div className="mb-3 p-3 bg-emerald-900/30 rounded-xl border border-emerald-600/30 text-center"><span className="text-emerald-300 font-bold">Campeão: <TN name={rSU.ch}/></span><span className="text-slate-400 mx-3">|</span><span className="text-blue-300 text-xs">Promovidos: {rSU.prom.map((t,i)=><span key={i}>{i>0?", ":""}<TN name={t}/></span>)}</span></div><div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">{rSU.grupos.map((g,gi)=>(<div key={gi} className="bg-slate-900/30 rounded-lg p-2 border border-slate-700/30"><h4 className="text-[10px] font-bold text-emerald-300 mb-1">{SD_GL[gi]}</h4>{g.times.map(t=>(<div key={t.time} className={`flex text-[10px] gap-1 ${t.pos<=4?'text-blue-300':'text-slate-400'}`}><span className="w-3">{t.pos}</span><span className="flex-1"><TN name={t.time}/></span><span className="font-mono w-4 text-right">{t.P}</span></div>))}</div>))}</div>{rSU.fases.map(f=>(<div key={f.n} className="mb-2"><h4 className="text-xs font-bold text-emerald-400 mb-1">{f.n}</h4><div className="space-y-0.5">{f.j.map((j,i)=>(<div key={i} className="flex items-center text-xs bg-slate-700/30 rounded p-1"><span className={`flex-1 text-right pr-1 ${j.w===j.a?'text-emerald-300 font-bold':'text-slate-400'}`}><TN name={j.a}/></span><span className="font-mono w-14 text-center">{j.ga}x{j.gb}{j.pen?' pen':''}</span><span className={`flex-1 pl-1 ${j.w===j.b?'text-emerald-300 font-bold':'text-slate-400'}`}><TN name={j.b}/></span></div>))}</div></div>))}</div>}</div>}
   </div>);
