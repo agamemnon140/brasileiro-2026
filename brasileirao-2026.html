@@ -31,9 +31,15 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.44
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.47
 // Motor único | Config: total+pesoCasa | Copa do Brasil | Datas por rodada
 // Dados atualizados até 08/06/2026 | A:R18 | B:R12 parc. | C:R9 | D:R10 parc. | CB:R16 (editável)
+// v4.47: Série D › Chaves ganha toggle "Confrontos | Por Estado". A nova visão "Por Estado"
+//        mostra, por UF, a distribuição CONJUNTA P(exatamente k times do estado chegam a cada
+//        fase: F2…Acesso). Os contadores saem do MESMO loop de Monte Carlo (simMC_D_single
+//        acumula ufAcc[uf][fase][k] por simulação; finalize emite rMC.ufDist ordenado por
+//        E[acesso]). Recalcula a cada "Simular Tudo", refletindo resultados atualizados via
+//        prepareSerieDState/extraRes. Custo desprezível (27 UF × 7 fases × ~7 contagens).
 // v4.46: porta para o .jsx o auto-load do results.json (useEffect após handleSearchResults) que
 //        antes era injetado só no HTML; agora o rebuild a partir do .jsx preserva o carregamento
 //        automático dos resultados publicados pela GitHub Action.
@@ -1596,7 +1602,7 @@ const prepareSerieDState = (cfg, eo, ak, extra) => {
 // Corpo de 1 simulação completa da Série D (grupos + mata-mata).
 // Recebe snap, tabD, ct (acumuladores); muta ct.
 // ct[t] deve ter: {cl, grupoTop1, f2, f3, oit, qf, sf, fin, ac, ch, elFinalSum}
-const simMC_D_single = (cfg, ak, eo, snap, tabD, ct, mc, mf, gpts) => {
+const simMC_D_single = (cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeams) => {
   const {
     el,
     at,
@@ -1769,8 +1775,53 @@ const simMC_D_single = (cfg, ak, eo, snap, tabD, ct, mc, mf, gpts) => {
   bumpMu(sf2, 'fin', sf1);
   const champ = s180(sf1, sf2);
   ct[champ].ch++;
+  // === Distribuição CONJUNTA por estado (v4.47) ===
+  // Para cada fase, conta quantos times de cada UF chegaram e incrementa o
+  // histograma ufAcc[uf][fase][k]. Os conjuntos abaixo já têm times únicos:
+  // f2=top-4 (64), f3=winF2 (32), oit=winF3 (16), qf=winOit (8), sf=qW (4),
+  // fin=2 finalistas, ac=4 semifinalistas + 2 do playoff (6 vagas de acesso).
+  if (ufAcc) {
+    const phaseSets = {
+      f2: gruposTop4.flat(),
+      f3: winF2,
+      oit: winF3,
+      qf: winOit,
+      sf: qW,
+      fin: [sf1, sf2],
+      ac: [...qW, ...playoff]
+    };
+    for (const ph in phaseSets) {
+      const cnt = {};
+      for (const t of phaseSets[ph]) {
+        const u = SD_INFO[t].uf;
+        cnt[u] = (cnt[u] || 0) + 1;
+      }
+      for (const u in ufTeams) ufAcc[u][ph][cnt[u] || 0]++;
+    }
+  }
 };
-const simMC_D_finalize = (snap, ct, nS, gpts) => {
+// Fases rastreadas na distribuição por estado (mesma semântica "chegou à fase").
+const SD_UF_PHASES = ['f2', 'f3', 'oit', 'qf', 'sf', 'fin', 'ac'];
+// Constrói ufTeams (UF→[times]) e ufAcc (histogramas zerados) para uma rodada de sims.
+const buildUfAcc = () => {
+  const ufTeams = {};
+  SD_TIMES.forEach(t => {
+    const u = SD_INFO[t].uf;
+    (ufTeams[u] = ufTeams[u] || []).push(t);
+  });
+  const ufAcc = {};
+  Object.keys(ufTeams).forEach(u => {
+    ufAcc[u] = {};
+    SD_UF_PHASES.forEach(p => {
+      ufAcc[u][p] = new Array(ufTeams[u].length + 1).fill(0);
+    });
+  });
+  return {
+    ufTeams,
+    ufAcc
+  };
+};
+const simMC_D_finalize = (snap, ct, nS, gpts, ufAcc, ufTeams) => {
   // Normaliza matchups do time: {adv: count} por fase → array [{adv, pct, count}] desc.
   const normMu = mu => {
     const out = {};
@@ -1828,8 +1879,28 @@ const simMC_D_finalize = (snap, ct, nS, gpts) => {
       matchups: normMu(ct[t].matchups)
     })).sort((a, b) => b.ac - a.ac || b.elo - a.elo),
     nSims: nS,
-    ptsCutsByGroup
+    ptsCutsByGroup,
+    ufDist: buildUfDist(ufAcc, ufTeams, nS)
   };
+};
+// Normaliza ufAcc em ufDist: por UF e fase, {pcts:[P(k)%], E:nº esperado}.
+// Ordenado por E[acesso] desc (mesma lógica do ranking principal). null se ausente.
+const buildUfDist = (ufAcc, ufTeams, nS) => {
+  if (!ufAcc) return null;
+  return Object.keys(ufAcc).map(u => {
+    const o = {
+      uf: u,
+      n: ufTeams[u].length
+    };
+    SD_UF_PHASES.forEach(p => {
+      const arr = ufAcc[u][p];
+      o[p] = {
+        pcts: arr.map(c => c / nS * 100),
+        E: arr.reduce((s, c, k) => s + c * k, 0) / nS
+      };
+    });
+    return o;
+  }).sort((a, b) => b.ac.E - a.ac.E);
 };
 const simMC_D = (cfg, nS, ak, eo) => {
   const tabD = SD_REAL_TAB;
@@ -1861,8 +1932,12 @@ const simMC_D = (cfg, nS, ak, eo) => {
   // gpts[gIdx][pos]: amostras de pontuação dos times que terminaram na (pos+1)ª
   // posição do grupo gIdx, ao longo das nS simulações. pos: 0-3 (1º-4º).
   const gpts = SD_GRUPOS.map(() => [[], [], [], []]);
-  for (let sim = 0; sim < nS; sim++) simMC_D_single(cfg, ak, eo, snap, tabD, ct, mc, mf, gpts);
-  return simMC_D_finalize(snap, ct, nS, gpts);
+  const {
+    ufTeams,
+    ufAcc
+  } = buildUfAcc();
+  for (let sim = 0; sim < nS; sim++) simMC_D_single(cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeams);
+  return simMC_D_finalize(snap, ct, nS, gpts, ufAcc, ufTeams);
 };
 const simMC_D_async = (cfg, nS, ak, eo, onProgress, onDone) => {
   const tabD = SD_REAL_TAB;
@@ -1892,13 +1967,17 @@ const simMC_D_async = (cfg, nS, ak, eo, onProgress, onDone) => {
     };
   });
   const gpts = SD_GRUPOS.map(() => [[], [], [], []]);
+  const {
+    ufTeams,
+    ufAcc
+  } = buildUfAcc();
   const chunk = Math.max(10, Math.floor(nS / 30));
   let done = 0;
   const run = () => {
     const end = Math.min(done + chunk, nS);
-    for (; done < end; done++) simMC_D_single(cfg, ak, eo, snap, tabD, ct, mc, mf, gpts);
+    for (; done < end; done++) simMC_D_single(cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeams);
     onProgress(done, nS);
-    if (done < nS) requestAnimationFrame(run);else onDone(simMC_D_finalize(snap, ct, nS, gpts));
+    if (done < nS) requestAnimationFrame(run);else onDone(simMC_D_finalize(snap, ct, nS, gpts, ufAcc, ufTeams));
   };
   requestAnimationFrame(run);
 };
@@ -13157,6 +13236,101 @@ const MatchupsView = ({
     className: "text-[10px] text-slate-500 mt-3 italic"
   }, "Para cada fase de mata-mata, os ", topN, " advers\xE1rios mais prov\xE1veis (% = entre as vezes em que o time chegou \xE0 fase). Fases s\xF3 aparecem se o time chegar a elas em \u2265", probFloor, "% das simula\xE7\xF5es."));
 };
+
+// Distribuição CONJUNTA por estado (Série D). Recebe rMC.ufDist (gerado no MC)
+// e mostra, para a fase selecionada, P(exatamente k times da UF chegam) com
+// heatmap por intensidade + nº esperado E. Ordena por E da fase escolhida.
+const SD_STATE_PHASES = [{
+  key: 'f2',
+  label: '2ª Fase'
+}, {
+  key: 'f3',
+  label: '3ª Fase'
+}, {
+  key: 'oit',
+  label: 'Oitavas'
+}, {
+  key: 'qf',
+  label: 'Quartas'
+}, {
+  key: 'sf',
+  label: 'Semi'
+}, {
+  key: 'fin',
+  label: 'Final'
+}, {
+  key: 'ac',
+  label: 'Acesso'
+}];
+const sdHeat = p => p <= 0 ? 'transparent' : `rgba(16,185,129,${(0.06 + Math.min(1, p / 100) * 0.55).toFixed(3)})`;
+const SerieDStateView = ({
+  ufDist,
+  nSims
+}) => {
+  const [phase, setPhase] = useState('ac');
+  if (!ufDist || !ufDist.length) return /*#__PURE__*/React.createElement("p", {
+    className: "text-slate-400 text-center py-8"
+  }, "Rode \"\u26A1 Simular Tudo\" novamente para gerar a distribui\xE7\xE3o por estado.");
+  const maxK = ufDist.reduce((m, r) => Math.max(m, (r[phase]?.pcts.length || 1) - 1), 0);
+  const rows = [...ufDist].sort((a, b) => (b[phase]?.E || 0) - (a[phase]?.E || 0));
+  const ks = Array.from({
+    length: maxK + 1
+  }, (_, k) => k);
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-3 flex-wrap"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs text-slate-400"
+  }, "Fase:"), /*#__PURE__*/React.createElement("select", {
+    value: phase,
+    onChange: e => setPhase(e.target.value),
+    className: "bg-slate-700 text-white text-xs rounded-lg px-2 py-1 border border-slate-600"
+  }, SD_STATE_PHASES.map(p => /*#__PURE__*/React.createElement("option", {
+    key: p.key,
+    value: p.key
+  }, p.label))), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] text-slate-500 italic"
+  }, "P(exatamente k times da UF chegam \xE0 fase)", nSims ? ' · ' + nSims.toLocaleString() + ' sims' : '')), /*#__PURE__*/React.createElement("div", {
+    className: "overflow-x-auto max-h-[520px]"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-xs"
+  }, /*#__PURE__*/React.createElement("thead", {
+    className: "sticky top-0 bg-slate-900"
+  }, /*#__PURE__*/React.createElement("tr", {
+    className: "border-b border-slate-700"
+  }, /*#__PURE__*/React.createElement("th", {
+    className: "text-left py-1 px-2 text-slate-400"
+  }, "UF"), /*#__PURE__*/React.createElement("th", {
+    className: "text-right py-1 px-1 text-slate-500",
+    title: "times do estado na S\xE9rie D"
+  }, "n"), ks.map(k => /*#__PURE__*/React.createElement("th", {
+    key: k,
+    className: "text-right py-1 px-2 text-slate-400"
+  }, k)), /*#__PURE__*/React.createElement("th", {
+    className: "text-right py-1 px-2 text-emerald-300",
+    title: "n\xFAmero esperado de times"
+  }, "E"))), /*#__PURE__*/React.createElement("tbody", null, rows.map(r => /*#__PURE__*/React.createElement("tr", {
+    key: r.uf,
+    className: "border-b border-slate-800/40"
+  }, /*#__PURE__*/React.createElement("td", {
+    className: "py-1 px-2 font-semibold text-slate-200"
+  }, r.uf), /*#__PURE__*/React.createElement("td", {
+    className: "py-1 px-1 text-right text-slate-500"
+  }, r.n), ks.map(k => {
+    const p = r[phase]?.pcts[k];
+    const v = p == null ? 0 : p;
+    return /*#__PURE__*/React.createElement("td", {
+      key: k,
+      className: "py-1 px-2 text-right font-mono text-slate-200",
+      style: {
+        background: sdHeat(v)
+      }
+    }, p == null ? '·' : v <= 0 ? '·' : v < 0.05 ? '~0' : v.toFixed(1));
+  }), /*#__PURE__*/React.createElement("td", {
+    className: "py-1 px-2 text-right font-mono text-emerald-300"
+  }, (r[phase]?.E || 0).toFixed(2))))))), /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-slate-500 mt-2 italic"
+  }, "Distribui\xE7\xE3o conjunta: P(k) = fra\xE7\xE3o de simula\xE7\xF5es em que exatamente k times do estado chegaram \xE0 fase. Acesso = 6 vagas (4 semifinalistas + 2 vencedores do playoff). \xB7 = 0%, ~0 = <0,05%."));
+};
 const GameRow = ({
   j,
   real,
@@ -15089,6 +15263,7 @@ function SerieDSim({
   const [nS, setNS] = useState(500);
   const [eo, setEo] = useState(initialEo || false);
   const [ak, setAk] = useState(initialAk || cfg.defaultAlpha);
+  const [cruzView, setCruzView] = useState('confrontos');
   const [rMC, setRMC] = useState(initialMC || null);
   const [rSU, setRSU] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -16176,11 +16351,23 @@ function SerieDSim({
     className: "flex items-center justify-between mb-3 flex-wrap gap-2"
   }, /*#__PURE__*/React.createElement("h2", {
     className: "text-base font-semibold text-emerald-300"
-  }, "Cruzamentos mais prov\xE1veis ", /*#__PURE__*/React.createElement("span", {
+  }, cruzView === 'estados' ? 'Distribuição por estado' : 'Cruzamentos mais prováveis', " ", /*#__PURE__*/React.createElement("span", {
     className: "text-slate-500 text-xs italic"
   }, "\xB7 ", rMC.nSims.toLocaleString(), " sims")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("span", {
+    className: "flex items-center gap-2 flex-wrap"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1 bg-slate-900/40 rounded-lg p-0.5"
+  }, [{
+    id: 'confrontos',
+    l: 'Confrontos'
+  }, {
+    id: 'estados',
+    l: 'Por Estado'
+  }].map(v => /*#__PURE__*/React.createElement("button", {
+    key: v.id,
+    onClick: () => setCruzView(v.id),
+    className: `py-1 px-2.5 rounded-md text-xs font-medium ${cruzView === v.id ? 'bg-emerald-600/80 text-white' : 'text-slate-400 hover:text-white'}`
+  }, v.l))), cruzView === 'confrontos' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-slate-400"
   }, "Grupo:"), /*#__PURE__*/React.createElement("select", {
     value: gF,
@@ -16191,7 +16378,10 @@ function SerieDSim({
   }, "Todos (96 times)"), SD_GRUPOS.map((_, i) => /*#__PURE__*/React.createElement("option", {
     key: i,
     value: i
-  }, SD_GL[i]))))), /*#__PURE__*/React.createElement(MatchupsView, {
+  }, SD_GL[i])))))), cruzView === 'estados' ? /*#__PURE__*/React.createElement(SerieDStateView, {
+    ufDist: rMC.ufDist,
+    nSims: rMC.nSims
+  }) : /*#__PURE__*/React.createElement(MatchupsView, {
     probs: rMC.probs.filter(p => (p.f2 || 0) >= 1 && (gF < 0 || p.grupo === gF)),
     phases: [{
       key: 'f2',
