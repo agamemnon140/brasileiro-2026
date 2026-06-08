@@ -33,7 +33,13 @@ const {
 // ============================================================================
 // SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.44
 // Motor único | Config: total+pesoCasa | Copa do Brasil | Datas por rodada
-// Dados atualizados até 01/06/2026 | A:R18 | B:R11 | C:R9 | D:R9 | CB:R16 (editável)
+// Dados atualizados até 08/06/2026 | A:R18 | B:R12 parc. | C:R9 | D:R10 parc. | CB:R16 (editável)
+// v4.46: porta para o .jsx o auto-load do results.json (useEffect após handleSearchResults) que
+//        antes era injetado só no HTML; agora o rebuild a partir do .jsx preserva o carregamento
+//        automático dos resultados publicados pela GitHub Action.
+// v4.45: +27 jogos reconciliados 1:1 vs Tabelas Detalhadas CBF (08/06). B R12 (3 antecipados:
+//        Operário-PR 2×1 Juventude, Criciúma 1×0 Londrina, CRB 2×3 São Bernardo) e D R10 parcial
+//        (24 jogos). Auditoria completa das 4 séries: 0 placares divergentes, 0 jogos faltantes.
 // v4.44: (1) Ao Vivo passa a abrir com os MESMOS times default do pré-jogo (Flamengo×Palmeiras).
 //        (2) Série D, Grupos>Probabilidades: clique num time abre detalhe (pts p10/p50/p90, posição
 //        final 1º-4º, F3/Oit/QF) e cada grupo mostra o corte de pontos por posição. (3) Aba Monte
@@ -17666,14 +17672,12 @@ function SimuladorUnificado() {
     let cancelled = false;
     fetch('results.json?t=' + Date.now(), {
       cache: 'no-store'
-    }).then(function (r) {
-      return r.ok ? r.json() : null;
-    }).then(function (d) {
+    }).then(r => r.ok ? r.json() : null).then(d => {
       if (cancelled || !d) return; // 404 no 1º deploy => no-op
-      var arr = Array.isArray(d) ? d : d && d.results;
+      const arr = Array.isArray(d) ? d : d && d.results;
       if (Array.isArray(arr) && arr.length) handleSearchResults(arr);
-    }).catch(function () {}); // rede/JSON quebrado => no-op
-    return function () {
+    }).catch(() => {}); // rede/JSON quebrado => no-op
+    return () => {
       cancelled = true;
     };
   }, []);
