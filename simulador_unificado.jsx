@@ -4,6 +4,9 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 // SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.44
 // Motor único | Config: total+pesoCasa | Copa do Brasil | Datas por rodada
 // Dados atualizados até 08/06/2026 | A:R18 | B:R12 parc. | C:R9 | D:R10 parc. | CB:R16 (editável)
+// v4.46: porta para o .jsx o auto-load do results.json (useEffect após handleSearchResults) que
+//        antes era injetado só no HTML; agora o rebuild a partir do .jsx preserva o carregamento
+//        automático dos resultados publicados pela GitHub Action.
 // v4.45: +27 jogos reconciliados 1:1 vs Tabelas Detalhadas CBF (08/06). B R12 (3 antecipados:
 //        Operário-PR 2×1 Juventude, Criciúma 1×0 Londrina, CRB 2×3 São Bernardo) e D R10 parcial
 //        (24 jogos). Auditoria completa das 4 séries: 0 placares divergentes, 0 jogos faltantes.
@@ -1339,7 +1342,7 @@ function UpdaterPanel({onResults,fetchedRes,onClear}){
       const buf=await r.arrayBuffer();if(buf.byteLength<1000)throw new Error('PDF vazio ou bloqueado');
       setStatus('Lendo o PDF com o Claude…');
       const prompt='Este PDF é a Tabela Detalhada da CBF de uma série do Brasileirão 2026 (A, B, C ou D — veja o cabeçalho). Extraia TODOS os jogos que JÁ têm placar (finalizados). Retorne SOMENTE um array JSON, nada mais: [{"serie":"A","rodada":18,"casa":"Flamengo","gc":3,"gf":0,"fora":"Coritiba"}]. Use nomes oficiais com sufixo de UF quando houver (Atlético-MG, Athletico-PR, Operário-PR, Botafogo-SP, Botafogo-PB, São Paulo, São Bernardo, Red Bull Bragantino, Ponte Preta, Vila Nova, etc.). Para a Série D, use exatamente os nomes que aparecem no PDF.';
-      const body={model:'claude-sonnet-4-20250514',max_tokens:16000,messages:[{role:'user',content:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64(buf)}},{type:'text',text:prompt}]}]};
+      const body={model:'claude-sonnet-4-6',max_tokens:16000,messages:[{role:'user',content:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64(buf)}},{type:'text',text:prompt}]}]};
       const headers={'Content-Type':'application/json'};if(apiKey)headers['x-api-key']=apiKey;
       const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers,body:JSON.stringify(body)});
       if(!resp.ok){if(resp.status===401||resp.status===403){setStatus('Precisa da API key da Anthropic (campo acima).');setBusy(false);return;}throw new Error('API '+resp.status);}
@@ -2303,7 +2306,7 @@ function SearchPanel({onResults}) {
   const buscar=async()=>{
     const q=query||defaultQ;setBusy(true);setErr('');setFound(null);
     const prompt='Busque na web os resultados FINAIS (com placar) do '+q+'. Procure em sites como ge.globo.com, espn.com.br, uol.com.br. Para cada jogo finalizado informe a série (A, B ou C), a rodada, o time mandante, gols do mandante, gols do visitante e time visitante.\n\nRetorne SOMENTE um array JSON, nada mais:\n[{"serie":"A","rodada":10,"casa":"Flamengo","gc":2,"gf":1,"fora":"Santos"}]\nVazio se nada: []\nNomes oficiais: Atlético-MG, São Paulo, Red Bull Bragantino, Athletico-PR, Operário-PR, Criciúma, Novorizontino, Goiás, Avaí, etc.';
-    const body={model:'claude-sonnet-4-20250514',max_tokens:3000,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]};
+    const body={model:'claude-sonnet-4-6',max_tokens:3000,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]};
     const headers={'Content-Type':'application/json'};
     if(apiKey)headers['x-api-key']=apiKey;
     try{
@@ -2415,6 +2418,20 @@ export default function SimuladorUnificado(){
       });
     }
   };
+  // AUTO-LOAD: resultados publicados pela GitHub Action (results.json, mesmo domínio do Pages).
+  // Reaproveita TODO o pipeline de handleSearchResults (normalização, dedup, inferência de rodada).
+  useEffect(()=>{
+    let cancelled=false;
+    fetch('results.json?t='+Date.now(),{cache:'no-store'})
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{
+        if(cancelled||!d)return; // 404 no 1º deploy => no-op
+        const arr=Array.isArray(d)?d:(d&&d.results);
+        if(Array.isArray(arr)&&arr.length)handleSearchResults(arr);
+      })
+      .catch(()=>{}); // rede/JSON quebrado => no-op
+    return ()=>{cancelled=true;};
+  },[]);
   const SAT=useMemo(()=>parseTab(SA_TAB,SA_NM,SA_DATES),[]);const SBT=useMemo(()=>parseTab(SB_TAB,SB_NM,SB_DATES),[]);const SCT=useMemo(()=>parseTab(SC_TAB,SC_NM,SC_DATES),[]);
   const fixtureCheck=useMemo(()=>fixtureIntegrity(SAT,SBT,SCT),[SAT,SBT,SCT]);
   const dataHealth=useMemo(()=>dataHealthReport(SAT,SBT,SCT),[SAT,SBT,SCT]);
