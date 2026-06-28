@@ -40,8 +40,10 @@ const {
 //        confronto (mandante×visitante por perna), o vencedor é calculado por agregado (+ seletor de
 //        pênaltis no empate) e AVANÇA sozinho à fase seguinte, preenchendo os times. Pré-carregado
 //        com os resultados reais (SD_F2_REAL, ordenado agora na numeração oficial B01-B32) e salvo
-//        por navegador (localStorage 'simUni_sdMM'; botão "Restaurar oficiais"). Também: na sub-aba
-//        "Jogos" o mata-mata passou para o TOPO e os jogos de grupos para baixo (fases recentes 1º).
+//        por navegador (localStorage 'simUni_sdMM'; botão "Restaurar oficiais"). Reseed por campanha
+//        (classificação geral) só a partir das QUARTAS (5ª fase), como na Tabela Detalhada CBF —
+//        oitavas (4ª) seguem o pareamento fixo D=Venc.C×Venc.C. A sub-aba "Jogos" mostra só os jogos
+//        de grupos (o mata-mata vive na sub-aba dedicada).
 // v4.48c: reconciliação 1:1 vs Tabelas Detalhadas CBF (re-baixadas 27/06, atualização 25/06),
 //        extraídas em modo -raw (sem embaralhar colunas). B: 141/141 jogos batem; C: 110/110;
 //        D fase de grupos: 480/480. Duas correções na D (PDF = fonte da verdade): ref452 Altos
@@ -16345,37 +16347,6 @@ function SerieDSim({
   }, r.def.toFixed(2)), /*#__PURE__*/React.createElement("td", {
     className: "text-right font-mono font-bold text-slate-300"
   }, r.ad.toFixed(2)))))))), aba === 'jogos' && /*#__PURE__*/React.createElement("div", {
-    className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50 mt-3"
-  }, /*#__PURE__*/React.createElement("h2", {
-    className: "text-base font-semibold text-emerald-300 mb-1"
-  }, "2\xAA Fase — Mata-mata"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-slate-500 mb-3 italic"
-  }, "Ida 21/06 \xB7 volta 27-29/06. Confrontos encerrados fixam o vencedor (verde) na simula\xE7\xE3o; os pendentes seguem simulados."), /*#__PURE__*/React.createElement("div", {
-    className: "space-y-0.5 max-h-[500px] overflow-y-auto"
-  }, SD_F2_REAL.map((t, i) => {
-    const og = leg => leg ? (leg.c === t.a ? [leg.gc, leg.gf] : [leg.gf, leg.gc]) : null;
-    const gi = og(t.ida),
-      gv = og(t.volta);
-    const agg = gv ? [gi[0] + gv[0], gi[1] + gv[1]] : null;
-    const cls = who => "flex-1 truncate " + (t.w === who ? 'text-emerald-300 font-semibold' : 'text-slate-300');
-    const placar = agg ? (t.w ? `${agg[0]}–${agg[1]}${t.pen ? ' (p\xEAn)' : ''}` : `${agg[0]}–${agg[1]} (?)`) : `ida ${gi[0]}-${gi[1]} \xB7 volta a definir`;
-    return /*#__PURE__*/React.createElement("div", {
-      key: i,
-      className: "flex items-center justify-between p-1 rounded text-xs bg-slate-700/30"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: cls(t.a) + " text-right pr-1"
-    }, /*#__PURE__*/React.createElement(TN, {
-      name: t.a
-    })), /*#__PURE__*/React.createElement("span", {
-      className: "mx-1 w-28 text-center font-mono text-[10px] " + (t.w ? 'text-emerald-300 font-bold' : 'text-slate-400')
-    }, placar), /*#__PURE__*/React.createElement("span", {
-      className: cls(t.b) + " pl-1"
-    }, /*#__PURE__*/React.createElement(TN, {
-      name: t.b
-    })), /*#__PURE__*/React.createElement("span", {
-      className: "w-4 text-emerald-400 text-[10px] text-right"
-    }, t.w ? '✓' : ''));
-  }))), aba === 'jogos' && /*#__PURE__*/React.createElement("div", {
     className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between mb-3 flex-wrap gap-2"
