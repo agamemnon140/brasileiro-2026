@@ -32,6 +32,11 @@ const {
 
 // ============================================================================
 // SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.49
+// v4.49h: o Monte Carlo da LIGA agora inclui suas edições nas fases finais de B (playoff de
+//        acesso) e C (quadrangular + final). refreshBcUser() resolve os slots TRAVADOS → times e
+//        gera BC_USER (overlay por par/jogo), que o MC consulta quando aquele confronto/jogo ocorre
+//        numa simulação (espelha o SD_KO_USER da Série D). Só vale quando a posição já está
+//        matematicamente garantida; senão simula normal.
 // v4.49g: o Monte Carlo (e a 1 Sim) agora INCLUEM suas edições do bracket da Série D (resolvedor
 //        sdBracketResolve lê simUni_sdMM e gera SD_KO_USER; s180 consulta antes do oficial). Sem
 //        edições cai no oficial. Edições de B/C ainda não entram no MC da liga.
@@ -967,7 +972,40 @@ const calcClassif = (times, res) => {
     pos: i + 1
   }));
 };
+// === Overlay das edições do usuário nas fases finais de B (playoff) e C (quadrangular) ===
+// Resolve os slots editados -> times projetados (só posições travadas), por par de times.
+// O MC consulta quando aquele confronto/jogo ocorre numa simulação (igual ao SD_KO_USER da D).
+let BC_USER = { B: {}, C: { games: {}, final: {} } };
+function refreshBcUser() {
+  BC_USER = { B: {}, C: { games: {}, final: {} } };
+  const build = (serie) => {
+    let edits; try { edits = JSON.parse(localStorage.getItem(serie === 'B' ? 'simUni_bPO' : 'simUni_cQuad') || '{}'); } catch (e) { return; }
+    if (!edits || !Object.keys(edits).length) return;
+    const RES = serie === 'B' ? SB_RES : SC_RES;
+    const NM = serie === 'B' ? SB_NM : SC_NM;
+    const teams = [...new Set(Object.values(NM))];
+    const st = {}; teams.forEach(t => st[t] = { P: 0, V: 0, GP: 0, GC: 0, J: 0 });
+    RES.forEach(r => { const c = r.c, f = r.f; if (!st[c] || !st[f]) return; st[c].J++; st[f].J++; st[c].GP += r.gc; st[c].GC += r.gf; st[f].GP += r.gf; st[f].GC += r.gc; if (r.gc > r.gf) { st[c].V++; st[c].P += 3; } else if (r.gc === r.gf) { st[c].P++; st[f].P++; } else { st[f].V++; st[f].P += 3; } });
+    const cl = teams.map(t => ({ t, ...st[t], SG: st[t].GP - st[t].GC })).sort((a, b) => b.P - a.P || b.V - a.V || b.SG - a.SG || b.GP - a.GP);
+    const totalRounds = serie === 'B' ? 38 : 19;
+    const mx = t => st[t].P + 3 * Math.max(0, totalRounds - st[t].J);
+    const seed = cl.map((c, i) => { const A = c.t; const best = 1 + cl.filter(x => x.t !== A && st[x.t].P > mx(A)).length; const worst = 1 + cl.filter(x => x.t !== A && mx(x.t) >= st[A].P).length; return (best === worst && best === i + 1) ? A : null; });
+    if (serie === 'B') {
+      const mk = (k, A, B) => { const r = edits[k]; if (!A || !B || !r || r.iA == null || r.iB == null || r.vA == null || r.vB == null) return; const aA = r.iA + r.vA, aB = r.iB + r.vB; const w = aA > aB ? A : aB > aA ? B : (r.pen === 'A' ? A : r.pen === 'B' ? B : null); if (w) BC_USER.B[[A, B].sort().join('|')] = w; };
+      mk('po1', seed[2], seed[5]); mk('po2', seed[3], seed[4]);
+    } else {
+      const groups = { A: [seed[0], seed[3], seed[4], seed[7]], B: [seed[1], seed[2], seed[5], seed[6]] };
+      const gstand = (g, grp) => { const s = {}; g.forEach(t => t && (s[t] = { t, P: 0, V: 0, GP: 0, GC: 0 })); for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { if (i === j) continue; const r = edits[grp + '-' + i + '-' + j]; if (!r || r.h == null || r.a == null || !g[i] || !g[j]) continue; BC_USER.C.games[g[i] + '>' + g[j]] = [r.h, r.a]; s[g[i]].GP += r.h; s[g[i]].GC += r.a; s[g[j]].GP += r.a; s[g[j]].GC += r.h; if (r.h > r.a) { s[g[i]].V++; s[g[i]].P += 3; } else if (r.h === r.a) { s[g[i]].P++; s[g[j]].P++; } else { s[g[j]].V++; s[g[j]].P += 3; } } return g.filter(Boolean).map(t => ({ ...s[t], SG: s[t].GP - s[t].GC })).sort((a, b) => b.P - a.P || b.V - a.V || b.SG - a.SG || b.GP - a.GP); };
+      const rA = gstand(groups.A, 'A'), rB = gstand(groups.B, 'B');
+      const wA = rA[0] && rA[0].t, wB = rB[0] && rB[0].t, rf = edits['final'];
+      if (wA && wB && rf && rf.iA != null && rf.iB != null && rf.vA != null && rf.vB != null) { const aA = rf.iA + rf.vA, aB = rf.iB + rf.vB; const w = aA > aB ? wA : aB > aA ? wB : (rf.pen === 'A' ? wA : rf.pen === 'B' ? wB : null); if (w) BC_USER.C.final[[wA, wB].sort().join('|')] = w; }
+    }
+  };
+  try { build('B'); } catch (e) {} try { build('C'); } catch (e) {}
+}
+const bcWinB = (a, b) => BC_USER.B[[a, b].sort().join('|')] || null;
 const simMC = (times, ranking, tab, res, cfg, sk, nS, ak, eo) => {
+  refreshBcUser();
   const lg = initLeague(times, t => ranking[t].elo, cfg);
   const {
     mc,
@@ -1177,8 +1215,8 @@ const simMC_single = (times, ranking, tab, res, cfg, sk, ak, eo, lg, mc, mf, ct,
       if (aggA !== aggB) return aggA > aggB ? a : b;
       return Math.random() < 0.5 ? a : b; // pênaltis
     };
-    const w1 = ttest(playoff[0], playoff[3]); // 3º×6º
-    const w2 = ttest(playoff[1], playoff[2]); // 4º×5º
+    const w1 = bcWinB(playoff[0], playoff[3]) || ttest(playoff[0], playoff[3]); // 3º×6º (edição do usuário tem prioridade)
+    const w2 = bcWinB(playoff[1], playoff[2]) || ttest(playoff[1], playoff[2]); // 4º×5º
     extraStats[w1].bAccess++;
     extraStats[w2].bAccess++;
   }
@@ -1222,8 +1260,9 @@ const simMC_single = (times, ranking, tab, res, cfg, sk, ak, eo, lg, mc, mf, ct,
           lC,
           lF
         } = calcL(at[c], df[c], at[f], df[f], el[c], el[f], mc, mf, cfg.homeAdv, eo, cfg.c0Log);
-        const gc = poissonRandom(lC),
-          gf = poissonRandom(lF);
+        const ug = BC_USER.C.games[c + '>' + f];
+        const gc = ug ? ug[0] : poissonRandom(lC),
+          gf = ug ? ug[1] : poissonRandom(lF);
         qst[c].GP += gc;
         qst[c].GC += gf;
         qst[f].GP += gf;
@@ -1284,8 +1323,8 @@ const simMC_single = (times, ranking, tab, res, cfg, sk, ak, eo, lg, mc, mf, ct,
     // Agregado
     const aggVM = ig2 + vg1; // voltaMandante total
     const aggIM = ig1 + vg2; // idaMandante total
-    let camp;
-    if (aggVM > aggIM) camp = voltaMandante;else if (aggIM > aggVM) camp = idaMandante;else camp = Math.random() < 0.5 ? voltaMandante : idaMandante; // pênaltis
+    let camp = BC_USER.C.final[[fa, fb].sort().join('|')] || null;
+    if (!camp) { if (aggVM > aggIM) camp = voltaMandante;else if (aggIM > aggVM) camp = idaMandante;else camp = Math.random() < 0.5 ? voltaMandante : idaMandante; } // pênaltis (ou edição do usuário)
     extraStats[camp].qChamp++;
   }
 };
@@ -1371,6 +1410,7 @@ const simMC_finalize = (times, ct, pts, posF, ptsAtPos, nS, elFinal, extraStats,
 // simplicidade aplicamos no estado inicial — o impacto na ordem é pequeno (Elo
 // dynamics são aproximadamente comutativas para shifts pequenos).
 const simMC_async = (times, ranking, tab, res, cfg, sk, nS, ak, eo, onProgress, onDone) => {
+  refreshBcUser();
   const lg = initLeague(times, t => ranking[t].elo, cfg);
   const {
     mc,
@@ -1442,6 +1482,7 @@ const simMC_async = (times, ranking, tab, res, cfg, sk, nS, ak, eo, onProgress, 
   requestAnimationFrame(run);
 };
 const simUnica = (times, ranking, tab, res, cfg, sk, ak, eo) => {
+  refreshBcUser();
   const lg = initLeague(times, t => ranking[t].elo, cfg);
   const {
     mc,
