@@ -32,6 +32,9 @@ const {
 
 // ============================================================================
 // SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.49
+// v4.49g: o Monte Carlo (e a 1 Sim) agora INCLUEM suas edições do bracket da Série D (resolvedor
+//        sdBracketResolve lê simUni_sdMM e gera SD_KO_USER; s180 consulta antes do oficial). Sem
+//        edições cai no oficial. Edições de B/C ainda não entram no MC da liga.
 // Motor único | Config: total+pesoCasa | Copa do Brasil | Datas por rodada
 // Dados atualizados até 27/06/2026 | A:R18 | B:R15 parc. | C:R12 parc. | D: grupos completos + 2ª fase parc. | CB:R16 (editável)
 // v4.49e: sub-aba "Chaves" de B e C agora EDITÁVEL (LeaguePhaseEdit, nos moldes do bracket da D):
@@ -1958,6 +1961,7 @@ const buildUfDist = (ufAcc, ufTeams, nS) => {
   }).sort((a, b) => b.ac.E - a.ac.E);
 };
 const simMC_D = (cfg, nS, ak, eo) => {
+  refreshSdKoUser();
   const tabD = SD_REAL_TAB;
   const snap = prepareSerieDState(cfg, eo, ak);
   const {
@@ -1995,6 +1999,7 @@ const simMC_D = (cfg, nS, ak, eo) => {
   return simMC_D_finalize(snap, ct, nS, gpts, ufAcc, ufTeams);
 };
 const simMC_D_async = (cfg, nS, ak, eo, onProgress, onDone) => {
+  refreshSdKoUser();
   const tabD = SD_REAL_TAB;
   const snap = prepareSerieDState(cfg, eo, ak);
   const {
@@ -8904,7 +8909,26 @@ const SD_KO_REAL = {
   [sdKoKey("São José-RS", "Santa Catarina")]: { w: "São José-RS", ga: 2, gb: 2, pen: true }, // B29
   [sdKoKey("São Luiz-RS", "Blumenau")]: { w: "São Luiz-RS", ga: 2, gb: 2, pen: true }, // B31
 };
-const sdKoReal = (a, b) => SD_KO_REAL[sdKoKey(a, b)] || null;
+// SD_KO_USER: overlay das EDIÇÕES do usuário no bracket (localStorage), tem prioridade sobre o oficial.
+let SD_KO_USER = {};
+const sdKoReal = (a, b) => SD_KO_USER[sdKoKey(a, b)] || SD_KO_REAL[sdKoKey(a, b)] || null;
+// Resolve as edições do usuário (por code) em um overlay por par-ordenado {w,ga,gb,pen}.
+function sdBracketResolve(edits) {
+  edits = edits || {};
+  const f2 = {}; SD_F2_REAL.forEach(t => f2[t.code] = t);
+  const st = {}; SD_GRUPOS.flat().forEach(t => st[t] = { P: 0, GP: 0, GC: 0 });
+  SD_RES.forEach(r => { const c = r.c, fo = r.f; if (!st[c] || !st[fo]) return; st[c].GP += r.gc; st[c].GC += r.gf; st[fo].GP += r.gf; st[fo].GC += r.gc; if (r.gc > r.gf) st[c].P += 3; else if (r.gc === r.gf) { st[c].P++; st[fo].P++; } else st[fo].P += 3; });
+  const camp = t => st[t] ? st[t].P * 1e6 + (st[t].GP - st[t].GC) * 1e3 + st[t].GP : 0;
+  const ordIda = (x, y) => (!x || !y) ? [x, y] : (camp(x) <= camp(y) ? [x, y] : [y, x]);
+  function qSeeds() { const ws = SD_D_CODES.map(winOf); if (ws.some(w => !w)) return []; return ws.slice().sort((a, b) => camp(b) - camp(a)); }
+  function teamsOf(code) { if (f2[code]) return [f2[code].a, f2[code].b]; if (code[0] === 'E') { const s = qSeeds(); const [i, j] = SD_BRK_QSEED[code]; return ordIda(s[i] || null, s[j] || null); } const p = SD_BRK_PAIRS[code]; if (!p) return [null, null]; return ordIda(winOf(p[0]), winOf(p[1])); }
+  function winOf(code) { const tm = teamsOf(code); if (!tm[0] || !tm[1]) return null; const r = edits[code] || {}; if (r.iA == null || r.iB == null || r.vA == null || r.vB == null) return null; const aA = r.iA + r.vA, aB = r.iB + r.vB; if (aA > aB) return tm[0]; if (aB > aA) return tm[1]; return r.pen === 'A' ? tm[0] : r.pen === 'B' ? tm[1] : null; }
+  const overlay = {};
+  const allCodes = [...SD_F2_REAL.map(t => t.code), ...SD_C_CODES, ...SD_D_CODES, 'E01', 'E02', 'E03', 'E04', 'F01', 'F02', 'G01'];
+  for (const code of allCodes) { const tm = teamsOf(code); if (!tm[0] || !tm[1]) continue; const w = winOf(code); if (!w) continue; const r = edits[code] || {}; const ga = (r.iA || 0) + (r.vA || 0), gb = (r.iB || 0) + (r.vB || 0); const k0 = [tm[0], tm[1]].sort()[0]; overlay[sdKoKey(tm[0], tm[1])] = { w, ga: k0 === tm[0] ? ga : gb, gb: k0 === tm[0] ? gb : ga, pen: !!r.pen }; }
+  return overlay;
+}
+function refreshSdKoUser() { try { SD_KO_USER = sdBracketResolve(JSON.parse(localStorage.getItem('simUni_sdMM') || '{}')); } catch (e) { SD_KO_USER = {}; } }
 // === 2ª fase REAL da Série D (por perna) — exibição na sub-aba "Jogos". ida 21/06, volta 27-29/06.
 // volta=null => ainda não disputada (segue simulada). Decididos espelham SD_KO_REAL (conferido).
 const SD_F2_REAL = [
@@ -16291,6 +16315,7 @@ function SerieDSim({
         pen: ga === gb
       };
     };
+    refreshSdKoUser();
     const fases = [];
     // Chaveamento OFICIAL CBF (igual à engine MC e ao bracket): 2ª/3ª/oitavas FIXO; quartas+ reseed.
     // 2ª fase: 32 confrontos oficiais (SD_F2_REAL); s180 aplica SD_KO_REAL nos já decididos.
