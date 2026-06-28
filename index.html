@@ -34,6 +34,13 @@ const {
 // SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.49
 // Motor único | Config: total+pesoCasa | Copa do Brasil | Datas por rodada
 // Dados atualizados até 27/06/2026 | A:R18 | B:R15 parc. | C:R12 parc. | D: grupos completos + 2ª fase parc. | CB:R16 (editável)
+// v4.49c: engine do Monte Carlo (e a simulação única) ALINHADAS ao chaveamento OFICIAL CBF, igual
+//        ao bracket: 2ª fase = 32 confrontos oficiais (SD_F2_REAL/B01-B32), 3ª = C=Venc.B×Venc.B,
+//        oitavas = D=Venc.C×Venc.C (FIXO, sem reseed), quartas+ = reseed por campanha (1×8,4×5,2×7,3×6),
+//        playoff de acesso reseed (1×4,2×3). Antes a engine usava SD_PAIRS/SD_SUPER + reseed nas
+//        oitavas (aproximação que divergia do oficial). SD_KO_REAL agora derivado de SD_F2_REAL (18
+//        confrontos decididos, inclui o bloco G1×G2 que antes ficava de fora) — os "cruzamentos mais
+//        prováveis" e as %s de fase passam a refletir os resultados reais e o bracket correto.
 // v4.49b: (a) SC_DATES: datas da Série C R10-R15 corrigidas vs PDF (estavam ~1 semana adiantadas;
 //        houve intervalo após a R9); R16-19 a CBF ainda não datou (estimativa). (b) Bracket: regra
 //        de mando explícita — esquerda = mandante da IDA = PIOR campanha (índice técnico); fases C+
@@ -1740,49 +1747,50 @@ const simMC_D_single = (cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeam
       gb = poissonRandom(r2.lF);
     return ga > gb ? a : gb > ga ? b : Math.random() < 0.5 ? a : b;
   };
-  // === 2ª fase (64 → 32): cruzamento entre grupos pareados ===
-  // winF2: vencedores da 2ª fase (= os que CHEGAM à 3ª fase, contados em ct.f3).
-  let winF2 = [];
-  for (const [gx, gy] of SD_PAIRS) {
-    const pairs = [[gruposTop4[gx][0], gruposTop4[gy][3]], [gruposTop4[gx][1], gruposTop4[gy][2]], [gruposTop4[gy][0], gruposTop4[gx][3]], [gruposTop4[gy][1], gruposTop4[gx][2]]];
-    for (const [a, b] of pairs) {
-      bumpMu(a, 'f2', b);
-      bumpMu(b, 'f2', a);
-      winF2.push(s180(a, b));
-    }
+  // === Mata-mata: chaveamento OFICIAL CBF — 2ª/3ª/oitavas FIXO; quartas+ reseed por campanha ===
+  // Grupos completos → top-4 determinístico; confrontos vêm de SD_F2_REAL (2ª fase) e SD_BRK_PAIRS
+  // (3ª/oitavas). s180 já aplica SD_KO_REAL (resultados reais) nos confrontos decididos.
+  // 2ª fase (32 confrontos oficiais B01-B32).
+  const winB = {};
+  for (const t of SD_F2_REAL) {
+    bumpMu(t.a, 'f2', t.b);
+    bumpMu(t.b, 'f2', t.a);
+    winB[t.code] = s180(t.a, t.b);
   }
+  const winF2 = Object.values(winB); // 32 → chegam à 3ª fase
   winF2.forEach(t => ct[t].f3++);
-  // === 3ª fase (32 → 16): cruzamento super-grupos ===
-  // winF3: vencedores da 3ª fase (= os que CHEGAM às oitavas, contados em ct.oit).
-  let winF3 = [];
-  for (const [p1, p2] of SD_SUPER) {
-    for (let j = 0; j < 4; j++) {
-      const a = winF2[p1 * 4 + j],
-        b = winF2[p2 * 4 + (3 - j)];
-      bumpMu(a, 'f3', b);
-      bumpMu(b, 'f3', a);
-      winF3.push(s180(a, b));
-    }
+  // 3ª fase (C = Venc.B × Venc.B, fixo)
+  const winC = {};
+  for (const code of SD_C_CODES) {
+    const p = SD_BRK_PAIRS[code],
+      a = winB[p[0]],
+      b = winB[p[1]];
+    bumpMu(a, 'f3', b);
+    bumpMu(b, 'f3', a);
+    winC[code] = s180(a, b);
   }
+  const winF3 = Object.values(winC); // 16 → chegam às oitavas
   winF3.forEach(t => ct[t].oit++);
-  // === Oitavas (16 → 8): reseed por campanha ===
-  const r16 = [...winF3].sort((a, b) => st[b].P - st[a].P || st[b].GP - st[b].GC - (st[a].GP - st[a].GC));
-  const winOit = [];
-  for (let i = 0; i < 8; i++) {
-    const a = r16[i],
-      b = r16[15 - i];
+  // Oitavas (D = Venc.C × Venc.C, FIXO — sem reseed)
+  const winD = {};
+  for (const code of SD_D_CODES) {
+    const p = SD_BRK_PAIRS[code],
+      a = winC[p[0]],
+      b = winC[p[1]];
     bumpMu(a, 'oit', b);
     bumpMu(b, 'oit', a);
-    winOit.push(s180(a, b));
+    winD[code] = s180(a, b);
   }
+  const winOit = Object.values(winD); // 8 → chegam às quartas
   winOit.forEach(t => ct[t].qf++);
-  // === Quartas (8 → 4): reseed ===
-  const r8 = [...winOit].sort((a, b) => st[b].P - st[a].P);
+  // Quartas (reseed por campanha do "Bloco I": 1×8, 4×5, 2×7, 3×6)
+  const camp8 = (a, b) => st[b].P - st[a].P || st[b].GP - st[b].GC - (st[a].GP - st[a].GC) || st[b].GP - st[a].GP;
+  const r8 = [...winOit].sort(camp8);
   const qW = [],
     qL = [];
-  for (let i = 0; i < 4; i++) {
+  for (const [i, j] of [[0, 7], [3, 4], [1, 6], [2, 5]]) {
     const a = r8[i],
-      b = r8[7 - i];
+      b = r8[j];
     bumpMu(a, 'qf', b);
     bumpMu(b, 'qf', a);
     const w = s180(a, b);
@@ -1792,12 +1800,13 @@ const simMC_D_single = (cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeam
   qW.forEach(t => ct[t].sf++);
   // === Semi + Playoff + Final ===
   qW.forEach(t => ct[t].ac++); // 4 semifinalistas acessam
-  // Playoff acesso: perdedores das QF se enfrentam
-  bumpMu(qL[0], 'po', qL[1]);
-  bumpMu(qL[1], 'po', qL[0]);
-  bumpMu(qL[2], 'po', qL[3]);
-  bumpMu(qL[3], 'po', qL[2]);
-  const playoff = [s180(qL[0], qL[1]), s180(qL[2], qL[3])];
+  // Playoff de acesso: 4 perdedores das quartas reseed por campanha (1×4, 2×3)
+  const pL = [...qL].sort(camp8);
+  bumpMu(pL[0], 'po', pL[3]);
+  bumpMu(pL[3], 'po', pL[0]);
+  bumpMu(pL[1], 'po', pL[2]);
+  bumpMu(pL[2], 'po', pL[1]);
+  const playoff = [s180(pL[0], pL[3]), s180(pL[1], pL[2])];
   playoff.forEach(t => ct[t].ac++); // +2 vencedores playoff
   // Semi
   bumpMu(qW[0], 'sf', qW[1]);
@@ -8867,24 +8876,25 @@ const SD_MM_DATES = {
 // portar SD_KO_REAL + os dois ajustes em s180 para lá, senão somem no próximo build.
 const sdKoKey = (a, b) => [a, b].sort().join('|');
 const SD_KO_REAL = {
-  // 2ª fase 2026 — confrontos DECIDIDOS com volta em 27/06 (ida 21/06). Chave = par ordenado.
-  [sdKoKey("ASA", "Sergipe")]: { w: "ASA", ga: 2, gb: 1, pen: false },
-  [sdKoKey("America-RJ", "XV de Piracicaba")]: { w: "XV de Piracicaba", ga: 1, gb: 3, pen: false },
-  [sdKoKey("América-RN", "Fluminense-PI")]: { w: "América-RN", ga: 4, gb: 0, pen: false },
-  [sdKoKey("Aparecidense", "Capital")]: { w: "Capital", ga: 1, gb: 5, pen: false },
-  [sdKoKey("Blumenau", "São Luiz-RS")]: { w: "São Luiz-RS", ga: 2, gb: 2, pen: true },
-  [sdKoKey("Brasiliense", "Goiatuba")]: { w: "Goiatuba", ga: 0, gb: 1, pen: false },
-  [sdKoKey("CRAC", "Tombense")]: { w: "CRAC", ga: 1, gb: 0, pen: false },
-  [sdKoKey("CSA", "Lagarto")]: { w: "CSA", ga: 3, gb: 1, pen: false },
-  [sdKoKey("Iguatu", "Tuna Luso")]: { w: "Iguatu", ga: 3, gb: 2, pen: false },
-  [sdKoKey("Imperatriz", "Maracanã")]: { w: "Imperatriz", ga: 1, gb: 1, pen: true },
-  [sdKoKey("Maguary", "Piauí")]: { w: "Maguary", ga: 2, gb: 1, pen: false },
-  [sdKoKey("Parnahyba", "Águia de Marabá")]: { w: "Águia de Marabá", ga: 2, gb: 3, pen: false },
-  [sdKoKey("Portuguesa-SP", "Sampaio Corrêa-RJ")]: { w: "Portuguesa-SP", ga: 2, gb: 1, pen: false },
-  [sdKoKey("Rio Branco-ES", "Uberlândia")]: { w: "Uberlândia", ga: 2, gb: 4, pen: false },
-  [sdKoKey("Sampaio Corrêa", "Trem")]: { w: "Trem", ga: 1, gb: 4, pen: false },
-  [sdKoKey("Santa Catarina", "São José-RS")]: { w: "São José-RS", ga: 2, gb: 2, pen: true },
-  [sdKoKey("Velo Clube", "Água Santa")]: { w: "Velo Clube", ga: 1, gb: 1, pen: true },
+  // Derivado de SD_F2_REAL — confrontos do mata-mata JÁ DECIDIDOS (ida+volta). Chave = par ordenado.
+  [sdKoKey("Independência", "Manauara")]: { w: "Manauara", ga: 0, gb: 4, pen: false }, // B01
+  [sdKoKey("Brasiliense", "Goiatuba")]: { w: "Goiatuba", ga: 0, gb: 1, pen: false }, // B06
+  [sdKoKey("Aparecidense", "Capital")]: { w: "Capital", ga: 1, gb: 5, pen: false }, // B07
+  [sdKoKey("Sampaio Corrêa", "Trem")]: { w: "Trem", ga: 1, gb: 4, pen: false }, // B09
+  [sdKoKey("Imperatriz", "Maracanã")]: { w: "Imperatriz", ga: 1, gb: 1, pen: true }, // B10
+  [sdKoKey("Tuna Luso", "Iguatu")]: { w: "Iguatu", ga: 3, gb: 2, pen: false }, // B11
+  [sdKoKey("Parnahyba", "Águia de Marabá")]: { w: "Águia de Marabá", ga: 2, gb: 3, pen: false }, // B12
+  [sdKoKey("Fluminense-PI", "América-RN")]: { w: "América-RN", ga: 4, gb: 0, pen: false }, // B14
+  [sdKoKey("Maguary", "Piauí")]: { w: "Maguary", ga: 2, gb: 1, pen: false }, // B16
+  [sdKoKey("Lagarto", "CSA")]: { w: "CSA", ga: 3, gb: 1, pen: false }, // B19
+  [sdKoKey("ASA", "Sergipe")]: { w: "ASA", ga: 2, gb: 1, pen: false }, // B20
+  [sdKoKey("Rio Branco-ES", "Uberlândia")]: { w: "Uberlândia", ga: 2, gb: 4, pen: false }, // B21
+  [sdKoKey("CRAC", "Tombense")]: { w: "CRAC", ga: 1, gb: 0, pen: false }, // B22
+  [sdKoKey("Sampaio Corrêa-RJ", "Portuguesa-SP")]: { w: "Portuguesa-SP", ga: 2, gb: 1, pen: false }, // B25
+  [sdKoKey("America-RJ", "XV de Piracicaba")]: { w: "XV de Piracicaba", ga: 1, gb: 3, pen: false }, // B27
+  [sdKoKey("Velo Clube", "Água Santa")]: { w: "Velo Clube", ga: 1, gb: 1, pen: true }, // B28
+  [sdKoKey("São José-RS", "Santa Catarina")]: { w: "São José-RS", ga: 2, gb: 2, pen: true }, // B29
+  [sdKoKey("São Luiz-RS", "Blumenau")]: { w: "São Luiz-RS", ga: 2, gb: 2, pen: true }, // B31
 };
 const sdKoReal = (a, b) => SD_KO_REAL[sdKoKey(a, b)] || null;
 // === 2ª fase REAL da Série D (por perna) — exibição na sub-aba "Jogos". ida 21/06, volta 27-29/06.
@@ -15866,6 +15876,9 @@ const SD_BRK_PAIRS = {
 };
 // quartas (E): reseed por campanha dos 8 vencedores das oitavas — 1º×8º, 4º×5º, 2º×7º, 3º×6º
 const SD_BRK_QSEED = { E01: [0, 7], E02: [3, 4], E03: [1, 6], E04: [2, 5] };
+// Listas de códigos por fase + índice por code (usados pela engine MC e pelo bracket).
+const SD_C_CODES = ['C01','C02','C03','C04','C05','C06','C07','C08','C09','C10','C11','C12','C13','C14','C15','C16'];
+const SD_D_CODES = ['D01','D02','D03','D04','D05','D06','D07','D08'];
 const SD_BRK_PHASES = [
   { key: 'f2', label: '2ª Fase', date: '21/06 e 27-28/06', codes: ['B01','B02','B03','B04','B05','B06','B07','B08','B09','B10','B11','B12','B13','B14','B15','B16','B17','B18','B19','B20','B21','B22','B23','B24','B25','B26','B27','B28','B29','B30','B31','B32'] },
   { key: 'f3', label: '3ª Fase', date: '05 e 12/07', codes: ['C01','C02','C03','C04','C05','C06','C07','C08','C09','C10','C11','C12','C13','C14','C15','C16'] },
@@ -16139,34 +16152,33 @@ function SerieDSim({
       };
     };
     const fases = [];
-    const gc = grupos.map(g => g.times.filter(t => t.pos <= 4).map(t => t.time));
-    let f2 = [];
-    for (const [gx, gy] of SD_PAIRS) {
-      f2.push(s180(gc[gx][0], gc[gy][3]));
-      f2.push(s180(gc[gx][1], gc[gy][2]));
-      f2.push(s180(gc[gy][0], gc[gx][3]));
-      f2.push(s180(gc[gy][1], gc[gx][2]));
-    }
+    // Chaveamento OFICIAL CBF (igual à engine MC e ao bracket): 2ª/3ª/oitavas FIXO; quartas+ reseed.
+    // 2ª fase: 32 confrontos oficiais (SD_F2_REAL); s180 aplica SD_KO_REAL nos já decididos.
+    const f2by = {};
+    SD_F2_REAL.forEach(t => { f2by[t.code] = s180(t.a, t.b); });
     fases.push({
       n: '2ª Fase (' + SD_MM_DATES.f2 + ')',
-      j: f2
+      j: SD_F2_REAL.map(t => f2by[t.code])
     });
-    let f3 = [];
-    for (const [p1, p2] of SD_SUPER) for (let j = 0; j < 4; j++) f3.push(s180(f2[p1 * 4 + j].w, f2[p2 * 4 + (3 - j)].w));
+    // 3ª fase (C = Venc.B × Venc.B, fixo)
+    const f3by = {};
+    SD_C_CODES.forEach(code => { const p = SD_BRK_PAIRS[code]; f3by[code] = s180(f2by[p[0]].w, f2by[p[1]].w); });
     fases.push({
       n: '3ª Fase (' + SD_MM_DATES.f3 + ')',
-      j: f3
+      j: SD_C_CODES.map(c => f3by[c])
     });
-    const r16 = [...f3.map(x => x.w)].sort((a, b) => st[b].P - st[a].P || st[b].GP - st[b].GC - (st[a].GP - st[a].GC));
-    let oit = [];
-    for (let i = 0; i < 8; i++) oit.push(s180(r16[i], r16[15 - i]));
+    // Oitavas (D = Venc.C × Venc.C, FIXO — sem reseed)
+    const d8by = {};
+    SD_D_CODES.forEach(code => { const p = SD_BRK_PAIRS[code]; d8by[code] = s180(f3by[p[0]].w, f3by[p[1]].w); });
+    const oit = SD_D_CODES.map(c => d8by[c]);
     fases.push({
       n: 'Oitavas (' + SD_MM_DATES.oit + ')',
       j: oit
     });
-    const r8 = [...oit.map(x => x.w)].sort((a, b) => st[b].P - st[a].P);
-    let qrt = [];
-    for (let i = 0; i < 4; i++) qrt.push(s180(r8[i], r8[7 - i]));
+    // Quartas: reseed por campanha (1×8, 4×5, 2×7, 3×6)
+    const camp8 = (a, b) => st[b].P - st[a].P || st[b].GP - st[b].GC - (st[a].GP - st[a].GC) || st[b].GP - st[a].GP;
+    const r8 = [...oit.map(x => x.w)].sort(camp8);
+    const qrt = [[0, 7], [3, 4], [1, 6], [2, 5]].map(([i, j]) => s180(r8[i], r8[j]));
     fases.push({
       n: 'Quartas (' + SD_MM_DATES.qrt + ')',
       j: qrt
@@ -16178,7 +16190,9 @@ function SerieDSim({
       n: 'Semi (' + SD_MM_DATES.semi + ')',
       j: semi
     });
-    let po = [s180(qL[0], qL[1]), s180(qL[2], qL[3])];
+    // Playoff de acesso: perdedores das quartas reseed por campanha (1×4, 2×3)
+    const pL = [...qL].sort(camp8);
+    let po = [s180(pL[0], pL[3]), s180(pL[1], pL[2])];
     fases.push({
       n: 'Playoff (' + SD_MM_DATES.po + ')',
       j: po
