@@ -34,6 +34,11 @@ const {
 // SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.48
 // Motor único | Config: total+pesoCasa | Copa do Brasil | Datas por rodada
 // Dados atualizados até 27/06/2026 | A:R18 | B:R15 parc. | C:R12 parc. | D: grupos completos + 2ª fase parc. | CB:R16 (editável)
+// v4.48c: reconciliação 1:1 vs Tabelas Detalhadas CBF (re-baixadas 27/06, atualização 25/06),
+//        extraídas em modo -raw (sem embaralhar colunas). B: 141/141 jogos batem; C: 110/110;
+//        D fase de grupos: 480/480. Duas correções na D (PDF = fonte da verdade): ref452 Altos
+//        3×2 Atlético-CE (web tinha 0-0) e +ref219 Decisão 1×1 Treze (R5 adiado, disputado 06/06).
+//        Com isso o chaveamento que a engine gera bate 30/32 com o oficial (restam 2 do bloco G1×G2).
 // v4.48b: (a) +junho B (R12-15, +31 jogos) e C (R10-12, +24) em SB_RES/SC_RES — jogos pós-PDF de
 //        01/06, via web (ge/CBF/ogol), com mando orientado pela tabela oficial. (b) Sub-aba "Jogos"
 //        da Série D ganha seção "2ª Fase — Mata-mata" (SD_F2_REAL, 32 confrontos por perna). (c) Nova
@@ -8711,8 +8716,8 @@ const SD_RES = [
 }, {
   c: "Altos",
   f: "Atlético-CE",
-  gc: 0,
-  gf: 0,
+  gc: 3,
+  gf: 2,
   r: 10
 }, {
   c: "Piauí",
@@ -8810,6 +8815,15 @@ const SD_RES = [
   gc: 4,
   gf: 0,
   r: 10
+}
+
+// ref219 (R5) Decisão x Treze — jogo adiado, disputado 06/06 (consta no PDF oficial de 25/06)
+, {
+  c: "Decisão",
+  f: "Treze",
+  gc: 1,
+  gf: 1,
+  r: 5
 }
 ];
 const SD_GRP_DATES = ['05/04', '12/04', '19/04', '26/04', '03/05', '10/05', '17/05', '24/05', '31/05', '14/06'];
