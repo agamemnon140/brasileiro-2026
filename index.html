@@ -34,6 +34,11 @@ const {
 // SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.49
 // Motor único | Config: total+pesoCasa | Copa do Brasil | Datas por rodada
 // Dados atualizados até 27/06/2026 | A:R18 | B:R15 parc. | C:R12 parc. | D: grupos completos + 2ª fase parc. | CB:R16 (editável)
+// v4.49b: (a) SC_DATES: datas da Série C R10-R15 corrigidas vs PDF (estavam ~1 semana adiantadas;
+//        houve intervalo após a R9); R16-19 a CBF ainda não datou (estimativa). (b) Bracket: regra
+//        de mando explícita — esquerda = mandante da IDA = PIOR campanha (índice técnico); fases C+
+//        passam a ordenar por campanha (ordIda). (c) Mata-mata removido da sub-aba "Jogos" (vive na
+//        sub-aba dedicada).
 // v4.49: Série D — nova sub-aba "Mata-mata" com BRACKET EDITÁVEL completo (2ª fase → final), no
 //        chaveamento oficial fixo da CBF (C01=Venc.B01×Venc.B06, …; oitavas D=C×C; quartas reseed
 //        por campanha 1º×8º…; semi/final). Componente SerieDBracket: você digita ida/volta de cada
@@ -4644,7 +4649,9 @@ const SB_META = {
 };
 
 // === SÉRIE C ===
-const SC_DATES = ['05/04', '12/04', '19/04', '26/04', '03/05', '10/05', '17/05', '24/05', '31/05', '07/06', '14/06', '21/06', '28/06', '05/07', '12/07', '19/07', '26/07', '09/08', '16/08'];
+// Datas corrigidas vs Tabela Detalhada CBF (raw): R10-R15 estavam ~1 semana adiantadas
+// (o calendário teve intervalo após a R9). R16-R19 a CBF ainda não datou → estimativa semanal.
+const SC_DATES = ['05/04', '12/04', '19/04', '26/04', '03/05', '10/05', '17/05', '24/05', '31/05', '14/06', '20/06', '27/06', '04/07', '11/07', '25/07', '01/08', '08/08', '15/08', '22/08'];
 const SC_RANKING = {
   'Ferroviária': {
     elo: 1310
@@ -15898,14 +15905,17 @@ function SerieDBracket() {
     return t => { const s = st[t] || { P: 0, GP: 0, GC: 0 }; return s.P * 1e6 + (s.GP - s.GC) * 1e3 + s.GP; };
   }, []);
 
+  // Da 3ª fase em diante (C/D/E/F/G) o mando é por campanha (índice técnico): o de PIOR
+  // campanha joga a IDA em casa. Convenção do bracket: esquerda = mandante da ida = pior campanha.
+  const ordIda = (x, y) => (!x || !y) ? [x, y] : (camp(x) <= camp(y) ? [x, y] : [y, x]);
   function teamsOf(code) {
-    if (f2map[code]) return [f2map[code].a, f2map[code].b];
+    if (f2map[code]) return [f2map[code].a, f2map[code].b]; // 2ª fase: ida.c (mando oficial do PDF) já é t.a
     if (code[0] === 'E') {
       const seeds = qSeeds(); const [i, j] = SD_BRK_QSEED[code];
-      return [seeds[i] || null, seeds[j] || null];
+      return ordIda(seeds[i] || null, seeds[j] || null);
     }
     const p = SD_BRK_PAIRS[code]; if (!p) return [null, null];
-    return [winnerOf(p[0]), winnerOf(p[1])];
+    return ordIda(winnerOf(p[0]), winnerOf(p[1]));
   }
   function winnerOf(code) {
     const tm = teamsOf(code); if (!tm[0] || !tm[1]) return null;
