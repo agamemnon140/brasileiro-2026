@@ -31,9 +31,17 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.48
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.49
 // Motor único | Config: total+pesoCasa | Copa do Brasil | Datas por rodada
 // Dados atualizados até 27/06/2026 | A:R18 | B:R15 parc. | C:R12 parc. | D: grupos completos + 2ª fase parc. | CB:R16 (editável)
+// v4.49: Série D — nova sub-aba "Mata-mata" com BRACKET EDITÁVEL completo (2ª fase → final), no
+//        chaveamento oficial fixo da CBF (C01=Venc.B01×Venc.B06, …; oitavas D=C×C; quartas reseed
+//        por campanha 1º×8º…; semi/final). Componente SerieDBracket: você digita ida/volta de cada
+//        confronto (mandante×visitante por perna), o vencedor é calculado por agregado (+ seletor de
+//        pênaltis no empate) e AVANÇA sozinho à fase seguinte, preenchendo os times. Pré-carregado
+//        com os resultados reais (SD_F2_REAL, ordenado agora na numeração oficial B01-B32) e salvo
+//        por navegador (localStorage 'simUni_sdMM'; botão "Restaurar oficiais"). Também: na sub-aba
+//        "Jogos" o mata-mata passou para o TOPO e os jogos de grupos para baixo (fases recentes 1º).
 // v4.48c: reconciliação 1:1 vs Tabelas Detalhadas CBF (re-baixadas 27/06, atualização 25/06),
 //        extraídas em modo -raw (sem embaralhar colunas). B: 141/141 jogos batem; C: 110/110;
 //        D fase de grupos: 480/480. Duas correções na D (PDF = fonte da verdade): ref452 Altos
@@ -8873,38 +8881,38 @@ const sdKoReal = (a, b) => SD_KO_REAL[sdKoKey(a, b)] || null;
 // === 2ª fase REAL da Série D (por perna) — exibição na sub-aba "Jogos". ida 21/06, volta 27-29/06.
 // volta=null => ainda não disputada (segue simulada). Decididos espelham SD_KO_REAL (conferido).
 const SD_F2_REAL = [
-  { a: "Independência", b: "Manauara", ida: { c: "Independência", gc: 0, gf: 2 }, volta: { c: "Manauara", gc: 2, gf: 0 }, w: "Manauara", pen: false },
-  { a: "São Raimundo-RR", b: "Porto Velho", ida: { c: "São Raimundo-RR", gc: 1, gf: 1 }, volta: null, w: null, pen: false },
-  { a: "Monte Roraima", b: "Guaporé", ida: { c: "Monte Roraima", gc: 3, gf: 2 }, volta: null, w: null, pen: false },
-  { a: "Araguaína", b: "Nacional-AM", ida: { c: "Araguaína", gc: 0, gf: 1 }, volta: null, w: null, pen: false },
-  { a: "Mixto", b: "Gama", ida: { c: "Mixto", gc: 1, gf: 2 }, volta: null, w: null, pen: false },
-  { a: "Brasiliense", b: "Goiatuba", ida: { c: "Brasiliense", gc: 0, gf: 0 }, volta: { c: "Goiatuba", gc: 1, gf: 0 }, w: "Goiatuba", pen: false },
-  { a: "Aparecidense", b: "Capital", ida: { c: "Aparecidense", gc: 1, gf: 1 }, volta: { c: "Capital", gc: 4, gf: 0 }, w: "Capital", pen: false },
-  { a: "Ceilândia", b: "Luverdense", ida: { c: "Ceilândia", gc: 1, gf: 2 }, volta: null, w: null, pen: false },
-  { a: "Sampaio Corrêa", b: "Trem", ida: { c: "Sampaio Corrêa", gc: 0, gf: 2 }, volta: { c: "Trem", gc: 2, gf: 1 }, w: "Trem", pen: false },
-  { a: "Imperatriz", b: "Maracanã", ida: { c: "Imperatriz", gc: 1, gf: 1 }, volta: { c: "Maracanã", gc: 0, gf: 0 }, w: "Imperatriz", pen: true },
-  { a: "Tuna Luso", b: "Iguatu", ida: { c: "Tuna Luso", gc: 1, gf: 2 }, volta: { c: "Iguatu", gc: 1, gf: 1 }, w: "Iguatu", pen: false },
-  { a: "Parnahyba", b: "Águia de Marabá", ida: { c: "Parnahyba", gc: 2, gf: 1 }, volta: { c: "Águia de Marabá", gc: 2, gf: 0 }, w: "Águia de Marabá", pen: false },
-  { a: "Central", b: "Ferroviário", ida: { c: "Central", gc: 1, gf: 1 }, volta: null, w: null, pen: false },
-  { a: "Fluminense-PI", b: "América-RN", ida: { c: "Fluminense-PI", gc: 0, gf: 3 }, volta: { c: "América-RN", gc: 1, gf: 0 }, w: "América-RN", pen: false },
-  { a: "Altos", b: "ABC", ida: { c: "Altos", gc: 0, gf: 1 }, volta: null, w: null, pen: false },
-  { a: "Maguary", b: "Piauí", ida: { c: "Maguary", gc: 2, gf: 0 }, volta: { c: "Piauí", gc: 1, gf: 0 }, w: "Maguary", pen: false },
-  { a: "Jacuipense", b: "Treze", ida: { c: "Jacuipense", gc: 1, gf: 3 }, volta: null, w: null, pen: false },
-  { a: "Serra Branca", b: "Juazeirense", ida: { c: "Serra Branca", gc: 2, gf: 0 }, volta: null, w: null, pen: false },
-  { a: "Lagarto", b: "CSA", ida: { c: "Lagarto", gc: 1, gf: 1 }, volta: { c: "CSA", gc: 2, gf: 0 }, w: "CSA", pen: false },
-  { a: "ASA", b: "Sergipe", ida: { c: "ASA", gc: 1, gf: 1 }, volta: { c: "Sergipe", gc: 0, gf: 1 }, w: "ASA", pen: false },
-  { a: "Rio Branco-ES", b: "Uberlândia", ida: { c: "Rio Branco-ES", gc: 0, gf: 2 }, volta: { c: "Uberlândia", gc: 2, gf: 2 }, w: "Uberlândia", pen: false },
-  { a: "CRAC", b: "Tombense", ida: { c: "CRAC", gc: 1, gf: 0 }, volta: { c: "Tombense", gc: 0, gf: 0 }, w: "CRAC", pen: false },
-  { a: "Ivinhema", b: "Democrata GV", ida: { c: "Ivinhema", gc: 3, gf: 1 }, volta: null, w: null, pen: false },
-  { a: "Vitória-ES", b: "Betim", ida: { c: "Vitória-ES", gc: 1, gf: 0 }, volta: { c: "Betim", gc: 2, gf: 1 }, w: null, pen: false },
-  { a: "Sampaio Corrêa-RJ", b: "Portuguesa-SP", ida: { c: "Sampaio Corrêa-RJ", gc: 1, gf: 1 }, volta: { c: "Portuguesa-SP", gc: 1, gf: 0 }, w: "Portuguesa-SP", pen: false },
-  { a: "Portuguesa-RJ", b: "Noroeste", ida: { c: "Portuguesa-RJ", gc: 1, gf: 1 }, volta: null, w: null, pen: false },
-  { a: "America-RJ", b: "XV de Piracicaba", ida: { c: "America-RJ", gc: 1, gf: 1 }, volta: { c: "XV de Piracicaba", gc: 2, gf: 0 }, w: "XV de Piracicaba", pen: false },
-  { a: "Velo Clube", b: "Água Santa", ida: { c: "Velo Clube", gc: 0, gf: 0 }, volta: { c: "Água Santa", gc: 1, gf: 1 }, w: "Velo Clube", pen: true },
-  { a: "São José-RS", b: "Santa Catarina", ida: { c: "São José-RS", gc: 1, gf: 1 }, volta: { c: "Santa Catarina", gc: 1, gf: 1 }, w: "São José-RS", pen: true },
-  { a: "São Joseense", b: "Cianorte", ida: { c: "São Joseense", gc: 0, gf: 1 }, volta: null, w: null, pen: false },
-  { a: "São Luiz-RS", b: "Blumenau", ida: { c: "São Luiz-RS", gc: 1, gf: 1 }, volta: { c: "Blumenau", gc: 1, gf: 1 }, w: "São Luiz-RS", pen: true },
-  { a: "FC Cascavel", b: "Marcílio Dias", ida: { c: "FC Cascavel", gc: 2, gf: 2 }, volta: null, w: null, pen: false },
+  { code: "B01", a: "Independência", b: "Manauara", ida: { c: "Independência", gc: 0, gf: 2 }, volta: { c: "Manauara", gc: 2, gf: 0 }, w: "Manauara", pen: false },
+  { code: "B02", a: "São Raimundo-RR", b: "Porto Velho", ida: { c: "São Raimundo-RR", gc: 1, gf: 1 }, volta: null, w: null, pen: false },
+  { code: "B03", a: "Monte Roraima", b: "Guaporé", ida: { c: "Monte Roraima", gc: 3, gf: 2 }, volta: null, w: null, pen: false },
+  { code: "B04", a: "Araguaína", b: "Nacional-AM", ida: { c: "Araguaína", gc: 0, gf: 1 }, volta: null, w: null, pen: false },
+  { code: "B05", a: "Mixto", b: "Gama", ida: { c: "Mixto", gc: 1, gf: 2 }, volta: null, w: null, pen: false },
+  { code: "B06", a: "Brasiliense", b: "Goiatuba", ida: { c: "Brasiliense", gc: 0, gf: 0 }, volta: { c: "Goiatuba", gc: 1, gf: 0 }, w: "Goiatuba", pen: false },
+  { code: "B07", a: "Aparecidense", b: "Capital", ida: { c: "Aparecidense", gc: 1, gf: 1 }, volta: { c: "Capital", gc: 4, gf: 0 }, w: "Capital", pen: false },
+  { code: "B08", a: "Ceilândia", b: "Luverdense", ida: { c: "Ceilândia", gc: 1, gf: 2 }, volta: null, w: null, pen: false },
+  { code: "B09", a: "Sampaio Corrêa", b: "Trem", ida: { c: "Sampaio Corrêa", gc: 0, gf: 2 }, volta: { c: "Trem", gc: 2, gf: 1 }, w: "Trem", pen: false },
+  { code: "B10", a: "Imperatriz", b: "Maracanã", ida: { c: "Imperatriz", gc: 1, gf: 1 }, volta: { c: "Maracanã", gc: 0, gf: 0 }, w: "Imperatriz", pen: true },
+  { code: "B11", a: "Tuna Luso", b: "Iguatu", ida: { c: "Tuna Luso", gc: 1, gf: 2 }, volta: { c: "Iguatu", gc: 1, gf: 1 }, w: "Iguatu", pen: false },
+  { code: "B12", a: "Parnahyba", b: "Águia de Marabá", ida: { c: "Parnahyba", gc: 2, gf: 1 }, volta: { c: "Águia de Marabá", gc: 2, gf: 0 }, w: "Águia de Marabá", pen: false },
+  { code: "B13", a: "Central", b: "Ferroviário", ida: { c: "Central", gc: 1, gf: 1 }, volta: null, w: null, pen: false },
+  { code: "B14", a: "Fluminense-PI", b: "América-RN", ida: { c: "Fluminense-PI", gc: 0, gf: 3 }, volta: { c: "América-RN", gc: 1, gf: 0 }, w: "América-RN", pen: false },
+  { code: "B15", a: "Altos", b: "ABC", ida: { c: "Altos", gc: 0, gf: 1 }, volta: null, w: null, pen: false },
+  { code: "B16", a: "Maguary", b: "Piauí", ida: { c: "Maguary", gc: 2, gf: 0 }, volta: { c: "Piauí", gc: 1, gf: 0 }, w: "Maguary", pen: false },
+  { code: "B17", a: "Jacuipense", b: "Treze", ida: { c: "Jacuipense", gc: 1, gf: 3 }, volta: null, w: null, pen: false },
+  { code: "B18", a: "Serra Branca", b: "Juazeirense", ida: { c: "Serra Branca", gc: 2, gf: 0 }, volta: null, w: null, pen: false },
+  { code: "B19", a: "Lagarto", b: "CSA", ida: { c: "Lagarto", gc: 1, gf: 1 }, volta: { c: "CSA", gc: 2, gf: 0 }, w: "CSA", pen: false },
+  { code: "B20", a: "ASA", b: "Sergipe", ida: { c: "ASA", gc: 1, gf: 1 }, volta: { c: "Sergipe", gc: 0, gf: 1 }, w: "ASA", pen: false },
+  { code: "B21", a: "Rio Branco-ES", b: "Uberlândia", ida: { c: "Rio Branco-ES", gc: 0, gf: 2 }, volta: { c: "Uberlândia", gc: 2, gf: 2 }, w: "Uberlândia", pen: false },
+  { code: "B22", a: "CRAC", b: "Tombense", ida: { c: "CRAC", gc: 1, gf: 0 }, volta: { c: "Tombense", gc: 0, gf: 0 }, w: "CRAC", pen: false },
+  { code: "B23", a: "Ivinhema", b: "Democrata GV", ida: { c: "Ivinhema", gc: 3, gf: 1 }, volta: null, w: null, pen: false },
+  { code: "B24", a: "Vitória-ES", b: "Betim", ida: { c: "Vitória-ES", gc: 1, gf: 0 }, volta: { c: "Betim", gc: 2, gf: 1 }, w: null, pen: false },
+  { code: "B25", a: "Sampaio Corrêa-RJ", b: "Portuguesa-SP", ida: { c: "Sampaio Corrêa-RJ", gc: 1, gf: 1 }, volta: { c: "Portuguesa-SP", gc: 1, gf: 0 }, w: "Portuguesa-SP", pen: false },
+  { code: "B26", a: "Portuguesa-RJ", b: "Noroeste", ida: { c: "Portuguesa-RJ", gc: 1, gf: 1 }, volta: null, w: null, pen: false },
+  { code: "B27", a: "America-RJ", b: "XV de Piracicaba", ida: { c: "America-RJ", gc: 1, gf: 1 }, volta: { c: "XV de Piracicaba", gc: 2, gf: 0 }, w: "XV de Piracicaba", pen: false },
+  { code: "B28", a: "Velo Clube", b: "Água Santa", ida: { c: "Velo Clube", gc: 0, gf: 0 }, volta: { c: "Água Santa", gc: 1, gf: 1 }, w: "Velo Clube", pen: true },
+  { code: "B29", a: "São José-RS", b: "Santa Catarina", ida: { c: "São José-RS", gc: 1, gf: 1 }, volta: { c: "Santa Catarina", gc: 1, gf: 1 }, w: "São José-RS", pen: true },
+  { code: "B30", a: "FC Cascavel", b: "Marcílio Dias", ida: { c: "FC Cascavel", gc: 2, gf: 2 }, volta: null, w: null, pen: false },
+  { code: "B31", a: "São Luiz-RS", b: "Blumenau", ida: { c: "São Luiz-RS", gc: 1, gf: 1 }, volta: { c: "Blumenau", gc: 1, gf: 1 }, w: "São Luiz-RS", pen: true },
+  { code: "B32", a: "São Joseense", b: "Cianorte", ida: { c: "São Joseense", gc: 0, gf: 1 }, volta: null, w: null, pen: false },
 ];
 const genGrpTab = g => {
   const n = g.length,
@@ -15836,6 +15844,125 @@ function LeagueSim({
 // ============================================================================
 // SÉRIE D — idêntico v3 (resumido)
 // ============================================================================
+// === Bracket editável do mata-mata da Série D 2026 (chaveamento oficial fixo CBF) ===
+const SD_BRK_PAIRS = {
+  C01: ['B01', 'B06'], C02: ['B02', 'B05'], C03: ['B03', 'B08'], C04: ['B04', 'B07'],
+  C05: ['B09', 'B14'], C06: ['B10', 'B13'], C07: ['B11', 'B16'], C08: ['B12', 'B15'],
+  C09: ['B17', 'B22'], C10: ['B18', 'B21'], C11: ['B19', 'B24'], C12: ['B20', 'B23'],
+  C13: ['B25', 'B30'], C14: ['B26', 'B29'], C15: ['B27', 'B32'], C16: ['B28', 'B31'],
+  D01: ['C01', 'C06'], D02: ['C02', 'C05'], D03: ['C03', 'C08'], D04: ['C04', 'C07'],
+  D05: ['C09', 'C14'], D06: ['C10', 'C13'], D07: ['C11', 'C16'], D08: ['C12', 'C15'],
+  F01: ['E01', 'E02'], F02: ['E03', 'E04'],
+  G01: ['F01', 'F02']
+};
+// quartas (E): reseed por campanha dos 8 vencedores das oitavas — 1º×8º, 4º×5º, 2º×7º, 3º×6º
+const SD_BRK_QSEED = { E01: [0, 7], E02: [3, 4], E03: [1, 6], E04: [2, 5] };
+const SD_BRK_PHASES = [
+  { key: 'f2', label: '2ª Fase', date: '21/06 e 27-28/06', codes: ['B01','B02','B03','B04','B05','B06','B07','B08','B09','B10','B11','B12','B13','B14','B15','B16','B17','B18','B19','B20','B21','B22','B23','B24','B25','B26','B27','B28','B29','B30','B31','B32'] },
+  { key: 'f3', label: '3ª Fase', date: '05 e 12/07', codes: ['C01','C02','C03','C04','C05','C06','C07','C08','C09','C10','C11','C12','C13','C14','C15','C16'] },
+  { key: 'f4', label: 'Oitavas (4ª Fase)', date: '19 e 26/07', codes: ['D01','D02','D03','D04','D05','D06','D07','D08'] },
+  { key: 'f5', label: 'Quartas (5ª Fase) · reseed por campanha', date: '08 e 15/08', codes: ['E01','E02','E03','E04'] },
+  { key: 'f6', label: 'Semifinal', date: '23 e 30/08', codes: ['F01','F02'] },
+  { key: 'f7', label: 'Final', date: '06 e 13/09', codes: ['G01'] }
+];
+
+function SerieDBracket() {
+  const f2map = useMemo(() => { const m = {}; for (const t of SD_F2_REAL) m[t.code] = t; return m; }, []);
+  const defaults = useMemo(() => {
+    const d = {};
+    for (const t of SD_F2_REAL) {
+      const e = {};
+      if (t.ida) { const iaA = t.ida.c === t.a; e.iA = iaA ? t.ida.gc : t.ida.gf; e.iB = iaA ? t.ida.gf : t.ida.gc; }
+      if (t.volta) { const vbB = t.volta.c === t.b; e.vB = vbB ? t.volta.gc : t.volta.gf; e.vA = vbB ? t.volta.gf : t.volta.gc; }
+      if (t.pen) e.pen = (t.w === t.a ? 'A' : 'B');
+      d[t.code] = e;
+    }
+    return d;
+  }, [f2map]);
+  const [res, setRes] = useState(() => {
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem('simUni_sdMM') || '{}'); } catch (e) {}
+    return { ...defaults, ...saved };
+  });
+  useEffect(() => { try { localStorage.setItem('simUni_sdMM', JSON.stringify(res)); } catch (e) {} }, [res]);
+  const setLeg = (code, field, val) => setRes(prev => ({ ...prev, [code]: { ...prev[code], [field]: val === '' ? undefined : Math.max(0, Math.min(30, parseInt(val) || 0)) } }));
+  const setPen = (code, val) => setRes(prev => ({ ...prev, [code]: { ...prev[code], pen: val || undefined } }));
+  const reset = () => setRes({ ...defaults });
+
+  const camp = useMemo(() => {
+    const st = {};
+    SD_GRUPOS.flat().forEach(t => st[t] = { P: 0, GP: 0, GC: 0 });
+    SD_RES.forEach(r => { const c = r.c, f = r.f; if (!st[c] || !st[f]) return; st[c].GP += r.gc; st[c].GC += r.gf; st[f].GP += r.gf; st[f].GC += r.gc; if (r.gc > r.gf) st[c].P += 3; else if (r.gc === r.gf) { st[c].P++; st[f].P++; } else st[f].P += 3; });
+    return t => { const s = st[t] || { P: 0, GP: 0, GC: 0 }; return s.P * 1e6 + (s.GP - s.GC) * 1e3 + s.GP; };
+  }, []);
+
+  function teamsOf(code) {
+    if (f2map[code]) return [f2map[code].a, f2map[code].b];
+    if (code[0] === 'E') {
+      const seeds = qSeeds(); const [i, j] = SD_BRK_QSEED[code];
+      return [seeds[i] || null, seeds[j] || null];
+    }
+    const p = SD_BRK_PAIRS[code]; if (!p) return [null, null];
+    return [winnerOf(p[0]), winnerOf(p[1])];
+  }
+  function winnerOf(code) {
+    const tm = teamsOf(code); if (!tm[0] || !tm[1]) return null;
+    const r = res[code] || {};
+    if (r.iA == null || r.iB == null || r.vA == null || r.vB == null) return null;
+    const aA = r.iA + r.vA, aB = r.iB + r.vB;
+    if (aA > aB) return tm[0]; if (aB > aA) return tm[1];
+    return r.pen === 'A' ? tm[0] : r.pen === 'B' ? tm[1] : null;
+  }
+  function qSeeds() {
+    const ws = ['D01','D02','D03','D04','D05','D06','D07','D08'].map(winnerOf);
+    if (ws.some(w => !w)) return [];
+    return ws.slice().sort((a, b) => camp(b) - camp(a));
+  }
+
+  const num = (code, field, enabled) => React.createElement('input', {
+    type: 'number', min: 0, value: (res[code] && res[code][field] != null) ? res[code][field] : '',
+    disabled: !enabled, onChange: e => setLeg(code, field, e.target.value),
+    className: 'w-7 text-center bg-slate-900/70 border border-slate-600 rounded text-[11px] py-0.5 ' + (enabled ? 'text-white' : 'text-slate-600')
+  });
+
+  const renderTie = (code) => {
+    const [a, b] = teamsOf(code);
+    const r = res[code] || {};
+    const both = a && b;
+    const aggA = (r.iA || 0) + (r.vA || 0), aggB = (r.iB || 0) + (r.vB || 0);
+    const complete = both && r.iA != null && r.iB != null && r.vA != null && r.vB != null;
+    const tied = complete && aggA === aggB;
+    const w = winnerOf(code);
+    const nm = (t, ph) => t ? React.createElement(TN, { name: t }) : React.createElement('span', { className: 'text-slate-600 italic' }, ph);
+    const srcPh = SD_BRK_PAIRS[code] ? ['Venc. ' + SD_BRK_PAIRS[code][0], 'Venc. ' + SD_BRK_PAIRS[code][1]] : (code[0] === 'E' ? ['classif. campanha', 'classif. campanha'] : ['', '']);
+    return React.createElement('div', { key: code, className: 'flex items-center gap-1 text-[11px] py-1 border-b border-slate-700/30' },
+      React.createElement('span', { className: 'text-slate-500 w-8 font-mono' }, code),
+      React.createElement('span', { className: 'flex-1 text-right truncate ' + (w && w === a ? 'text-emerald-300 font-semibold' : '') }, nm(a, srcPh[0])),
+      React.createElement('div', { className: 'flex items-center gap-0.5' },
+        num(code, 'iA', both), React.createElement('span', { className: 'text-slate-600' }, '×'), num(code, 'iB', both),
+        React.createElement('span', { className: 'text-slate-700 mx-0.5' }, '/'),
+        num(code, 'vA', both), React.createElement('span', { className: 'text-slate-600' }, '×'), num(code, 'vB', both)),
+      React.createElement('span', { className: 'flex-1 truncate ' + (w && w === b ? 'text-emerald-300 font-semibold' : '') }, nm(b, srcPh[1])),
+      complete ? React.createElement('span', { className: 'w-10 text-right font-mono text-emerald-400' }, aggA + '-' + aggB) : React.createElement('span', { className: 'w-10' }),
+      tied ? React.createElement('select', {
+        value: r.pen || '', onChange: e => setPen(code, e.target.value),
+        className: 'bg-slate-900 border border-amber-600/50 rounded text-[10px] text-amber-300'
+      }, React.createElement('option', { value: '' }, 'pên?'), React.createElement('option', { value: 'A' }, (a || 'A').slice(0, 8)), React.createElement('option', { value: 'B' }, (b || 'B').slice(0, 8)))
+        : React.createElement('span', { className: 'w-4 text-emerald-400' }, w ? '✓' : ''));
+  };
+
+  return React.createElement('div', { className: 'bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50' },
+    React.createElement('div', { className: 'flex items-center justify-between mb-2 flex-wrap gap-2' },
+      React.createElement('h2', { className: 'text-base font-semibold text-emerald-300' }, 'Mata-mata — Bracket editável'),
+      React.createElement('button', { onClick: reset, className: 'px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded-lg text-[11px] border border-slate-600' }, 'Restaurar oficiais')),
+    React.createElement('p', { className: 'text-[11px] text-slate-500 mb-3 italic' }, 'Digite ida/volta (mandante × visitante de cada perna). O vencedor avança sozinho à fase seguinte; empate no agregado abre seletor de pênaltis. Suas edições ficam salvas neste navegador. Chaveamento oficial CBF.'),
+    SD_BRK_PHASES.map(ph => React.createElement('div', { key: ph.key, className: 'mb-4' },
+      React.createElement('div', { className: 'flex items-baseline gap-2 mb-1' },
+        React.createElement('h3', { className: 'text-sm font-bold text-emerald-400' }, ph.label),
+        React.createElement('span', { className: 'text-[10px] text-slate-500' }, ph.date)),
+      React.createElement('div', { className: 'bg-slate-900/30 rounded-lg px-2' }, ph.codes.map(renderTie)))));
+}
+
 function SerieDSim({
   cfg,
   initialMC,
@@ -16074,6 +16201,9 @@ function SerieDSim({
     id: 'jogos',
     l: 'Jogos'
   }, {
+    id: 'bracket',
+    l: 'Mata-mata'
+  }, {
     id: 'geral',
     l: 'Geral'
   }, {
@@ -16215,6 +16345,37 @@ function SerieDSim({
   }, r.def.toFixed(2)), /*#__PURE__*/React.createElement("td", {
     className: "text-right font-mono font-bold text-slate-300"
   }, r.ad.toFixed(2)))))))), aba === 'jogos' && /*#__PURE__*/React.createElement("div", {
+    className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50 mt-3"
+  }, /*#__PURE__*/React.createElement("h2", {
+    className: "text-base font-semibold text-emerald-300 mb-1"
+  }, "2\xAA Fase — Mata-mata"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-slate-500 mb-3 italic"
+  }, "Ida 21/06 \xB7 volta 27-29/06. Confrontos encerrados fixam o vencedor (verde) na simula\xE7\xE3o; os pendentes seguem simulados."), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-0.5 max-h-[500px] overflow-y-auto"
+  }, SD_F2_REAL.map((t, i) => {
+    const og = leg => leg ? (leg.c === t.a ? [leg.gc, leg.gf] : [leg.gf, leg.gc]) : null;
+    const gi = og(t.ida),
+      gv = og(t.volta);
+    const agg = gv ? [gi[0] + gv[0], gi[1] + gv[1]] : null;
+    const cls = who => "flex-1 truncate " + (t.w === who ? 'text-emerald-300 font-semibold' : 'text-slate-300');
+    const placar = agg ? (t.w ? `${agg[0]}–${agg[1]}${t.pen ? ' (p\xEAn)' : ''}` : `${agg[0]}–${agg[1]} (?)`) : `ida ${gi[0]}-${gi[1]} \xB7 volta a definir`;
+    return /*#__PURE__*/React.createElement("div", {
+      key: i,
+      className: "flex items-center justify-between p-1 rounded text-xs bg-slate-700/30"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: cls(t.a) + " text-right pr-1"
+    }, /*#__PURE__*/React.createElement(TN, {
+      name: t.a
+    })), /*#__PURE__*/React.createElement("span", {
+      className: "mx-1 w-28 text-center font-mono text-[10px] " + (t.w ? 'text-emerald-300 font-bold' : 'text-slate-400')
+    }, placar), /*#__PURE__*/React.createElement("span", {
+      className: cls(t.b) + " pl-1"
+    }, /*#__PURE__*/React.createElement(TN, {
+      name: t.b
+    })), /*#__PURE__*/React.createElement("span", {
+      className: "w-4 text-emerald-400 text-[10px] text-right"
+    }, t.w ? '✓' : ''));
+  }))), aba === 'jogos' && /*#__PURE__*/React.createElement("div", {
     className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between mb-3 flex-wrap gap-2"
@@ -16322,38 +16483,7 @@ function SerieDSim({
         className: "text-orange-400 w-7 text-[10px] font-mono"
       }, Math.round(prob.pA), "%")));
     }));
-  })()), aba === 'jogos' && /*#__PURE__*/React.createElement("div", {
-    className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50 mt-3"
-  }, /*#__PURE__*/React.createElement("h2", {
-    className: "text-base font-semibold text-emerald-300 mb-1"
-  }, "2\xAA Fase — Mata-mata"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-slate-500 mb-3 italic"
-  }, "Ida 21/06 \xB7 volta 27-29/06. Confrontos encerrados fixam o vencedor (verde) na simula\xE7\xE3o; os pendentes seguem simulados."), /*#__PURE__*/React.createElement("div", {
-    className: "space-y-0.5 max-h-[500px] overflow-y-auto"
-  }, SD_F2_REAL.map((t, i) => {
-    const og = leg => leg ? (leg.c === t.a ? [leg.gc, leg.gf] : [leg.gf, leg.gc]) : null;
-    const gi = og(t.ida),
-      gv = og(t.volta);
-    const agg = gv ? [gi[0] + gv[0], gi[1] + gv[1]] : null;
-    const cls = who => "flex-1 truncate " + (t.w === who ? 'text-emerald-300 font-semibold' : 'text-slate-300');
-    const placar = agg ? (t.w ? `${agg[0]}–${agg[1]}${t.pen ? ' (p\xEAn)' : ''}` : `${agg[0]}–${agg[1]} (?)`) : `ida ${gi[0]}-${gi[1]} \xB7 volta a definir`;
-    return /*#__PURE__*/React.createElement("div", {
-      key: i,
-      className: "flex items-center justify-between p-1 rounded text-xs bg-slate-700/30"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: cls(t.a) + " text-right pr-1"
-    }, /*#__PURE__*/React.createElement(TN, {
-      name: t.a
-    })), /*#__PURE__*/React.createElement("span", {
-      className: "mx-1 w-28 text-center font-mono text-[10px] " + (t.w ? 'text-emerald-300 font-bold' : 'text-slate-400')
-    }, placar), /*#__PURE__*/React.createElement("span", {
-      className: cls(t.b) + " pl-1"
-    }, /*#__PURE__*/React.createElement(TN, {
-      name: t.b
-    })), /*#__PURE__*/React.createElement("span", {
-      className: "w-4 text-emerald-400 text-[10px] text-right"
-    }, t.w ? '✓' : ''));
-  }))), aba === 'geral' && /*#__PURE__*/React.createElement("div", {
+  })()), aba === 'bracket' && /*#__PURE__*/React.createElement(SerieDBracket, null), aba === 'geral' && /*#__PURE__*/React.createElement("div", {
     className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"
   }, /*#__PURE__*/React.createElement("h2", {
     className: "text-base font-semibold text-emerald-300 mb-1"
