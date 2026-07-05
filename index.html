@@ -31,7 +31,12 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.50
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.50b
+// v4.50b (05/07/2026): computeUnifiedState(cfg, ak, extras) — os Elos/atk/def unificados
+//        (perna Copa BR do dashboard, aba Ratings da CB, H2H, LiveSim) agora evoluem também
+//        com os resultados manuais (userResAll) e buscados (fetchedRes) de A/B/C/D, não só
+//        com os embutidos. Deps do useMemo allTeams incluem fetchedRes/userResAll para
+//        recalcular sem F5. (Port ao .jsx pendente.)
 // v4.50 (05/07/2026): resultados manuais/buscados entram no "Simular Tudo". (a) Placares digitados
 //        na aba Jogos de A/B/C agora vivem no App (userResAll), persistem em localStorage
 //        (simUni_userRes) e sobrevivem ao reload; (b) runAll do dashboard passa mergeRes(SX_RES,
@@ -891,7 +896,10 @@ const applyCBToLeague = (el2, at2, df2, lg, cfg, ak, eo) => {
 // SD_RES, CB_RES_IDA, CB_RES_VOLTA). Cada série é processada com seus próprios
 // lambdas (mc/mf via getML). Usado por allElos/allTeams no App e pela aba Ratings
 // da Copa BR para mostrar valores atuais (não nominais pré-temporada).
-const computeUnifiedState = (cfg, ak) => {
+// `extras` (opcional): {A,B,C,D} com resultados manuais/buscados a somar aos embutidos
+// (mergeRes garante dedup; embutido vence). Mantém a perna Copa BR do dashboard, os
+// Ratings da CB e o H2H coerentes com o que o usuário digitou/buscou.
+const computeUnifiedState = (cfg, ak, extras) => {
   const elos = {},
     atk = {},
     def = {};
@@ -924,10 +932,10 @@ const computeUnifiedState = (cfg, ak) => {
       updR(elos, atk, def, r.c, r.f, r.gc, r.gf, lC, lF, cfg, ak, false);
     }
   };
-  apply(SA_RES, 'A');
-  apply(SB_RES, 'B');
-  apply(SC_RES, 'C');
-  apply(SD_RES, 'D');
+  apply(extras ? mergeRes(SA_RES, extras.A) : SA_RES, 'A');
+  apply(extras ? mergeRes(SB_RES, extras.B) : SB_RES, 'B');
+  apply(extras ? mergeRes(SC_RES, extras.C) : SC_RES, 'C');
+  apply(extras ? mergeRes(SD_RES, extras.D) : SD_RES, 'D');
   // Apply CB results — usa lgCache.A como fallback p/ teams externos (caso de mismatch
   // de nome como "Barra-SC" vs "Barra"; vasta maioria dos teams CB já estão no state)
   applyCBToLeague(elos, atk, def, lgCache.A, cfg, ak, false);
@@ -18973,7 +18981,12 @@ function SimuladorUnificado() {
   // Bahia 1545 pós CB, etc.) e LiveSim/CopaBrasilSim trabalham com estado real.
   const allTeams = useMemo(() => {
     const db = {};
-    const u = computeUnifiedState(cfg, cfg.defaultAlpha || 'base');
+    const u = computeUnifiedState(cfg, cfg.defaultAlpha || 'base', {
+      A: mergeRes([], userResAll.A, fetchedRes.A),
+      B: mergeRes([], userResAll.B, fetchedRes.B),
+      C: mergeRes([], userResAll.C, fetchedRes.C),
+      D: fetchedRes.D || []
+    });
     Object.keys(SA_RANKING).forEach(t => {
       db[t] = {
         atk: u.atk[t],
@@ -19007,7 +19020,7 @@ function SimuladorUnificado() {
       };
     });
     return db;
-  }, [cfg]);
+  }, [cfg, fetchedRes, userResAll]);
   const allElos = useMemo(() => {
     const e = {};
     Object.entries(allTeams).forEach(([n, d]) => e[n] = d.elo);
@@ -19427,7 +19440,7 @@ function SimuladorUnificado() {
     })
   }), /*#__PURE__*/React.createElement("div", {
     className: "mt-4 text-center text-slate-500 text-xs"
-  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R11) | C:", SC_RES.length, " (R9) | D:", SD_RES.length, " (R9) | Copa BR: R16 (edit\xE1vel) | v4.50 \u2014 resultados manuais entram no Simular Tudo"))));
+  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R11) | C:", SC_RES.length, " (R9) | D:", SD_RES.length, " (R9) | Copa BR: R16 (edit\xE1vel) | v4.50b \u2014 resultados manuais entram no Simular Tudo e nos Elos unificados"))));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(SimuladorUnificado));
 </script>
