@@ -31,7 +31,12 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.51
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.51b
+// v4.51b (05/07/2026): DateCard — cards de jogo ganham bloco de data estilo FIFA
+//        (dia-da-semana / dia / MÊS + tag da rodada) no GameRow de A/B/C e nos Jogos da D,
+//        substituindo o texto DD/MM + "R n". A CBF publica apenas data de referência POR
+//        RODADA e nenhum horário — o card não inventa hora (title explica). Ano fixo 2026
+//        para o dia-da-semana. (Port ao .jsx pendente.)
 // v4.51 (05/07/2026): ProbChip — probabilidades pré-jogo viram pílulas estilo FIFA 2026
 //        (emerald=casa, slate=empate, laranja=fora; casa deixa de ser azul) nos Jogos de
 //        A/B/C (GameRow, branches editável e display) e da Série D. Zero cálculo novo
@@ -14090,6 +14095,31 @@ const ProbChip = ({
     title: tone === 'h' ? 'Vitória do mandante' : tone === 'a' ? 'Vitória do visitante' : 'Empate'
   }, Math.round(v), "%");
 };
+// DateCard: bloco compacto de data estilo FIFA (dia-da-semana / dia / mês + rodada).
+// Só existe data DD/MM por RODADA (referência CBF) e nenhum horário — não inventar hora.
+const DC_MES = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+const DC_DIA = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+const DateCard = ({
+  data,
+  rodada
+}) => {
+  const m = data ? /^(\d{1,2})\/(\d{1,2})/.exec(data) : null;
+  const dd = m ? +m[1] : null,
+    mm = m ? +m[2] : null;
+  const wd = m ? DC_DIA[new Date(2026, mm - 1, dd).getDay()] : '';
+  return /*#__PURE__*/React.createElement("span", {
+    className: "flex flex-col items-center justify-center w-9 shrink-0 rounded-md bg-slate-900/60 border border-slate-700/60 py-0.5 leading-none",
+    title: (m ? 'Data de referência da rodada — ' : '') + 'R' + rodada
+  }, m && /*#__PURE__*/React.createElement("span", {
+    className: "text-[7px] text-slate-500 tracking-wide"
+  }, wd), m && /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] font-bold text-slate-200"
+  }, dd), m && /*#__PURE__*/React.createElement("span", {
+    className: "text-[7px] text-emerald-400/80 tracking-wide"
+  }, DC_MES[mm - 1]), /*#__PURE__*/React.createElement("span", {
+    className: "text-[7px] text-slate-500" + (m ? " mt-0.5" : "")
+  }, "R", rodada));
+};
 const GameRow = ({
   j,
   real,
@@ -14127,11 +14157,10 @@ const GameRow = ({
   if (!hasScore && onScore) {
     return /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-between p-1.5 rounded text-xs bg-slate-700/30 gap-1"
-    }, j.data && /*#__PURE__*/React.createElement("span", {
-      className: "text-slate-600 w-12 text-[10px]"
-    }, j.data), /*#__PURE__*/React.createElement("span", {
-      className: "text-slate-500 w-6 text-right font-mono"
-    }, "R", j.rodada), prob && /*#__PURE__*/React.createElement(ProbChip, {
+    }, /*#__PURE__*/React.createElement(DateCard, {
+      data: j.data,
+      rodada: j.rodada
+    }), prob && /*#__PURE__*/React.createElement(ProbChip, {
       v: prob.pH,
       tone: "h"
     }), /*#__PURE__*/React.createElement("span", {
@@ -14163,11 +14192,10 @@ const GameRow = ({
   }
   return /*#__PURE__*/React.createElement("div", {
     className: `flex items-center justify-between p-1.5 rounded text-xs ${isUser ? 'bg-amber-900/20 border-l-2 border-amber-400' : real || j.real ? 'bg-emerald-900/20 border-l-2 border-emerald-500' : hasScore ? 'bg-slate-700/20 border-l-2 border-slate-600' : 'bg-slate-700/30'}`
-  }, j.data && /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-600 w-12 text-[10px]"
-  }, j.data), /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-500 w-6 text-right font-mono"
-  }, "R", j.rodada), prob && !hasScore && /*#__PURE__*/React.createElement(ProbChip, {
+  }, /*#__PURE__*/React.createElement(DateCard, {
+    data: j.data,
+    rodada: j.rodada
+  }), prob && !hasScore && /*#__PURE__*/React.createElement(ProbChip, {
     v: prob.pH,
     tone: "h"
   }), /*#__PURE__*/React.createElement("span", {
@@ -16732,11 +16760,10 @@ function SerieDSim({
       return /*#__PURE__*/React.createElement("div", {
         key: i,
         className: "flex items-center justify-between p-1 rounded text-xs bg-slate-700/30"
-      }, j.data && /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-600 w-12 text-[10px]"
-      }, j.data), /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-500 w-6 text-right font-mono"
-      }, "R", j.rodada), /*#__PURE__*/React.createElement("span", {
+      }, /*#__PURE__*/React.createElement(DateCard, {
+        data: j.data,
+        rodada: j.rodada
+      }), /*#__PURE__*/React.createElement("span", {
         className: "text-slate-600 w-10 text-center text-[10px]"
       }, SD_GL[j.grupo].split('·')[0]), rl ? /*#__PURE__*/React.createElement("span", {
         className: "flex items-center flex-1"
@@ -19509,7 +19536,7 @@ function SimuladorUnificado() {
     })
   }), /*#__PURE__*/React.createElement("div", {
     className: "mt-4 text-center text-slate-500 text-xs"
-  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R11) | C:", SC_RES.length, " (R9) | D:", SD_RES.length, " (R9) | Copa BR: R16 (edit\xE1vel) | v4.51 \u2014 chips de probabilidade estilo FIFA nos Jogos"))));
+  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R11) | C:", SC_RES.length, " (R9) | D:", SD_RES.length, " (R9) | Copa BR: R16 (edit\xE1vel) | v4.51b \u2014 chips de probabilidade e cards de data estilo FIFA"))));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(SimuladorUnificado));
 </script>
