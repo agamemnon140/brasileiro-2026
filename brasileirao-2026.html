@@ -31,7 +31,17 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.49
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.50
+// v4.50 (05/07/2026): resultados manuais/buscados entram no "Simular Tudo". (a) Placares digitados
+//        na aba Jogos de A/B/C agora vivem no App (userResAll), persistem em localStorage
+//        (simUni_userRes) e sobrevivem ao reload; (b) runAll do dashboard passa mergeRes(SX_RES,
+//        userRes, fetchedRes) em vez dos embutidos crus — manual e buscado valem no MC geral;
+//        (c) simMC_D_async ganha param `extra` → prepareSerieDState, então fetchedRes.D entra no
+//        MC da Série D no dashboard E na aba (antes só na 1 Sim); (d) precedência unificada
+//        embutido > manual > buscado com dedup por par casa|fora (mergeRes) — engine e display
+//        agora concordam, e corrige dupla contagem em calcClassif quando manual+buscado coexistiam.
+//        Efeito colateral documentado: placar manual em rodada futura eleva maxRR e adia o drift.
+//        (Port ao simulador_unificado.jsx PENDENTE — fonte segue na v4.47.)
 // v4.49h: o Monte Carlo da LIGA agora inclui suas edições nas fases finais de B (playoff de
 //        acesso) e C (quadrangular + final). refreshBcUser() resolve os slots TRAVADOS → times e
 //        gera BC_USER (overlay por par/jogo), que o MC consulta quando aquele confronto/jogo ocorre
@@ -971,6 +981,23 @@ const calcClassif = (times, res) => {
     ...c,
     pos: i + 1
   }));
+};
+// mergeRes: concatena fontes de resultado com dedup por par c|f (primeiro vence).
+// Precedência documentada: embutidos (SX_RES) > manuais (userRes) > buscados (fetchedRes).
+// Chave c|f (sem rodada) é a mesma dos dedups existentes (prepareSerieDState, handleSearchResults):
+// em turno-returno cada par ordenado casa|fora ocorre 1x na temporada.
+const mergeRes = (base, ...extras) => {
+  const out = base.slice();
+  const seen = new Set();
+  for (const r of base) seen.add(r.c + '|' + r.f);
+  for (const arr of extras) {
+    if (!arr) continue;
+    for (const r of arr) {
+      const k = r.c + '|' + r.f;
+      if (!seen.has(k)) { seen.add(k); out.push(r); }
+    }
+  }
+  return out;
 };
 // === Overlay das edições do usuário nas fases finais de B (playoff) e C (quadrangular) ===
 // Resolve os slots editados -> times projetados (só posições travadas), por par de times.
@@ -2039,10 +2066,10 @@ const simMC_D = (cfg, nS, ak, eo) => {
   for (let sim = 0; sim < nS; sim++) simMC_D_single(cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeams);
   return simMC_D_finalize(snap, ct, nS, gpts, ufAcc, ufTeams);
 };
-const simMC_D_async = (cfg, nS, ak, eo, onProgress, onDone) => {
+const simMC_D_async = (cfg, nS, ak, eo, extra, onProgress, onDone) => {
   refreshSdKoUser();
   const tabD = SD_REAL_TAB;
-  const snap = prepareSerieDState(cfg, eo, ak);
+  const snap = prepareSerieDState(cfg, eo, ak, extra);
   const {
     mc,
     mf
@@ -15226,6 +15253,8 @@ function LeagueSim({
   meta,
   cfg,
   extraRes,
+  userRes,
+  setUserRes,
   initialMC,
   initialAk,
   initialEo,
@@ -15239,7 +15268,6 @@ function LeagueSim({
   const [rSU, setRSU] = useState(null);
   const [busy, setBusy] = useState(false);
   const [rF, setRF] = useState(0);
-  const [userRes, setUserRes] = useState([]);
   // Drift efetivo: usa valor do dashboard (ou 0 se não definido)
   const effCfg = useMemo(() => ({
     ...cfg,
@@ -15254,7 +15282,8 @@ function LeagueSim({
       if (initialEo !== undefined) setEo(initialEo);
     }
   }, [initialMC, initialAk, initialEo]);
-  const allRes = useMemo(() => [...res, ...(extraRes || []), ...userRes], [res, extraRes, userRes]);
+  // Precedência: embutidos (res) > manuais (userRes) > buscados (extraRes) — dedup por par c|f.
+  const allRes = useMemo(() => mergeRes(res, userRes, extraRes), [res, extraRes, userRes]);
   const setScore = (casa, fora, rodada, gc, gf) => {
     setUserRes(prev => {
       const without = prev.filter(r => !(r.c === casa && r.f === fora && r.r === rodada));
@@ -16254,12 +16283,12 @@ function SerieDSim({
   const doMC = useCallback(() => {
     setBusy(true);
     setProgress(0);
-    simMC_D_async(cfg, nS, ak, eo, (done, total) => setProgress(done / total), result => {
+    simMC_D_async(cfg, nS, ak, eo, extraRes, (done, total) => setProgress(done / total), result => {
       setRMC(result);
       setBusy(false);
       setProgress(1);
     });
-  }, [nS, effCfg, eo, ak]);
+  }, [nS, effCfg, eo, ak, extraRes]);
   const doSU = useCallback(() => {
     const {
       mc,
@@ -18786,6 +18815,41 @@ function SimuladorUnificado() {
       localStorage.setItem('simUni_fetchedRes', JSON.stringify(fetchedRes));
     } catch (e) {}
   }, [fetchedRes]);
+  // Placares digitados na aba Jogos de A/B/C (antes viviam só dentro de LeagueSim e
+  // sumiam no reload). Persistidos em simUni_userRes e consumidos pelo dashboard.
+  const [userResAll, setUserResAll] = useState(() => {
+    try {
+      const s = localStorage.getItem('simUni_userRes');
+      if (s) {
+        const p = JSON.parse(s);
+        return {
+          A: p.A || [],
+          B: p.B || [],
+          C: p.C || []
+        };
+      }
+    } catch (e) {}
+    return {
+      A: [],
+      B: [],
+      C: []
+    };
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('simUni_userRes', JSON.stringify(userResAll));
+    } catch (e) {}
+  }, [userResAll]);
+  const setUserResFor = useCallback(sk => upd => setUserResAll(prev => ({
+    ...prev,
+    [sk]: typeof upd === 'function' ? upd(prev[sk]) : upd
+  })), []);
+  // Merge com precedência embutido > manual > buscado — fonte única do "Simular Tudo".
+  const mergedRes = useMemo(() => ({
+    A: mergeRes(SA_RES, userResAll.A, fetchedRes.A),
+    B: mergeRes(SB_RES, userResAll.B, fetchedRes.B),
+    C: mergeRes(SC_RES, userResAll.C, fetchedRes.C)
+  }), [fetchedRes, userResAll]);
   const [showSearch, setShowSearch] = useState(false);
   // Normalizar nomes de times (busca → simulador)
   const normName = n => {
@@ -18995,7 +19059,7 @@ function SimuladorUnificado() {
         advance();
         nextStage();
       };
-      if (k === 'A') simMC_async(Object.keys(SA_RANKING), SA_RANKING, SAT, SA_RES, dashCfg, 'A', dashN, dashAk, dashEo, onFrame, onDone);else if (k === 'B') simMC_async(Object.keys(SB_RANKING), SB_RANKING, SBT, SB_RES, dashCfg, 'B', dashN, dashAk, dashEo, onFrame, onDone);else if (k === 'C') simMC_async(Object.keys(SC_RANKING), SC_RANKING, SCT, SC_RES, dashCfg, 'C', dashN, dashAk, dashEo, onFrame, onDone);else if (k === 'D') simMC_D_async(dashCfg, dashN, dashAk, dashEo, onFrame, onDone);else if (k === 'CB') {
+      if (k === 'A') simMC_async(Object.keys(SA_RANKING), SA_RANKING, SAT, mergedRes.A, dashCfg, 'A', dashN, dashAk, dashEo, onFrame, onDone);else if (k === 'B') simMC_async(Object.keys(SB_RANKING), SB_RANKING, SBT, mergedRes.B, dashCfg, 'B', dashN, dashAk, dashEo, onFrame, onDone);else if (k === 'C') simMC_async(Object.keys(SC_RANKING), SC_RANKING, SCT, mergedRes.C, dashCfg, 'C', dashN, dashAk, dashEo, onFrame, onDone);else if (k === 'D') simMC_D_async(dashCfg, dashN, dashAk, dashEo, fetchedRes.D, onFrame, onDone);else if (k === 'CB') {
         // Copa BR: preferencialmente use Elos/atk/def EVOLUÍDOS das sims das outras séries.
         // Fallback: ranking nominal se a série não foi simulada nesta rodada.
         const evolved = {
@@ -19027,7 +19091,7 @@ function SimuladorUnificado() {
       }
     };
     setTimeout(nextStage, 10);
-  }, [cfg, dashN, dashAk, dashEo, dashDrift, SAT, SBT, SCT, allElos, allTeams, dashSel]);
+  }, [cfg, dashN, dashAk, dashEo, dashDrift, SAT, SBT, SCT, allElos, allTeams, dashSel, mergedRes, fetchedRes]);
 
   // Auto-rodar "Simular Tudo" na primeira carga da página, com defaults atuais
   // (10k sims, drift médio, todas as séries). Useref garante que dispara apenas
@@ -19296,6 +19360,8 @@ function SimuladorUnificado() {
     meta: SA_META,
     cfg: cfg,
     extraRes: fetchedRes.A,
+    userRes: userResAll.A,
+    setUserRes: setUserResFor('A'),
     initialMC: dash?.A,
     initialAk: dash?.ak,
     initialEo: dash?.eo,
@@ -19308,6 +19374,8 @@ function SimuladorUnificado() {
     meta: SB_META,
     cfg: cfg,
     extraRes: fetchedRes.B,
+    userRes: userResAll.B,
+    setUserRes: setUserResFor('B'),
     initialMC: dash?.B,
     initialAk: dash?.ak,
     initialEo: dash?.eo,
@@ -19320,6 +19388,8 @@ function SimuladorUnificado() {
     meta: SC_META,
     cfg: cfg,
     extraRes: fetchedRes.C,
+    userRes: userResAll.C,
+    setUserRes: setUserResFor('C'),
     initialMC: dash?.C,
     initialAk: dash?.ak,
     initialEo: dash?.eo,
@@ -19357,7 +19427,7 @@ function SimuladorUnificado() {
     })
   }), /*#__PURE__*/React.createElement("div", {
     className: "mt-4 text-center text-slate-500 text-xs"
-  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R11) | C:", SC_RES.length, " (R9) | D:", SD_RES.length, " (R9) | Copa BR: R16 (edit\xE1vel) | v4.44 \u2014 chances detalhadas por grupo na S\xE9rie D"))));
+  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R11) | C:", SC_RES.length, " (R9) | D:", SD_RES.length, " (R9) | Copa BR: R16 (edit\xE1vel) | v4.50 \u2014 resultados manuais entram no Simular Tudo"))));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(SimuladorUnificado));
 </script>
