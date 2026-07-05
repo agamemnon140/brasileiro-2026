@@ -31,7 +31,13 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.50c
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.51
+// v4.51 (05/07/2026): ProbChip — probabilidades pré-jogo viram pílulas estilo FIFA 2026
+//        (emerald=casa, slate=empate, laranja=fora; casa deixa de ser azul) nos Jogos de
+//        A/B/C (GameRow, branches editável e display) e da Série D. Zero cálculo novo
+//        (calcProbs já alimentava os spans). Bônus D: a lista de Jogos agora também marca
+//        como jogados os resultados BUSCADOS (extraRes), não só SD_RES — display alinhado
+//        à engine. (Port ao .jsx pendente.)
 // v4.50c (05/07/2026): edições das Oitavas da Copa BR (cb16Scores) agora persistem em
 //        localStorage (simUni_cbR16) e entram no Monte Carlo do DASHBOARD: overlay CB_USER +
 //        refreshCbUser() no topo do simMC_CB (padrão SD_KO_USER/BC_USER). Edição completa
@@ -14072,6 +14078,18 @@ const SerieDStateView = ({
     className: "text-[10px] text-slate-500 mt-2 italic"
   }, "Distribui\xE7\xE3o conjunta: P(k) = fra\xE7\xE3o de simula\xE7\xF5es em que exatamente k times do estado chegaram \xE0 fase. Acesso = 6 vagas (4 semifinalistas + 2 vencedores do playoff). \xB7 = 0%, ~0 = <0,05%."));
 };
+// ProbChip: pílula de probabilidade pré-jogo (estilo FIFA 2026).
+// tone: 'h' casa (emerald) | 'd' empate (slate) | 'a' fora (orange).
+const ProbChip = ({
+  v,
+  tone
+}) => {
+  const cls = tone === 'h' ? 'bg-emerald-500/15 text-emerald-300 border-emerald-400/25' : tone === 'a' ? 'bg-orange-500/15 text-orange-300 border-orange-400/25' : 'bg-slate-600/25 text-slate-300 border-slate-500/30';
+  return /*#__PURE__*/React.createElement("span", {
+    className: 'inline-flex items-center justify-center min-w-[30px] px-1 rounded-full border text-[9px] font-mono leading-4 shrink-0 ' + cls,
+    title: tone === 'h' ? 'Vitória do mandante' : tone === 'a' ? 'Vitória do visitante' : 'Empate'
+  }, Math.round(v), "%");
+};
 const GameRow = ({
   j,
   real,
@@ -14113,9 +14131,10 @@ const GameRow = ({
       className: "text-slate-600 w-12 text-[10px]"
     }, j.data), /*#__PURE__*/React.createElement("span", {
       className: "text-slate-500 w-6 text-right font-mono"
-    }, "R", j.rodada), prob && /*#__PURE__*/React.createElement("span", {
-      className: "text-blue-400 w-7 text-right text-[10px] font-mono"
-    }, Math.round(prob.pH), "%"), /*#__PURE__*/React.createElement("span", {
+    }, "R", j.rodada), prob && /*#__PURE__*/React.createElement(ProbChip, {
+      v: prob.pH,
+      tone: "h"
+    }), /*#__PURE__*/React.createElement("span", {
       className: "flex-1 text-right truncate pr-1 text-[11px]"
     }, /*#__PURE__*/React.createElement(TN, {
       name: j.casa
@@ -14137,9 +14156,10 @@ const GameRow = ({
       className: "flex-1 truncate pl-1 text-[11px]"
     }, /*#__PURE__*/React.createElement(TN, {
       name: j.fora
-    })), prob && /*#__PURE__*/React.createElement("span", {
-      className: "text-orange-400 w-7 text-[10px] font-mono"
-    }, Math.round(prob.pA), "%"));
+    })), prob && /*#__PURE__*/React.createElement(ProbChip, {
+      v: prob.pA,
+      tone: "a"
+    }));
   }
   return /*#__PURE__*/React.createElement("div", {
     className: `flex items-center justify-between p-1.5 rounded text-xs ${isUser ? 'bg-amber-900/20 border-l-2 border-amber-400' : real || j.real ? 'bg-emerald-900/20 border-l-2 border-emerald-500' : hasScore ? 'bg-slate-700/20 border-l-2 border-slate-600' : 'bg-slate-700/30'}`
@@ -14147,23 +14167,30 @@ const GameRow = ({
     className: "text-slate-600 w-12 text-[10px]"
   }, j.data), /*#__PURE__*/React.createElement("span", {
     className: "text-slate-500 w-6 text-right font-mono"
-  }, "R", j.rodada), prob && !hasScore && /*#__PURE__*/React.createElement("span", {
-    className: "text-blue-400 w-7 text-right text-[10px] font-mono"
-  }, Math.round(prob.pH), "%"), /*#__PURE__*/React.createElement("span", {
+  }, "R", j.rodada), prob && !hasScore && /*#__PURE__*/React.createElement(ProbChip, {
+    v: prob.pH,
+    tone: "h"
+  }), /*#__PURE__*/React.createElement("span", {
     className: "flex-1 text-right truncate pr-1"
   }, /*#__PURE__*/React.createElement(TN, {
     name: j.casa
   })), hasScore ? /*#__PURE__*/React.createElement("span", {
     className: `mx-1 font-mono font-bold w-12 text-center ${gc > gf ? 'text-emerald-400' : gc < gf ? 'text-red-400' : 'text-yellow-400'}`
   }, gc, " x ", gf) : /*#__PURE__*/React.createElement("span", {
-    className: "mx-1 w-12 text-center text-slate-600"
-  }, prob ? Math.round(prob.pD) + '%' : 'vs'), /*#__PURE__*/React.createElement("span", {
+    className: "mx-1 w-12 text-center"
+  }, prob ? /*#__PURE__*/React.createElement(ProbChip, {
+    v: prob.pD,
+    tone: "d"
+  }) : /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-600"
+  }, "vs")), /*#__PURE__*/React.createElement("span", {
     className: "flex-1 truncate pl-1"
   }, /*#__PURE__*/React.createElement(TN, {
     name: j.fora
-  })), prob && !hasScore && /*#__PURE__*/React.createElement("span", {
-    className: "text-orange-400 w-7 text-[10px] font-mono"
-  }, Math.round(prob.pA), "%"), (real || j.real) && /*#__PURE__*/React.createElement("span", {
+  })), prob && !hasScore && /*#__PURE__*/React.createElement(ProbChip, {
+    v: prob.pA,
+    tone: "a"
+  }), (real || j.real) && /*#__PURE__*/React.createElement("span", {
     className: "ml-1 text-emerald-400 text-[10px]"
   }, "\u2713"), isUser && onScore && /*#__PURE__*/React.createElement("button", {
     onClick: () => onScore(j.casa, j.fora, j.rodada, null, null),
@@ -16700,7 +16727,8 @@ function SerieDSim({
         prob = calcProbs(lC, lF);
       }
       // SD_REAL_TAB tem mando casa/fora idêntico ao calendário oficial CBF, então a busca é exata.
-      const rl = SD_RES.find(r => r.c === j.casa && r.f === j.fora && r.r === j.rodada);
+      // Fallback: resultados buscados (extraRes) também contam como jogados no display.
+      const rl = SD_RES.find(r => r.c === j.casa && r.f === j.fora && r.r === j.rodada) || (extraRes || []).find(r => r.c === j.casa && r.f === j.fora && (r.r === j.rodada || r.r === 0));
       return /*#__PURE__*/React.createElement("div", {
         key: i,
         className: "flex items-center justify-between p-1 rounded text-xs bg-slate-700/30"
@@ -16726,21 +16754,28 @@ function SerieDSim({
         className: "text-emerald-400 text-[10px] ml-1"
       }, "\u2713")) : /*#__PURE__*/React.createElement("span", {
         className: "flex items-center flex-1"
-      }, prob && /*#__PURE__*/React.createElement("span", {
-        className: "text-blue-400 w-7 text-right text-[10px] font-mono"
-      }, Math.round(prob.pH), "%"), /*#__PURE__*/React.createElement("span", {
+      }, prob && /*#__PURE__*/React.createElement(ProbChip, {
+        v: prob.pH,
+        tone: "h"
+      }), /*#__PURE__*/React.createElement("span", {
         className: "flex-1 text-right truncate pr-1"
       }, /*#__PURE__*/React.createElement(TN, {
         name: j.casa
       })), /*#__PURE__*/React.createElement("span", {
-        className: "mx-1 w-8 text-center text-slate-500 text-[10px]"
-      }, prob ? Math.round(prob.pD) + '%' : 'vs'), /*#__PURE__*/React.createElement("span", {
+        className: "mx-1 w-8 text-center"
+      }, prob ? /*#__PURE__*/React.createElement(ProbChip, {
+        v: prob.pD,
+        tone: "d"
+      }) : /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-500 text-[10px]"
+      }, "vs")), /*#__PURE__*/React.createElement("span", {
         className: "flex-1 truncate pl-1"
       }, /*#__PURE__*/React.createElement(TN, {
         name: j.fora
-      })), prob && /*#__PURE__*/React.createElement("span", {
-        className: "text-orange-400 w-7 text-[10px] font-mono"
-      }, Math.round(prob.pA), "%")));
+      })), prob && /*#__PURE__*/React.createElement(ProbChip, {
+        v: prob.pA,
+        tone: "a"
+      })));
     }));
   })()), aba === 'bracket' && /*#__PURE__*/React.createElement(SerieDBracket, null), aba === 'geral' && /*#__PURE__*/React.createElement("div", {
     className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"
@@ -19474,7 +19509,7 @@ function SimuladorUnificado() {
     })
   }), /*#__PURE__*/React.createElement("div", {
     className: "mt-4 text-center text-slate-500 text-xs"
-  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R11) | C:", SC_RES.length, " (R9) | D:", SD_RES.length, " (R9) | Copa BR: R16 (edit\xE1vel) | v4.50c \u2014 resultados manuais entram no Simular Tudo, Elos unificados e MC da CB"))));
+  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R11) | C:", SC_RES.length, " (R9) | D:", SD_RES.length, " (R9) | Copa BR: R16 (edit\xE1vel) | v4.51 \u2014 chips de probabilidade estilo FIFA nos Jogos"))));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(SimuladorUnificado));
 </script>
