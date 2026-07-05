@@ -31,7 +31,13 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.52
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.52b
+// v4.52b (05/07/2026): sub-aba "Árvore" na Copa do Brasil — R32 (oficial, cbScores) →
+//        Oitavas (edições da aba R16) convergindo ao centro com conectores CSS, mesmo
+//        visual da árvore da D. Centro = Quartas/Semi (SORTEIO por rodada, placeholders
+//        tracejados — não existe chaveamento fixo pós-oitavas) + Final + top-5 de título
+//        do Monte Carlo. Chip de % de avançar às quartas (rMC.probs.qf) nas oitavas
+//        indefinidas. (Port ao .jsx pendente.)
 // v4.52 (05/07/2026): árvore do mata-mata da Série D estilo FIFA 2026 — SerieDBracket ganha
 //        toggle [Lista (editar) | Árvore]. A Árvore é READ-ONLY, montada dos MESMOS closures
 //        teamsOf/winnerOf/res (nada de estado duplicado): asas 2ª fase→3ª fase→Oitavas
@@ -18005,6 +18011,74 @@ function CopaBrasilSim({
   }, /*#__PURE__*/React.createElement(TN, {
     name: m.b
   })));
+  // === Árvore estilo FIFA 2026 (read-only): R32 → Oitavas convergindo ao centro. ===
+  // QF em diante é SORTEIO por rodada (sem chaveamento fixo) → placeholders no centro.
+  // Placares: R32 = oficiais (cbScores); Oitavas = edições da aba R16 (cb16Scores).
+  const cbR32Tie = idx => {
+    const [ia, ib] = CB_R32[idx];
+    const a = teams[ia], b = teams[ib];
+    const sc = cbScores[idx] || {};
+    const complete = sc.g1a != null && sc.g1b != null && sc.g2a != null && sc.g2b != null;
+    const aa = (sc.g1a || 0) + (sc.g2a || 0), ab = (sc.g1b || 0) + (sc.g2b || 0);
+    const w = complete ? aa > ab ? a : ab > aa ? b : CB_R16_SET.has(a) ? a : CB_R16_SET.has(b) ? b : null : null;
+    return { a, b, aa, ab, complete, w, pen: complete && aa === ab };
+  };
+  const cbR16Tie = idx => {
+    const [a, b] = CB_R16_PAIRS[idx];
+    const sc = cb16Scores[idx] || {};
+    const complete = sc.g1a != null && sc.g1b != null && sc.g2a != null && sc.g2b != null;
+    const aa = (sc.g1a || 0) + (sc.g2a || 0), ab = (sc.g1b || 0) + (sc.g2b || 0);
+    const w = complete ? aa > ab ? a : ab > aa ? b : null : null; // agregado empatado: pênaltis indefinidos
+    return { a, b, aa, ab, complete, w, pen: complete && aa === ab };
+  };
+  const cbAdvOf = t => {
+    if (!rMC || !rMC.probs || !t) return null;
+    const p = rMC.probs.find(x => x.time === t);
+    return p && p.qf != null ? p.qf : null;
+  };
+  const cbTieCard = (t, withAdv, key) => {
+    const row = (tm, agg, isW) => {
+      const pv = withAdv && !t.w ? cbAdvOf(tm) : null;
+      return React.createElement('div', { className: 'flex items-center gap-1 px-1.5 py-1 min-w-0' + (isW ? ' bg-emerald-900/25' : '') },
+        React.createElement(Badge, { name: tm, size: 22 }),
+        React.createElement('span', { className: 'flex-1 min-w-0 truncate text-[11px] ' + (isW ? 'text-emerald-300 font-semibold' : t.w ? 'text-slate-500' : 'text-slate-200') }, tm),
+        pv != null ? React.createElement('span', { className: 'shrink-0 text-[8px] font-mono text-emerald-400/80', title: '% de avançar às quartas (Monte Carlo)' }, Math.round(pv) + '%') : null,
+        React.createElement('span', { className: 'shrink-0 w-4 text-right font-mono text-[11px] ' + (isW ? 'text-emerald-300 font-bold' : 'text-slate-500') }, t.complete ? agg : ''));
+    };
+    return React.createElement('div', { key, className: 'w-36 shrink-0 rounded-lg border overflow-hidden bg-slate-800/70 ' + (t.w ? 'border-emerald-500/30' : 'border-slate-700/60') },
+      row(t.a, t.aa, !!t.w && t.w === t.a),
+      React.createElement('div', { className: 'border-t border-slate-700/40' }),
+      row(t.b, t.ab, !!t.w && t.w === t.b),
+      t.pen && t.w ? React.createElement('div', { className: 'px-1.5 pb-0.5 -mt-0.5 text-[8px] text-amber-400' }, 'pên.') : null);
+  };
+  const cbTreeNode = (i16, right) => {
+    const t16 = cbR16Tie(i16);
+    const kids = [t16.a, t16.b].map(tm => CB_R32.findIndex((_, i) => cbR32Tie(i).w === tm)).filter(i => i >= 0);
+    const stack = React.createElement('div', { className: 'flex flex-col justify-around gap-1.5' }, kids.map(i => cbTieCard(cbR32Tie(i), false, 'r32-' + i)));
+    const rail = React.createElement('div', { className: 'w-2.5 shrink-0 self-stretch my-5 border-slate-600/50 ' + (right ? 'border-l border-y rounded-l-md' : 'border-r border-y rounded-r-md') });
+    const tick = React.createElement('div', { className: 'w-2 shrink-0 border-t border-slate-600/50' });
+    const card = cbTieCard(t16, true, 'r16-' + i16);
+    return right ? React.createElement('div', { key: 'n' + i16, className: 'flex items-center' }, card, tick, rail, stack) : React.createElement('div', { key: 'n' + i16, className: 'flex items-center' }, stack, rail, tick, card);
+  };
+  const cbCenter = React.createElement('div', { className: 'flex flex-col justify-center items-center gap-3 shrink-0 px-2 w-48' },
+    [{ lb: 'Quartas · sorteio', n: 4 }, { lb: 'Semifinal · sorteio', n: 2 }, { lb: '🏆 Final', n: 1 }].map(g =>
+      React.createElement('div', { key: g.lb, className: 'flex flex-col items-center gap-1' },
+        React.createElement('div', { className: 'text-[9px] uppercase tracking-wider text-emerald-400/80 font-bold' }, g.lb),
+        Array.from({ length: g.n }, (_, i) => React.createElement('div', { key: i, className: 'w-32 h-8 rounded-lg border border-dashed border-slate-600/50 flex items-center justify-center text-[9px] text-slate-600' }, 'sorteio')))),
+    rMC && rMC.probs ? React.createElement('div', { className: 'mt-1 w-full' },
+      React.createElement('div', { className: 'text-[9px] uppercase tracking-wider text-slate-500 font-bold text-center mb-1' }, 'Título (MC)'),
+      rMC.probs.slice(0, 5).map(p => React.createElement('div', { key: p.time, className: 'flex items-center gap-1 px-1 py-0.5' },
+        React.createElement(Badge, { name: p.time, size: 16 }),
+        React.createElement('span', { className: 'flex-1 min-w-0 truncate text-[10px] text-slate-300' }, p.time),
+        React.createElement('span', { className: 'text-[10px] font-mono text-yellow-400' }, p.ch.toFixed(1) + '%')))) : null);
+  const cbArvore = React.createElement('div', { className: 'bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50' },
+    React.createElement('h2', { className: 'text-base font-semibold text-emerald-300 mb-1' }, 'Árvore — R32 → Oitavas'),
+    React.createElement('p', { className: 'text-[10px] text-slate-500 mb-3 italic' }, 'Das quartas em diante o regulamento manda SORTEIO por rodada — não existe chaveamento fixo após as oitavas. Edite os placares das oitavas na aba R16; rode "Simular Tudo" para os % de avanço e título.'),
+    React.createElement('div', { className: 'overflow-x-auto max-w-full pb-2' },
+      React.createElement('div', { className: 'flex items-center min-w-[1100px] gap-1' },
+        React.createElement('div', { className: 'flex flex-col justify-around gap-2' }, [0, 1, 2, 3].map(i => cbTreeNode(i, false))),
+        cbCenter,
+        React.createElement('div', { className: 'flex flex-col justify-around gap-2' }, [4, 5, 6, 7].map(i => cbTreeNode(i, true))))));
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "flex flex-wrap items-center justify-center gap-2 mb-3"
   }, /*#__PURE__*/React.createElement("span", {
@@ -18020,6 +18094,9 @@ function CopaBrasilSim({
   }, {
     id: 'jogos',
     l: 'R16'
+  }, {
+    id: 'arvore',
+    l: 'Árvore'
   }, {
     id: 'bracket',
     l: 'Formato'
@@ -18308,7 +18385,7 @@ function CopaBrasilSim({
     className: "text-xs text-red-400"
   }, "Limpar")), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500 mt-2"
-  }, "ida: mandante = time da esquerda | volta: mandante = time da direita")), aba === 'bracket' && /*#__PURE__*/React.createElement("div", {
+  }, "ida: mandante = time da esquerda | volta: mandante = time da direita")), aba === 'arvore' && cbArvore, aba === 'bracket' && /*#__PURE__*/React.createElement("div", {
     className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"
   }, /*#__PURE__*/React.createElement("h2", {
     className: "text-base font-semibold text-emerald-300 mb-3"
@@ -19607,7 +19684,7 @@ function SimuladorUnificado() {
     })
   }), /*#__PURE__*/React.createElement("div", {
     className: "mt-4 text-center text-slate-500 text-xs"
-  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R11) | C:", SC_RES.length, " (R9) | D:", SD_RES.length, " (R9) | Copa BR: R16 (edit\xE1vel) | v4.52 \u2014 \u00e1rvore do mata-mata da S\u00e9rie D estilo FIFA"))));
+  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R11) | C:", SC_RES.length, " (R9) | D:", SD_RES.length, " (R9) | Copa BR: R16 (edit\xE1vel) | v4.52b \u2014 \u00e1rvores de mata-mata (S\u00e9rie D e Copa BR) estilo FIFA"))));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(SimuladorUnificado));
 </script>
