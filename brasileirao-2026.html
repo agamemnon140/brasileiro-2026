@@ -31,7 +31,13 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.50b
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.50c
+// v4.50c (05/07/2026): edições das Oitavas da Copa BR (cb16Scores) agora persistem em
+//        localStorage (simUni_cbR16) e entram no Monte Carlo do DASHBOARD: overlay CB_USER +
+//        refreshCbUser() no topo do simMC_CB (padrão SD_KO_USER/BC_USER). Edição completa
+//        (ida+volta) fixa o vencedor; agregado empatado = pênaltis 50/50, igual ao in-tab.
+//        R32 segue 100% oficial (CB_RES_IDA/VOLTA; cbScores nunca foi editável). "Limpar"
+//        da aba Jogos zera e persiste. (Port ao .jsx pendente.)
 // v4.50b (05/07/2026): computeUnifiedState(cfg, ak, extras) — os Elos/atk/def unificados
 //        (perna Copa BR do dashboard, aba Ratings da CB, H2H, LiveSim) agora evoluem também
 //        com os resultados manuais (userResAll) e buscados (fetchedRes) de A/B/C/D, não só
@@ -1039,6 +1045,14 @@ function refreshBcUser() {
   try { build('B'); } catch (e) {} try { build('C'); } catch (e) {}
 }
 const bcWinB = (a, b) => BC_USER.B[[a, b].sort().join('|')] || null;
+// === Overlay das edições do usuário nas Oitavas da Copa do Brasil (cb16Scores) ===
+// Persistidas em simUni_cbR16 pela aba Jogos da CB; simMC_CB consulta a cada rodada
+// de MC (espelha o padrão SD_KO_USER / BC_USER). R32 já é toda oficial (CB_RES_IDA/VOLTA).
+let CB_USER = { r16: {} };
+function refreshCbUser() {
+  CB_USER = { r16: {} };
+  try { CB_USER.r16 = JSON.parse(localStorage.getItem('simUni_cbR16') || '{}'); } catch (e) {}
+}
 const simMC = (times, ranking, tab, res, cfg, sk, nS, ak, eo) => {
   refreshBcUser();
   const lg = initLeague(times, t => ranking[t].elo, cfg);
@@ -2121,6 +2135,7 @@ const simMC_D_async = (cfg, nS, ak, eo, extra, onProgress, onDone) => {
 // teamElos: Elos por time (evoluídos das sims A/B/C/D quando disponíveis).
 // teamAD: atk/def por time (evoluídos idem). Fallback: lg.initAD(elo) como antes.
 const simMC_CB = (cfg, nS, ak, eo, teamElos, teamAD) => {
+  refreshCbUser();
   const teams = CB_TEAMS;
   const elos = {};
   teams.forEach(t => elos[t] = teamElos[t] || CB_ELOS[t] || 1200);
@@ -2236,11 +2251,17 @@ const simMC_CB = (cfg, nS, ak, eo, teamElos, teamAD) => {
     const allReal16 = r32.length === 16 && r32.every(w => CB_R16_SET.has(w));
     let r16p = [];
     if (allReal16) {
-      for (const [na, nb] of CB_R16_PAIRS) {
+      CB_R16_PAIRS.forEach(([na, nb], idx) => {
         bump(na, 'r16', nb);
         bump(nb, 'r16', na);
-        r16p.push(s2L(na, nb));
-      }
+        // Edição completa do usuário (simUni_cbR16) fixa o vencedor; empate no agregado = pênaltis 50/50.
+        const u = CB_USER.r16[idx];
+        if (u && u.g1a != null && u.g1b != null && u.g2a != null && u.g2b != null) {
+          const aa = u.g1a + u.g2a,
+            ab2 = u.g1b + u.g2b;
+          r16p.push(aa > ab2 ? na : ab2 > aa ? nb : Math.random() < 0.5 ? na : nb);
+        } else r16p.push(s2L(na, nb));
+      });
     } else {
       const sh16 = shuffle(r32);
       for (let i = 0; i < sh16.length; i += 2) {
@@ -17571,7 +17592,20 @@ function CopaBrasilSim({
     });
     return init;
   });
-  const [cb16Scores, setCb16Scores] = useState({});
+  // Edições das Oitavas persistem em simUni_cbR16 e alimentam o simMC_CB do
+  // dashboard via CB_USER/refreshCbUser (padrão sdMM). "Limpar" zera e persiste.
+  const [cb16Scores, setCb16Scores] = useState(() => {
+    try {
+      const s = localStorage.getItem('simUni_cbR16');
+      if (s) return JSON.parse(s) || {};
+    } catch (e) {}
+    return {};
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('simUni_cbR16', JSON.stringify(cb16Scores));
+    } catch (e) {}
+  }, [cb16Scores]);
   const [rMC, setRMC] = useState(initialMC || null);
   const [rSU, setRSU] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -19440,7 +19474,7 @@ function SimuladorUnificado() {
     })
   }), /*#__PURE__*/React.createElement("div", {
     className: "mt-4 text-center text-slate-500 text-xs"
-  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R11) | C:", SC_RES.length, " (R9) | D:", SD_RES.length, " (R9) | Copa BR: R16 (edit\xE1vel) | v4.50b \u2014 resultados manuais entram no Simular Tudo e nos Elos unificados"))));
+  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R11) | C:", SC_RES.length, " (R9) | D:", SD_RES.length, " (R9) | Copa BR: R16 (edit\xE1vel) | v4.50c \u2014 resultados manuais entram no Simular Tudo, Elos unificados e MC da CB"))));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(SimuladorUnificado));
 </script>
