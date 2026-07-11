@@ -31,7 +31,15 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.52b
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.53
+// v4.53 (11/07/2026): mata-mata com perna PARCIAL — inserir só a ida (ou só a volta) agora
+//        VALE na simulação: a perna conhecida fica fixa e o MC simula apenas a perna faltante
+//        (90 min, mando correto), em vez de ignorar a edição e simular o agregado integrado
+//        de 180 min. Implementado em: Série D (sdBracketResolve → SD_KO_PART_USER + novo
+//        SD_KO_PART_REAL p/ idas oficiais; s180 do dashboard e da 1 Sim) e Copa do Brasil
+//        (Oitavas: simMC_CB do dashboard + sim2L(fix) no in-tab; R32 idem por simetria).
+//        Playoff B / quadrangular C seguem exigindo confronto completo (os jogos do
+//        quadrangular já são individuais). (Port ao .jsx pendente.)
 // v4.52b (05/07/2026): sub-aba "Árvore" na Copa do Brasil — R32 (oficial, cbScores) →
 //        Oitavas (edições da aba R16) convergindo ao centro com conectores CSS, mesmo
 //        visual da árvore da D. Centro = Quartas/Semi (SORTEIO por rodada, placeholders
@@ -1857,6 +1865,19 @@ const simMC_D_single = (cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeam
   const s180 = (a, b) => {
     const real = sdKoReal(a, b);
     if (real) return real.w; // confronto real já decidido: usa o vencedor de verdade
+    const part = sdKoPart(a, b);
+    if (part) {
+      // Perna conhecida FIXA; simula só a faltante (90 min, mando da perna). Agregado decide; empate = pênaltis 50/50.
+      const leg = (h, v) => {
+        const r = eo ? (() => { const d = el[h] - el[v]; const e = 1 / (1 + Math.pow(10, -d / 400)); return { lC: cfg.mnMM * (0.5 + e), lF: cfg.mnMM * (0.5 + (1 - e)) }; })() : { lC: Math.max(0.2, cfg.mnMM * at[h] * df[v]), lF: Math.max(0.2, cfg.mnMM * at[v] * df[h]) };
+        return [poissonRandom(r.lC), poissonRandom(r.lF)];
+      };
+      let iA = part.iA, iB = part.iB, vA = part.vA, vB = part.vB;
+      if (iA == null) { const g = leg(part.a, part.b); iA = g[0]; iB = g[1]; }
+      if (vA == null) { const g = leg(part.b, part.a); vB = g[0]; vA = g[1]; } // volta: mando de b
+      const aggA = iA + vA, aggB = iB + vB;
+      return aggA > aggB ? part.a : aggB > aggA ? part.b : Math.random() < 0.5 ? part.a : part.b;
+    }
     const r2 = eo ? (() => {
       const d = el[a] - el[b];
       const e = 1 / (1 + Math.pow(10, -d / 400));
@@ -2278,11 +2299,32 @@ const simMC_CB = (cfg, nS, ak, eo, teamElos, teamAD) => {
       CB_R16_PAIRS.forEach(([na, nb], idx) => {
         bump(na, 'r16', nb);
         bump(nb, 'r16', na);
-        // Edição completa do usuário (simUni_cbR16) fixa o vencedor; empate no agregado = pênaltis 50/50.
-        const u = CB_USER.r16[idx];
-        if (u && u.g1a != null && u.g1b != null && u.g2a != null && u.g2b != null) {
-          const aa = u.g1a + u.g2a,
-            ab2 = u.g1b + u.g2b;
+        // Edições do usuário (simUni_cbR16): perna completa fica FIXA; perna faltante é simulada
+        // (mando correto). Ida+volta completas = vencedor determinístico; empate = pênaltis 50/50.
+        const u = CB_USER.r16[idx] || {};
+        const hasI = u.g1a != null && u.g1b != null,
+          hasV = u.g2a != null && u.g2b != null;
+        if (hasI || hasV) {
+          const {
+            mc: m1,
+            mf: m2
+          } = getML(cfg, 'CB');
+          let g1a = u.g1a,
+            g1b = u.g1b,
+            g2a = u.g2a,
+            g2b = u.g2b;
+          if (!hasI) {
+            const l1 = calcL(at2[na], df2[na], at2[nb], df2[nb], el2[na], el2[nb], m1, m2, cfg.homeAdv, eo, cfg.c0Log);
+            g1a = poissonRandom(l1.lC);
+            g1b = poissonRandom(l1.lF);
+          }
+          if (!hasV) {
+            const l2 = calcL(at2[nb], df2[nb], at2[na], df2[na], el2[nb], el2[na], m1, m2, cfg.homeAdv, eo, cfg.c0Log);
+            g2b = poissonRandom(l2.lC);
+            g2a = poissonRandom(l2.lF);
+          }
+          const aa = g1a + g2a,
+            ab2 = g1b + g2b;
           r16p.push(aa > ab2 ? na : ab2 > aa ? nb : Math.random() < 0.5 ? na : nb);
         } else r16p.push(s2L(na, nb));
       });
@@ -9033,6 +9075,12 @@ const SD_KO_REAL = {
 // SD_KO_USER: overlay das EDIÇÕES do usuário no bracket (localStorage), tem prioridade sobre o oficial.
 let SD_KO_USER = {};
 const sdKoReal = (a, b) => SD_KO_USER[sdKoKey(a, b)] || SD_KO_REAL[sdKoKey(a, b)] || null;
+// Confrontos PARCIAIS (só ida ou só volta conhecida): a perna conhecida fica FIXA e o MC
+// simula apenas a perna faltante (90 min, mando correto), em vez do agregado integrado de 180.
+// Shape: { a, b, iA, iB, vA, vB } — a = mandante da ida; campos null = perna a simular.
+let SD_KO_PART_USER = {};
+let SD_KO_PART_REAL = {}; // preenchido pelos jogos de ida REAIS (ex.: 3ª fase) quando a volta está pendente
+const sdKoPart = (a, b) => SD_KO_PART_USER[sdKoKey(a, b)] || SD_KO_PART_REAL[sdKoKey(a, b)] || null;
 // Resolve as edições do usuário (por code) em um overlay por par-ordenado {w,ga,gb,pen}.
 function sdBracketResolve(edits) {
   edits = edits || {};
@@ -9045,11 +9093,20 @@ function sdBracketResolve(edits) {
   function teamsOf(code) { if (f2[code]) return [f2[code].a, f2[code].b]; if (code[0] === 'E') { const s = qSeeds(); const [i, j] = SD_BRK_QSEED[code]; return ordIda(s[i] || null, s[j] || null); } const p = SD_BRK_PAIRS[code]; if (!p) return [null, null]; return ordIda(winOf(p[0]), winOf(p[1])); }
   function winOf(code) { const tm = teamsOf(code); if (!tm[0] || !tm[1]) return null; const r = edits[code] || {}; if (r.iA == null || r.iB == null || r.vA == null || r.vB == null) return null; const aA = r.iA + r.vA, aB = r.iB + r.vB; if (aA > aB) return tm[0]; if (aB > aA) return tm[1]; return r.pen === 'A' ? tm[0] : r.pen === 'B' ? tm[1] : null; }
   const overlay = {};
+  const partial = {};
   const allCodes = [...SD_F2_REAL.map(t => t.code), ...SD_C_CODES, ...SD_D_CODES, 'E01', 'E02', 'E03', 'E04', 'F01', 'F02', 'G01'];
-  for (const code of allCodes) { const tm = teamsOf(code); if (!tm[0] || !tm[1]) continue; const w = winOf(code); if (!w) continue; const r = edits[code] || {}; const ga = (r.iA || 0) + (r.vA || 0), gb = (r.iB || 0) + (r.vB || 0); const k0 = [tm[0], tm[1]].sort()[0]; overlay[sdKoKey(tm[0], tm[1])] = { w, ga: k0 === tm[0] ? ga : gb, gb: k0 === tm[0] ? gb : ga, pen: !!r.pen }; }
-  return overlay;
+  for (const code of allCodes) {
+    const tm = teamsOf(code); if (!tm[0] || !tm[1]) continue;
+    const r = edits[code] || {};
+    const w = winOf(code);
+    if (w) { const ga = (r.iA || 0) + (r.vA || 0), gb = (r.iB || 0) + (r.vB || 0); const k0 = [tm[0], tm[1]].sort()[0]; overlay[sdKoKey(tm[0], tm[1])] = { w, ga: k0 === tm[0] ? ga : gb, gb: k0 === tm[0] ? gb : ga, pen: !!r.pen }; continue; }
+    // Edição PARCIAL: uma perna completa (ida ou volta) sem a outra → o MC fixa a perna conhecida.
+    const hasIda = r.iA != null && r.iB != null, hasVolta = r.vA != null && r.vB != null;
+    if (hasIda || hasVolta) partial[sdKoKey(tm[0], tm[1])] = { a: tm[0], b: tm[1], iA: hasIda ? r.iA : null, iB: hasIda ? r.iB : null, vA: hasVolta ? r.vA : null, vB: hasVolta ? r.vB : null };
+  }
+  return { overlay, partial };
 }
-function refreshSdKoUser() { try { SD_KO_USER = sdBracketResolve(JSON.parse(localStorage.getItem('simUni_sdMM') || '{}')); } catch (e) { SD_KO_USER = {}; } }
+function refreshSdKoUser() { try { const r = sdBracketResolve(JSON.parse(localStorage.getItem('simUni_sdMM') || '{}')); SD_KO_USER = r.overlay; SD_KO_PART_USER = r.partial; } catch (e) { SD_KO_USER = {}; SD_KO_PART_USER = {}; } }
 // === 2ª fase REAL da Série D (por perna) — exibição na sub-aba "Jogos". ida 21/06, volta 27-29/06.
 // volta=null => ainda não disputada (segue simulada). Decididos espelham SD_KO_REAL (conferido).
 const SD_F2_REAL = [
@@ -16519,6 +16576,27 @@ function SerieDSim({
           pen: !!real.pen
         };
       }
+      const part = sdKoPart(a, b);
+      if (part) {
+        // Perna conhecida FIXA; simula só a faltante (90 min, mando da perna).
+        const leg = (h, v) => {
+          const r = eo ? (() => { const d = el[h] - el[v]; const e = 1 / (1 + Math.pow(10, -d / 400)); return { lC: effCfg.mnMM * (0.5 + e), lF: effCfg.mnMM * (0.5 + (1 - e)) }; })() : { lC: Math.max(0.2, effCfg.mnMM * at[h] * df[v]), lF: Math.max(0.2, effCfg.mnMM * at[v] * df[h]) };
+          return [poissonRandom(r.lC), poissonRandom(r.lF)];
+        };
+        let iA = part.iA, iB = part.iB, vA = part.vA, vB = part.vB;
+        if (iA == null) { const g = leg(part.a, part.b); iA = g[0]; iB = g[1]; }
+        if (vA == null) { const g = leg(part.b, part.a); vB = g[0]; vA = g[1]; }
+        const aggA = iA + vA, aggB = iB + vB;
+        const w = aggA > aggB ? part.a : aggB > aggA ? part.b : Math.random() < 0.5 ? part.a : part.b;
+        return {
+          a,
+          b,
+          ga: part.a === a ? aggA : aggB,
+          gb: part.a === a ? aggB : aggA,
+          w,
+          pen: aggA === aggB
+        };
+      }
       const {
         lC,
         lF
@@ -17799,18 +17877,30 @@ function CopaBrasilSim({
   const cbRFiltered = useMemo(() => filterByName(cbRSort.sorted, qR), [cbRSort.sorted, qR]);
   const cbMCFiltered = useMemo(() => filterByName(cbMCSort.sorted, qM), [cbMCSort.sorted, qM]);
 
-  // Simular confronto 2 jogos ida/volta
-  const sim2L = (a, b, at, df, el) => {
+  // Simular confronto 2 jogos ida/volta. `fix` (opcional): perna já conhecida fica FIXA
+  // ({g1a,g1b} e/ou {g2a,g2b}) e só a perna faltante é simulada, com o mando correto.
+  const sim2L = (a, b, at, df, el, fix) => {
     const {
       mc,
       mf
     } = getML(cfg, 'CB');
-    const l1 = calcL(at[a], df[a], at[b], df[b], el[a], el[b], mc, mf, cfg.homeAdv, eo, cfg.c0Log);
-    const g1a = poissonRandom(l1.lC),
+    let g1a, g1b, g2a, g2b;
+    if (fix && fix.g1a != null && fix.g1b != null) {
+      g1a = fix.g1a;
+      g1b = fix.g1b;
+    } else {
+      const l1 = calcL(at[a], df[a], at[b], df[b], el[a], el[b], mc, mf, cfg.homeAdv, eo, cfg.c0Log);
+      g1a = poissonRandom(l1.lC);
       g1b = poissonRandom(l1.lF);
-    const l2 = calcL(at[b], df[b], at[a], df[a], el[b], el[a], mc, mf, cfg.homeAdv, eo, cfg.c0Log);
-    const g2b = poissonRandom(l2.lC),
+    }
+    if (fix && fix.g2a != null && fix.g2b != null) {
+      g2a = fix.g2a;
+      g2b = fix.g2b;
+    } else {
+      const l2 = calcL(at[b], df[b], at[a], df[a], el[b], el[a], mc, mf, cfg.homeAdv, eo, cfg.c0Log);
+      g2b = poissonRandom(l2.lC);
       g2a = poissonRandom(l2.lF);
+    }
     const aa = g1a + g2a,
       ab = g1b + g2b;
     return {
@@ -17876,6 +17966,7 @@ function CopaBrasilSim({
             pen: aa === ab
           };
         }
+        return sim2L(a, b, at, df, el, sc || null); // perna parcial fica fixa
       }
       return sim2L(a, b, at, df, el);
     });
@@ -17901,7 +17992,7 @@ function CopaBrasilSim({
             pen: aa === ab
           };
         }
-        return sim2L(a, b, at, df, el);
+        return sim2L(a, b, at, df, el, useCbScores ? sc || null : null); // ida parcial fica fixa
       });
     } // oitavas: chaveamento real + placares reais quando houver
     else {
@@ -19684,7 +19775,7 @@ function SimuladorUnificado() {
     })
   }), /*#__PURE__*/React.createElement("div", {
     className: "mt-4 text-center text-slate-500 text-xs"
-  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R11) | C:", SC_RES.length, " (R9) | D:", SD_RES.length, " (R9) | Copa BR: R16 (edit\xE1vel) | v4.52b \u2014 \u00e1rvores de mata-mata (S\u00e9rie D e Copa BR) estilo FIFA"))));
+  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R11) | C:", SC_RES.length, " (R9) | D:", SD_RES.length, " (R9) | Copa BR: R16 (edit\xE1vel) | v4.53 \u2014 perna parcial do mata-mata fixa a ida e simula s\u00f3 a volta"))));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(SimuladorUnificado));
 </script>
