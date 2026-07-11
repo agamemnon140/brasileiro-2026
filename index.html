@@ -31,7 +31,10 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.55
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.55b
+// v4.55b (11/07/2026): nova fase no "Por Estado" de B/C — Top-6 (B: 2 diretos + 4 do
+//        playoff) e Top-8 (C: classificados ao quadrangular), p/ estimar quantos times
+//        da UF AVANÇAM à fase seguinte (campo topN no ufDist).
 // v4.55 (11/07/2026): "Por Estado" nas Chaves de B e C, como na Série D — sub-visão
 //        [Confrontos | Por Estado] com a distribuição CONJUNTA por UF de ACESSO e
 //        REBAIXAMENTO: simMC acumula por sim (via extraStats.__uf; acesso B = top-2 +
@@ -1130,6 +1133,7 @@ const simMC = (times, ranking, tab, res, cfg, sk, nS, ak, eo) => {
     Object.keys(ufTeams).forEach(u => {
       acc[u] = {
         acesso: new Array(ufTeams[u].length + 1).fill(0),
+        topN: new Array(ufTeams[u].length + 1).fill(0), // v4.55b: top-6 (B) / top-8 (C) — classificados à fase seguinte
         reb: new Array(ufTeams[u].length + 1).fill(0)
       };
     });
@@ -1297,6 +1301,8 @@ const simMC_single = (times, ranking, tab, res, cfg, sk, ak, eo, lg, mc, mf, ct,
     });
   };
   ufTally(cl.slice(times.length - nRebN).map(c => c.time), 'reb');
+  // v4.55b: classificados à fase seguinte — top-6 na B (2 diretos + 4 do playoff), top-8 na C (quadrangular).
+  ufTally(cl.slice(0, sk === 'C' ? 8 : 6).map(c => c.time), 'topN');
   // Acumula Elo final por time (amostra no fim da temporada simulada).
   if (elFinal) {
     times.forEach(t => {
@@ -1529,7 +1535,7 @@ const simMC_finalize = (times, ct, pts, posF, ptsAtPos, nS, elFinal, extraStats,
     }).sort((a, b) => b.mediaPts - a.mediaPts),
     nSims: nS,
     // v4.55: distribuição conjunta por UF (B/C) — consumida pela sub-aba "Por Estado" das Chaves.
-    ufDist: extraStats && extraStats.__uf ? buildUfDist(extraStats.__uf.acc, extraStats.__uf.ufTeams, nS, ['acesso', 'reb'], 'acesso') : null,
+    ufDist: extraStats && extraStats.__uf ? buildUfDist(extraStats.__uf.acc, extraStats.__uf.ufTeams, nS, ['acesso', 'topN', 'reb'], 'acesso') : null,
     cortes: {
       titulo: pc(0),
       g4: pc(3),
@@ -1574,6 +1580,7 @@ const simMC_async = (times, ranking, tab, res, cfg, sk, nS, ak, eo, onProgress, 
     Object.keys(ufTeams).forEach(u => {
       acc[u] = {
         acesso: new Array(ufTeams[u].length + 1).fill(0),
+        topN: new Array(ufTeams[u].length + 1).fill(0), // v4.55b: top-6 (B) / top-8 (C) — classificados à fase seguinte
         reb: new Array(ufTeams[u].length + 1).fill(0)
       };
     });
@@ -15040,10 +15047,13 @@ function LeagueSim({
       key: 'acesso',
       label: 'Acesso'
     }, {
+      key: 'topN',
+      label: meta.key === 'B' ? 'Top-6 (G2 + playoff)' : 'Top-8 (quadrangular)'
+    }, {
       key: 'reb',
       label: 'Rebaixamento'
     }],
-    note: meta.key === 'B' ? 'Acesso = 4 vagas (1\u00BA-2\u00BA direto + 2 vencedores do playoff 3\u00BA-6\u00BA); rebaixamento = 4 \u00FAltimos.' : 'Acesso = 4 vagas (top-2 de cada grupo do quadrangular); rebaixamento = 2 \u00FAltimos (formato 2026).'
+    note: meta.key === 'B' ? 'Acesso = 4 vagas (1\u00BA-2\u00BA direto + 2 vencedores do playoff 3\u00BA-6\u00BA); Top-6 = classificados \u00E0 fase seguinte; rebaixamento = 4 \u00FAltimos.' : 'Acesso = 4 vagas (top-2 de cada grupo do quadrangular); Top-8 = classificados ao quadrangular; rebaixamento = 2 \u00FAltimos (formato 2026).'
   }) : /*#__PURE__*/React.createElement(React.Fragment, null, meta.key === 'B' && /*#__PURE__*/React.createElement(MatchupsView, {
     probs: rMC.probs.filter(p => (p.bPlayoff || 0) >= 1),
     phases: [{
@@ -18613,7 +18623,7 @@ function SimuladorUnificado() {
     })
   }), /*#__PURE__*/React.createElement("div", {
     className: "mt-4 text-center text-slate-500 text-xs"
-  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R16+) | C:", SC_RES.length, " (R13) | D:", SD_RES.length, " (grupos) + mata-mata | Copa BR: R16 (edit\xE1vel) | v4.55 \u2014 acesso/rebaixamento por estado nas Chaves de B e C"))));
+  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R16+) | C:", SC_RES.length, " (R13) | D:", SD_RES.length, " (grupos) + mata-mata | Copa BR: R16 (edit\xE1vel) | v4.55b \u2014 acesso/top-6\u00b78/rebaixamento por estado nas Chaves de B e C"))));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(SimuladorUnificado));
 </script>
