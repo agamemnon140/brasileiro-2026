@@ -31,7 +31,16 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.53
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.54
+// v4.54 (11/07/2026): reconciliação vs Tabelas Detalhadas CBF (B 09/07, C 10/07, D 08/07).
+//        B: +17 jogos (R15 restante, R16 completa, 1º jogo da R17) — 34 já registrados
+//        confirmados 1:1, total 161. C: +16 (R12 restante, R13 completa), total 130.
+//        D: 13 voltas da 2ª fase que faltavam + 3 correções (B01 volta 1x1, não 2x0; B09
+//        orientação; B24 2x0) — TODAS as 32 voltas agora oficiais; SD_KO_REAL passa a ser
+//        DERIVADO de SD_F2_REAL (fim do risco de drift). NOVO SD_F3_IDA: os 16 jogos de ida
+//        da 3ª fase (04-06/07) entram como perna parcial (v4.53) — o MC fixa a ida e simula
+//        só a volta — e como defaults do bracket editável. Se você abriu o bracket antes,
+//        clique "Restaurar oficiais" p/ puxar as correções. (Port ao .jsx pendente.)
 // v4.53 (11/07/2026): mata-mata com perna PARCIAL — inserir só a ida (ou só a volta) agora
 //        VALE na simulação: a perna conhecida fica fixa e o MC simula apenas a perna faltante
 //        (90 min, mando correto), em vez de ignorar a edição e simular o agregado integrado
@@ -94,7 +103,7 @@ const {
 //        sdBracketResolve lê simUni_sdMM e gera SD_KO_USER; s180 consulta antes do oficial). Sem
 //        edições cai no oficial. Edições de B/C ainda não entram no MC da liga.
 // Motor único | Config: total+pesoCasa | Copa do Brasil | Datas por rodada
-// Dados atualizados até 27/06/2026 | A:R18 | B:R15 parc. | C:R12 parc. | D: grupos completos + 2ª fase parc. | CB:R16 (editável)
+// Dados atualizados até 10/07/2026 | A:R18 | B:R16 (+1 da R17) | C:R13 | D: 2ª fase completa + 3ª fase ida | CB:R16 (editável)
 // v4.49e: sub-aba "Chaves" de B e C agora EDITÁVEL (LeaguePhaseEdit, nos moldes do bracket da D):
 //        B = playoff de acesso (3º×6º, 4º×5º ida/volta) com vencedores subindo; C = quadrangular
 //        (2 grupos de 4 ida-volta, mini-tabela + top-2 acesso) + final do título. Times projetados
@@ -3943,882 +3952,168 @@ const SB_NM = {
   'VLN': 'Vila Nova'
 };
 const SB_TAB = ['CEA-SBR,VLN-CRB,OPR-AGO,BSP-FOR,CUI-SPT,AVA-JUV,NAU-CRI,ATH-PPR,GOI-AMG,NOV-LON', 'JUV-NOV,FOR-CUI,AMG-BSP,LON-GOI,AGO-NAU,SPT-VLN,PPR-CEA,CRI-ATH,CRB-AVA,SBR-OPR', 'FOR-JUV,NAU-PPR,CUI-CEA,VLN-AGO,LON-SPT,AVA-OPR,NOV-CRB,ATH-AMG,BSP-SBR,GOI-CRI', 'CRI-BSP,JUV-GOI,PPR-VLN,SPT-AVA,CEA-NAU,AMG-NOV,OPR-CUI,SBR-FOR,CRB-ATH,AGO-LON', 'AMG-SPT,NAU-SBR,VLN-OPR,AVA-PPR,CRB-JUV,BSP-AGO,LON-CEA,GOI-CUI,NOV-ATH,FOR-CRI', 'CUI-BSP,PPR-AMG,SPT-NOV,JUV-LON,SBR-GOI,OPR-FOR,CEA-VLN,AGO-AVA,CRI-CRB,ATH-NAU', 'BSP-NAU,CUI-CRI,FOR-GOI,SBR-PPR,OPR-LON,SPT-CEA,AGO-JUV,AMG-CRB,AVA-NOV,VLN-ATH', 'GOI-VLN,ATH-CUI,PPR-SPT,CEA-AGO,CRB-OPR,JUV-CRI,NAU-AMG,AVA-FOR,NOV-BSP,LON-SBR', 'SBR-AMG,OPR-NAU,GOI-BSP,CUI-NOV,ATH-JUV,VLN-AVA,CRI-AGO,CEA-FOR,SPT-CRB,PPR-LON', 'NAU-CUI,NOV-CEA,FOR-LON,JUV-SPT,AGO-SBR,CRB-PPR,AMG-VLN,AVA-GOI,OPR-CRI,BSP-ATH', 'JUV-AMG,AGO-GOI,AVA-CRI,ATH-FOR,SPT-NAU,SBR-NOV,LON-VLN,CEA-OPR,CUI-CRB,PPR-BSP', 'OPR-JUV,CRI-LON,CRB-SBR,AMG-AGO,VLN-BSP,PPR-CUI,NAU-FOR,CEA-AVA,GOI-NOV,SPT-ATH', 'AGO-CRB,SBR-SPT,JUV-PPR,ATH-GOI,CUI-VLN,BSP-OPR,NOV-NAU,LON-AVA,CRI-CEA,FOR-AMG', 'GOI-OPR,SPT-AGO,LON-ATH,VLN-NAU,CEA-BSP,SBR-JUV,AVA-CUI,CRB-FOR,PPR-NOV,AMG-CRI', 'CUI-LON,NOV-VLN,OPR-AMG,CRI-SBR,JUV-CEA,ATH-AVA,AGO-PPR,FOR-SPT,NAU-GOI,BSP-CRB', 'CUI-AMG,FOR-PPR,CRI-SPT,NOV-AGO,LON-CRB,GOI-CEA,NAU-JUV,BSP-AVA,VLN-SBR,ATH-OPR', 'PPR-CRI,JUV-VLN,SPT-BSP,OPR-NOV,SBR-CUI,AVA-NAU,AGO-FOR,CRB-GOI,AMG-LON,CEA-ATH', 'CRB-NAU,SBR-AVA,AMG-CEA,JUV-CUI,FOR-NOV,CRI-VLN,PPR-GOI,SPT-OPR,AGO-ATH,LON-BSP', 'BSP-JUV,NOV-CRI,ATH-SBR,OPR-PPR,CEA-CRB,GOI-SPT,AVA-AMG,NAU-LON,CUI-AGO,VLN-FOR', 'SBR-CEA,CRB-VLN,AGO-OPR,FOR-BSP,SPT-CUI,JUV-AVA,CRI-NAU,PPR-ATH,AMG-GOI,LON-NOV', 'NOV-JUV,CUI-FOR,BSP-AMG,GOI-LON,NAU-AGO,VLN-SPT,CEA-PPR,ATH-CRI,AVA-CRB,OPR-SBR', 'JUV-FOR,PPR-NAU,CEA-CUI,AGO-VLN,SPT-LON,OPR-AVA,CRB-NOV,AMG-ATH,SBR-BSP,CRI-GOI', 'BSP-CRI,GOI-JUV,VLN-PPR,AVA-SPT,NAU-CEA,NOV-AMG,CUI-OPR,FOR-SBR,ATH-CRB,LON-AGO', 'SPT-AMG,SBR-NAU,OPR-VLN,PPR-AVA,JUV-CRB,AGO-BSP,CEA-LON,CUI-GOI,ATH-NOV,CRI-FOR', 'BSP-CUI,AMG-PPR,NOV-SPT,LON-JUV,GOI-SBR,FOR-OPR,VLN-CEA,AVA-AGO,CRB-CRI,NAU-ATH', 'NAU-BSP,CRI-CUI,GOI-FOR,PPR-SBR,LON-OPR,CEA-SPT,JUV-AGO,CRB-AMG,NOV-AVA,ATH-VLN', 'VLN-GOI,CUI-ATH,SPT-PPR,AGO-CEA,OPR-CRB,CRI-JUV,AMG-NAU,FOR-AVA,BSP-NOV,SBR-LON', 'AMG-SBR,NAU-OPR,BSP-GOI,NOV-CUI,JUV-ATH,AVA-VLN,AGO-CRI,FOR-CEA,CRB-SPT,LON-PPR', 'CUI-NAU,CEA-NOV,LON-FOR,SPT-JUV,SBR-AGO,PPR-CRB,VLN-AMG,GOI-AVA,CRI-OPR,ATH-BSP', 'AMG-JUV,GOI-AGO,CRI-AVA,FOR-ATH,NAU-SPT,NOV-SBR,VLN-LON,OPR-CEA,CRB-CUI,BSP-PPR', 'JUV-OPR,LON-CRI,SBR-CRB,AGO-AMG,BSP-VLN,CUI-PPR,FOR-NAU,AVA-CEA,NOV-GOI,ATH-SPT', 'CRB-AGO,SPT-SBR,PPR-JUV,GOI-ATH,VLN-CUI,OPR-BSP,NAU-NOV,AVA-LON,CEA-CRI,AMG-FOR', 'OPR-GOI,AGO-SPT,ATH-LON,NAU-VLN,BSP-CEA,JUV-SBR,CUI-AVA,FOR-CRB,NOV-PPR,CRI-AMG', 'LON-CUI,VLN-NOV,AMG-OPR,SBR-CRI,CEA-JUV,AVA-ATH,PPR-AGO,SPT-FOR,GOI-NAU,CRB-BSP', 'AMG-CUI,PPR-FOR,SPT-CRI,AGO-NOV,CRB-LON,CEA-GOI,JUV-NAU,AVA-BSP,SBR-VLN,OPR-ATH', 'CRI-PPR,VLN-JUV,BSP-SPT,NOV-OPR,CUI-SBR,NAU-AVA,FOR-AGO,GOI-CRB,LON-AMG,ATH-CEA', 'NAU-CRB,AVA-SBR,CEA-AMG,CUI-JUV,NOV-FOR,VLN-CRI,GOI-PPR,OPR-SPT,ATH-AGO,BSP-LON', 'JUV-BSP,CRI-NOV,SBR-ATH,PPR-OPR,CRB-CEA,SPT-GOI,AMG-AVA,LON-NAU,AGO-CUI,FOR-VLN'];
-const SB_RES = [{
-  c: 'Botafogo-SP',
-  f: 'Fortaleza',
-  gc: 4,
-  gf: 0,
-  r: 1
-}, {
-  c: 'Novorizontino',
-  f: 'Londrina',
-  gc: 1,
-  gf: 3,
-  r: 1
-}, {
-  c: 'Athletic',
-  f: 'Ponte Preta',
-  gc: 2,
-  gf: 1,
-  r: 1
-}, {
-  c: 'Operário-PR',
-  f: 'Atlético-GO',
-  gc: 1,
-  gf: 0,
-  r: 1
-}, {
-  c: 'Ceará',
-  f: 'São Bernardo',
-  gc: 1,
-  gf: 1,
-  r: 1
-}, {
-  c: 'Goiás',
-  f: 'América-MG',
-  gc: 3,
-  gf: 1,
-  r: 1
-}, {
-  c: 'Avaí',
-  f: 'Juventude',
-  gc: 2,
-  gf: 0,
-  r: 1
-}, {
-  c: 'Náutico',
-  f: 'Criciúma',
-  gc: 0,
-  gf: 1,
-  r: 1
-}, {
-  c: 'Cuiabá',
-  f: 'Sport',
-  gc: 0,
-  gf: 0,
-  r: 1
-}, {
-  c: 'Vila Nova',
-  f: 'CRB',
-  gc: 2,
-  gf: 2,
-  r: 1
-}, {
-  c: 'Ponte Preta',
-  f: 'Ceará',
-  gc: 1,
-  gf: 1,
-  r: 2
-}, {
-  c: 'São Bernardo',
-  f: 'Operário-PR',
-  gc: 1,
-  gf: 2,
-  r: 2
-}, {
-  c: 'América-MG',
-  f: 'Botafogo-SP',
-  gc: 1,
-  gf: 2,
-  r: 2
-}, {
-  c: 'Londrina',
-  f: 'Goiás',
-  gc: 2,
-  gf: 2,
-  r: 2
-}, {
-  c: 'Fortaleza',
-  f: 'Cuiabá',
-  gc: 0,
-  gf: 0,
-  r: 2
-}, {
-  c: 'Atlético-GO',
-  f: 'Náutico',
-  gc: 1,
-  gf: 2,
-  r: 2
-}, {
-  c: 'Criciúma',
-  f: 'Athletic',
-  gc: 1,
-  gf: 1,
-  r: 2
-}, {
-  c: 'Sport',
-  f: 'Vila Nova',
-  gc: 1,
-  gf: 1,
-  r: 2
-}, {
-  c: 'CRB',
-  f: 'Avaí',
-  gc: 0,
-  gf: 1,
-  r: 2
-}, {
-  c: 'Juventude',
-  f: 'Novorizontino',
-  gc: 0,
-  gf: 0,
-  r: 2
-}, {
-  c: 'Botafogo-SP',
-  f: 'São Bernardo',
-  gc: 1,
-  gf: 2,
-  r: 3
-}, {
-  c: 'Fortaleza',
-  f: 'Juventude',
-  gc: 2,
-  gf: 1,
-  r: 3
-}, {
-  c: 'Náutico',
-  f: 'Ponte Preta',
-  gc: 1,
-  gf: 0,
-  r: 3
-}, {
-  c: 'Cuiabá',
-  f: 'Ceará',
-  gc: 0,
-  gf: 2,
-  r: 3
-}, {
-  c: 'Vila Nova',
-  f: 'Atlético-GO',
-  gc: 2,
-  gf: 1,
-  r: 3
-}, {
-  c: 'Londrina',
-  f: 'Sport',
-  gc: 1,
-  gf: 2,
-  r: 3
-}, {
-  c: 'Avaí',
-  f: 'Operário-PR',
-  gc: 0,
-  gf: 0,
-  r: 3
-}, {
-  c: 'Novorizontino',
-  f: 'CRB',
-  gc: 1,
-  gf: 1,
-  r: 3
-}, {
-  c: 'Athletic',
-  f: 'América-MG',
-  gc: 1,
-  gf: 1,
-  r: 3
-}, {
-  c: 'Goiás',
-  f: 'Criciúma',
-  gc: 1,
-  gf: 0,
-  r: 3
-}, {
-  c: 'Criciúma',
-  f: 'Botafogo-SP',
-  gc: 1,
-  gf: 0,
-  r: 4
-}, {
-  c: 'Sport',
-  f: 'Avaí',
-  gc: 2,
-  gf: 2,
-  r: 4
-}, {
-  c: 'Ceará',
-  f: 'Náutico',
-  gc: 1,
-  gf: 0,
-  r: 4
-}, {
-  c: 'Ponte Preta',
-  f: 'Vila Nova',
-  gc: 0,
-  gf: 1,
-  r: 4
-}, {
-  c: 'São Bernardo',
-  f: 'Fortaleza',
-  gc: 0,
-  gf: 1,
-  r: 4
-}, {
-  c: 'América-MG',
-  f: 'Novorizontino',
-  gc: 0,
-  gf: 3,
-  r: 4
-}, {
-  c: 'Operário-PR',
-  f: 'Cuiabá',
-  gc: 0,
-  gf: 0,
-  r: 4
-}, {
-  c: 'Atlético-GO',
-  f: 'Londrina',
-  gc: 2,
-  gf: 1,
-  r: 4
-}, {
-  c: 'CRB',
-  f: 'Athletic',
-  gc: 2,
-  gf: 3,
-  r: 4
-}, {
-  c: 'Juventude',
-  f: 'Goiás',
-  gc: 2,
-  gf: 0,
-  r: 4
-}, {
-  c: 'Botafogo-SP',
-  f: 'Atlético-GO',
-  gc: 1,
-  gf: 1,
-  r: 5
-}, {
-  c: 'Novorizontino',
-  f: 'Athletic',
-  gc: 2,
-  gf: 1,
-  r: 5
-}, {
-  c: 'América-MG',
-  f: 'Sport',
-  gc: 0,
-  gf: 0,
-  r: 5
-}, {
-  c: 'Londrina',
-  f: 'Ceará',
-  gc: 0,
-  gf: 0,
-  r: 5
-}, {
-  c: 'Fortaleza',
-  f: 'Criciúma',
-  gc: 3,
-  gf: 2,
-  r: 5
-}, {
-  c: 'Goiás',
-  f: 'Cuiabá',
-  gc: 0,
-  gf: 2,
-  r: 5
-}, {
-  c: 'Avaí',
-  f: 'Ponte Preta',
-  gc: 1,
-  gf: 2,
-  r: 5
-}, {
-  c: 'Náutico',
-  f: 'São Bernardo',
-  gc: 0,
-  gf: 3,
-  r: 5
-}, {
-  c: 'CRB',
-  f: 'Juventude',
-  gc: 0,
-  gf: 1,
-  r: 5
-}, {
-  c: 'Vila Nova',
-  f: 'Operário-PR',
-  gc: 2,
-  gf: 1,
-  r: 5
-}, {
-  c: 'Sport',
-  f: 'Novorizontino',
-  gc: 1,
-  gf: 0,
-  r: 6
-}, {
-  c: 'Juventude',
-  f: 'Londrina',
-  gc: 1,
-  gf: 0,
-  r: 6
-}, {
-  c: 'São Bernardo',
-  f: 'Goiás',
-  gc: 1,
-  gf: 0,
-  r: 6
-}, {
-  c: 'Operário-PR',
-  f: 'Fortaleza',
-  gc: 0,
-  gf: 0,
-  r: 6
-}, {
-  c: 'Ceará',
-  f: 'Vila Nova',
-  gc: 3,
-  gf: 3,
-  r: 6
-}, {
-  c: 'Atlético-GO',
-  f: 'Avaí',
-  gc: 2,
-  gf: 1,
-  r: 6
-}, {
-  c: 'Criciúma',
-  f: 'CRB',
-  gc: 3,
-  gf: 1,
-  r: 6
-}, {
-  c: 'Cuiabá',
-  f: 'Botafogo-SP',
-  gc: 1,
-  gf: 1,
-  r: 6
-}, {
-  c: 'Ponte Preta',
-  f: 'América-MG',
-  gc: 1,
-  gf: 0,
-  r: 6
-}, {
-  c: 'Athletic',
-  f: 'Náutico',
-  gc: 0,
-  gf: 1,
-  r: 6
-},
-// R7 (02-04/05/2026)
-{
-  c: 'Botafogo-SP',
-  f: 'Náutico',
-  gc: 1,
-  gf: 1,
-  r: 7
-}, {
-  c: 'Cuiabá',
-  f: 'Criciúma',
-  gc: 1,
-  gf: 1,
-  r: 7
-}, {
-  c: 'Fortaleza',
-  f: 'Goiás',
-  gc: 4,
-  gf: 1,
-  r: 7
-}, {
-  c: 'São Bernardo',
-  f: 'Ponte Preta',
-  gc: 3,
-  gf: 0,
-  r: 7
-}, {
-  c: 'Operário-PR',
-  f: 'Londrina',
-  gc: 3,
-  gf: 0,
-  r: 7
-}, {
-  c: 'Sport',
-  f: 'Ceará',
-  gc: 2,
-  gf: 0,
-  r: 7
-}, {
-  c: 'Atlético-GO',
-  f: 'Juventude',
-  gc: 0,
-  gf: 0,
-  r: 7
-}, {
-  c: 'América-MG',
-  f: 'CRB',
-  gc: 1,
-  gf: 2,
-  r: 7
-}, {
-  c: 'Avaí',
-  f: 'Novorizontino',
-  gc: 3,
-  gf: 3,
-  r: 7
-}, {
-  c: 'Vila Nova',
-  f: 'Athletic',
-  gc: 1,
-  gf: 1,
-  r: 7
-},
-// R8 (09-10/05/2026)
-{
-  c: 'Goiás',
-  f: 'Vila Nova',
-  gc: 1,
-  gf: 0,
-  r: 8
-}, {
-  c: 'Athletic',
-  f: 'Cuiabá',
-  gc: 0,
-  gf: 0,
-  r: 8
-}, {
-  c: 'Ponte Preta',
-  f: 'Sport',
-  gc: 1,
-  gf: 3,
-  r: 8
-}, {
-  c: 'Ceará',
-  f: 'Atlético-GO',
-  gc: 0,
-  gf: 1,
-  r: 8
-}, {
-  c: 'CRB',
-  f: 'Operário-PR',
-  gc: 3,
-  gf: 0,
-  r: 8
-}, {
-  c: 'Juventude',
-  f: 'Criciúma',
-  gc: 0,
-  gf: 0,
-  r: 8
-}, {
-  c: 'Náutico',
-  f: 'América-MG',
-  gc: 4,
-  gf: 0,
-  r: 8
-}, {
-  c: 'Avaí',
-  f: 'Fortaleza',
-  gc: 0,
-  gf: 0,
-  r: 8
-}, {
-  c: 'Novorizontino',
-  f: 'Botafogo-SP',
-  gc: 1,
-  gf: 0,
-  r: 8
-}, {
-  c: 'Londrina',
-  f: 'São Bernardo',
-  gc: 1,
-  gf: 3,
-  r: 8
-},
-// R9 (16-18/05/2026)
-{
-  c: 'São Bernardo',
-  f: 'América-MG',
-  gc: 1,
-  gf: 1,
-  r: 9
-}, {
-  c: 'Operário-PR',
-  f: 'Náutico',
-  gc: 2,
-  gf: 6,
-  r: 9
-}, {
-  c: 'Goiás',
-  f: 'Botafogo-SP',
-  gc: 1,
-  gf: 0,
-  r: 9
-}, {
-  c: 'Cuiabá',
-  f: 'Novorizontino',
-  gc: 0,
-  gf: 0,
-  r: 9
-}, {
-  c: 'Athletic',
-  f: 'Juventude',
-  gc: 1,
-  gf: 1,
-  r: 9
-}, {
-  c: 'Vila Nova',
-  f: 'Avaí',
-  gc: 2,
-  gf: 0,
-  r: 9
-}, {
-  c: 'Criciúma',
-  f: 'Atlético-GO',
-  gc: 1,
-  gf: 1,
-  r: 9
-}, {
-  c: 'Ceará',
-  f: 'Fortaleza',
-  gc: 2,
-  gf: 1,
-  r: 9
-}, {
-  c: 'Sport',
-  f: 'CRB',
-  gc: 1,
-  gf: 2,
-  r: 9
-}, {
-  c: 'Ponte Preta',
-  f: 'Londrina',
-  gc: 1,
-  gf: 4,
-  r: 9
-},
-// R10 (22-24/05/2026) — fixtures REAIS da CBF (a SB_TAB algorítmica diverge daqui
-// p/ frente; ver nota de integridade). São Bernardo lidera (20). Sport vice (22 c/ jogo).
-{
-  c: 'Náutico',
-  f: 'Cuiabá',
-  gc: 1,
-  gf: 0,
-  r: 10
-}, {
-  c: 'Novorizontino',
-  f: 'Ceará',
-  gc: 2,
-  gf: 1,
-  r: 10
-}, {
-  c: 'Fortaleza',
-  f: 'Londrina',
-  gc: 3,
-  gf: 0,
-  r: 10
-}, {
-  c: 'Juventude',
-  f: 'Sport',
-  gc: 0,
-  gf: 1,
-  r: 10
-}, {
-  c: 'Atlético-GO',
-  f: 'São Bernardo',
-  gc: 0,
-  gf: 1,
-  r: 10
-}, {
-  c: 'CRB',
-  f: 'Ponte Preta',
-  gc: 4,
-  gf: 2,
-  r: 10
-}, {
-  c: 'América-MG',
-  f: 'Vila Nova',
-  gc: 1,
-  gf: 2,
-  r: 10
-}, {
-  c: 'Avaí',
-  f: 'Goiás',
-  gc: 0,
-  gf: 2,
-  r: 10
-}, {
-  c: 'Operário-PR',
-  f: 'Criciúma',
-  gc: 1,
-  gf: 1,
-  r: 10
-}, {
-  c: 'Botafogo-SP',
-  f: 'Athletic',
-  gc: 1,
-  gf: 2,
-  r: 10
-}, {
-  c: 'Juventude',
-  f: 'América-MG',
-  gc: 3,
-  gf: 0,
-  r: 11
-}, {
-  c: 'Atlético-GO',
-  f: 'Goiás',
-  gc: 1,
-  gf: 1,
-  r: 11
-}, {
-  c: 'Avaí',
-  f: 'Criciúma',
-  gc: 1,
-  gf: 2,
-  r: 11
-}, {
-  c: 'Athletic',
-  f: 'Fortaleza',
-  gc: 1,
-  gf: 0,
-  r: 11
-}, {
-  c: 'Sport',
-  f: 'Náutico',
-  gc: 2,
-  gf: 0,
-  r: 11
-}, {
-  c: 'São Bernardo',
-  f: 'Novorizontino',
-  gc: 1,
-  gf: 1,
-  r: 11
-}, {
-  c: 'Londrina',
-  f: 'Vila Nova',
-  gc: 0,
-  gf: 1,
-  r: 11
-}, {
-  c: 'Ceará',
-  f: 'Operário-PR',
-  gc: 1,
-  gf: 2,
-  r: 11
-}, {
-  c: 'Cuiabá',
-  f: 'CRB',
-  gc: 2,
-  gf: 0,
-  r: 11
-}, {
-  c: 'Ponte Preta',
-  f: 'Botafogo-SP',
-  gc: 0,
-  gf: 0,
-  r: 11
-}, {
-  c: 'Operário-PR',
-  f: 'Juventude',
-  gc: 2,
-  gf: 1,
-  r: 12
-}, {
-  c: 'Criciúma',
-  f: 'Londrina',
-  gc: 1,
-  gf: 0,
-  r: 12
-}, {
-  c: 'CRB',
-  f: 'São Bernardo',
-  gc: 2,
-  gf: 3,
-  r: 12
-}
-// +junho B (R12-15, jogos pós-PDF 01/06; fontes web ge/CBF/ogol)
-, {
-  c: "América-MG",
-  f: "Atlético-GO",
-  gc: 1,
-  gf: 2,
-  r: 12
-}, {
-  c: "Vila Nova",
-  f: "Botafogo-SP",
-  gc: 1,
-  gf: 0,
-  r: 12
-}, {
-  c: "Ponte Preta",
-  f: "Cuiabá",
-  gc: 1,
-  gf: 2,
-  r: 12
-}, {
-  c: "Náutico",
-  f: "Fortaleza",
-  gc: 0,
-  gf: 1,
-  r: 12
-}, {
-  c: "Ceará",
-  f: "Avaí",
-  gc: 2,
-  gf: 1,
-  r: 12
-}, {
-  c: "Goiás",
-  f: "Novorizontino",
-  gc: 0,
-  gf: 4,
-  r: 12
-}, {
-  c: "Sport",
-  f: "Athletic",
-  gc: 1,
-  gf: 1,
-  r: 12
-}, {
-  c: "Atlético-GO",
-  f: "CRB",
-  gc: 3,
-  gf: 3,
-  r: 13
-}, {
-  c: "São Bernardo",
-  f: "Sport",
-  gc: 0,
-  gf: 0,
-  r: 13
-}, {
-  c: "Cuiabá",
-  f: "Vila Nova",
-  gc: 1,
-  gf: 0,
-  r: 13
-}, {
-  c: "Athletic",
-  f: "Goiás",
-  gc: 1,
-  gf: 1,
-  r: 13
-}, {
-  c: "Novorizontino",
-  f: "Náutico",
-  gc: 2,
-  gf: 2,
-  r: 13
-}, {
-  c: "Juventude",
-  f: "Ponte Preta",
-  gc: 3,
-  gf: 0,
-  r: 13
-}, {
-  c: "Botafogo-SP",
-  f: "Operário-PR",
-  gc: 2,
-  gf: 1,
-  r: 13
-}, {
-  c: "Criciúma",
-  f: "Ceará",
-  gc: 1,
-  gf: 1,
-  r: 13
-}, {
-  c: "Londrina",
-  f: "Avaí",
-  gc: 3,
-  gf: 2,
-  r: 13
-}, {
-  c: "Fortaleza",
-  f: "América-MG",
-  gc: 0,
-  gf: 3,
-  r: 13
-}, {
-  c: "Sport",
-  f: "Atlético-GO",
-  gc: 1,
-  gf: 1,
-  r: 14
-}, {
-  c: "Vila Nova",
-  f: "Náutico",
-  gc: 4,
-  gf: 3,
-  r: 14
-}, {
-  c: "Ceará",
-  f: "Botafogo-SP",
-  gc: 0,
-  gf: 1,
-  r: 14
-}, {
-  c: "Londrina",
-  f: "Athletic",
-  gc: 2,
-  gf: 0,
-  r: 14
-}, {
-  c: "Goiás",
-  f: "Operário-PR",
-  gc: 0,
-  gf: 3,
-  r: 14
-}, {
-  c: "Avaí",
-  f: "Cuiabá",
-  gc: 1,
-  gf: 0,
-  r: 14
-}, {
-  c: "CRB",
-  f: "Fortaleza",
-  gc: 1,
-  gf: 1,
-  r: 14
-}, {
-  c: "São Bernardo",
-  f: "Juventude",
-  gc: 0,
-  gf: 1,
-  r: 14
-}, {
-  c: "Ponte Preta",
-  f: "Novorizontino",
-  gc: 0,
-  gf: 2,
-  r: 14
-}, {
-  c: "América-MG",
-  f: "Criciúma",
-  gc: 0,
-  gf: 1,
-  r: 14
-}, {
-  c: "Cuiabá",
-  f: "Londrina",
-  gc: 2,
-  gf: 2,
-  r: 15
-}, {
-  c: "Novorizontino",
-  f: "Vila Nova",
-  gc: 2,
-  gf: 1,
-  r: 15
-}, {
-  c: "Operário-PR",
-  f: "América-MG",
-  gc: 1,
-  gf: 0,
-  r: 15
-}, {
-  c: "Criciúma",
-  f: "São Bernardo",
-  gc: 1,
-  gf: 0,
-  r: 15
-}
+const SB_RES = [
+  { c: 'Botafogo-SP', f: 'Fortaleza', gc: 4, gf: 0, r: 1 },
+  { c: 'Novorizontino', f: 'Londrina', gc: 1, gf: 3, r: 1 },
+  { c: 'Athletic', f: 'Ponte Preta', gc: 2, gf: 1, r: 1 },
+  { c: 'Operário-PR', f: 'Atlético-GO', gc: 1, gf: 0, r: 1 },
+  { c: 'Ceará', f: 'São Bernardo', gc: 1, gf: 1, r: 1 },
+  { c: 'Goiás', f: 'América-MG', gc: 3, gf: 1, r: 1 },
+  { c: 'Avaí', f: 'Juventude', gc: 2, gf: 0, r: 1 },
+  { c: 'Náutico', f: 'Criciúma', gc: 0, gf: 1, r: 1 },
+  { c: 'Cuiabá', f: 'Sport', gc: 0, gf: 0, r: 1 },
+  { c: 'Vila Nova', f: 'CRB', gc: 2, gf: 2, r: 1 },
+  { c: 'Ponte Preta', f: 'Ceará', gc: 1, gf: 1, r: 2 },
+  { c: 'São Bernardo', f: 'Operário-PR', gc: 1, gf: 2, r: 2 },
+  { c: 'América-MG', f: 'Botafogo-SP', gc: 1, gf: 2, r: 2 },
+  { c: 'Londrina', f: 'Goiás', gc: 2, gf: 2, r: 2 },
+  { c: 'Fortaleza', f: 'Cuiabá', gc: 0, gf: 0, r: 2 },
+  { c: 'Atlético-GO', f: 'Náutico', gc: 1, gf: 2, r: 2 },
+  { c: 'Criciúma', f: 'Athletic', gc: 1, gf: 1, r: 2 },
+  { c: 'Sport', f: 'Vila Nova', gc: 1, gf: 1, r: 2 },
+  { c: 'CRB', f: 'Avaí', gc: 0, gf: 1, r: 2 },
+  { c: 'Juventude', f: 'Novorizontino', gc: 0, gf: 0, r: 2 },
+  { c: 'Botafogo-SP', f: 'São Bernardo', gc: 1, gf: 2, r: 3 },
+  { c: 'Fortaleza', f: 'Juventude', gc: 2, gf: 1, r: 3 },
+  { c: 'Náutico', f: 'Ponte Preta', gc: 1, gf: 0, r: 3 },
+  { c: 'Cuiabá', f: 'Ceará', gc: 0, gf: 2, r: 3 },
+  { c: 'Vila Nova', f: 'Atlético-GO', gc: 2, gf: 1, r: 3 },
+  { c: 'Londrina', f: 'Sport', gc: 1, gf: 2, r: 3 },
+  { c: 'Avaí', f: 'Operário-PR', gc: 0, gf: 0, r: 3 },
+  { c: 'Novorizontino', f: 'CRB', gc: 1, gf: 1, r: 3 },
+  { c: 'Athletic', f: 'América-MG', gc: 1, gf: 1, r: 3 },
+  { c: 'Goiás', f: 'Criciúma', gc: 1, gf: 0, r: 3 },
+  { c: 'Criciúma', f: 'Botafogo-SP', gc: 1, gf: 0, r: 4 },
+  { c: 'Sport', f: 'Avaí', gc: 2, gf: 2, r: 4 },
+  { c: 'Ceará', f: 'Náutico', gc: 1, gf: 0, r: 4 },
+  { c: 'Ponte Preta', f: 'Vila Nova', gc: 0, gf: 1, r: 4 },
+  { c: 'São Bernardo', f: 'Fortaleza', gc: 0, gf: 1, r: 4 },
+  { c: 'América-MG', f: 'Novorizontino', gc: 0, gf: 3, r: 4 },
+  { c: 'Operário-PR', f: 'Cuiabá', gc: 0, gf: 0, r: 4 },
+  { c: 'Atlético-GO', f: 'Londrina', gc: 2, gf: 1, r: 4 },
+  { c: 'CRB', f: 'Athletic', gc: 2, gf: 3, r: 4 },
+  { c: 'Juventude', f: 'Goiás', gc: 2, gf: 0, r: 4 },
+  { c: 'Botafogo-SP', f: 'Atlético-GO', gc: 1, gf: 1, r: 5 },
+  { c: 'Novorizontino', f: 'Athletic', gc: 2, gf: 1, r: 5 },
+  { c: 'América-MG', f: 'Sport', gc: 0, gf: 0, r: 5 },
+  { c: 'Londrina', f: 'Ceará', gc: 0, gf: 0, r: 5 },
+  { c: 'Fortaleza', f: 'Criciúma', gc: 3, gf: 2, r: 5 },
+  { c: 'Goiás', f: 'Cuiabá', gc: 0, gf: 2, r: 5 },
+  { c: 'Avaí', f: 'Ponte Preta', gc: 1, gf: 2, r: 5 },
+  { c: 'Náutico', f: 'São Bernardo', gc: 0, gf: 3, r: 5 },
+  { c: 'CRB', f: 'Juventude', gc: 0, gf: 1, r: 5 },
+  { c: 'Vila Nova', f: 'Operário-PR', gc: 2, gf: 1, r: 5 },
+  { c: 'Sport', f: 'Novorizontino', gc: 1, gf: 0, r: 6 },
+  { c: 'Juventude', f: 'Londrina', gc: 1, gf: 0, r: 6 },
+  { c: 'São Bernardo', f: 'Goiás', gc: 1, gf: 0, r: 6 },
+  { c: 'Operário-PR', f: 'Fortaleza', gc: 0, gf: 0, r: 6 },
+  { c: 'Ceará', f: 'Vila Nova', gc: 3, gf: 3, r: 6 },
+  { c: 'Atlético-GO', f: 'Avaí', gc: 2, gf: 1, r: 6 },
+  { c: 'Criciúma', f: 'CRB', gc: 3, gf: 1, r: 6 },
+  { c: 'Cuiabá', f: 'Botafogo-SP', gc: 1, gf: 1, r: 6 },
+  { c: 'Ponte Preta', f: 'América-MG', gc: 1, gf: 0, r: 6 },
+  { c: 'Athletic', f: 'Náutico', gc: 0, gf: 1, r: 6 },
+  { c: 'Botafogo-SP', f: 'Náutico', gc: 1, gf: 1, r: 7 },
+  { c: 'Cuiabá', f: 'Criciúma', gc: 1, gf: 1, r: 7 },
+  { c: 'Fortaleza', f: 'Goiás', gc: 4, gf: 1, r: 7 },
+  { c: 'São Bernardo', f: 'Ponte Preta', gc: 3, gf: 0, r: 7 },
+  { c: 'Operário-PR', f: 'Londrina', gc: 3, gf: 0, r: 7 },
+  { c: 'Sport', f: 'Ceará', gc: 2, gf: 0, r: 7 },
+  { c: 'Atlético-GO', f: 'Juventude', gc: 0, gf: 0, r: 7 },
+  { c: 'América-MG', f: 'CRB', gc: 1, gf: 2, r: 7 },
+  { c: 'Avaí', f: 'Novorizontino', gc: 3, gf: 3, r: 7 },
+  { c: 'Vila Nova', f: 'Athletic', gc: 1, gf: 1, r: 7 },
+  { c: 'Goiás', f: 'Vila Nova', gc: 1, gf: 0, r: 8 },
+  { c: 'Athletic', f: 'Cuiabá', gc: 0, gf: 0, r: 8 },
+  { c: 'Ponte Preta', f: 'Sport', gc: 1, gf: 3, r: 8 },
+  { c: 'Ceará', f: 'Atlético-GO', gc: 0, gf: 1, r: 8 },
+  { c: 'CRB', f: 'Operário-PR', gc: 3, gf: 0, r: 8 },
+  { c: 'Juventude', f: 'Criciúma', gc: 0, gf: 0, r: 8 },
+  { c: 'Náutico', f: 'América-MG', gc: 4, gf: 0, r: 8 },
+  { c: 'Avaí', f: 'Fortaleza', gc: 0, gf: 0, r: 8 },
+  { c: 'Novorizontino', f: 'Botafogo-SP', gc: 1, gf: 0, r: 8 },
+  { c: 'Londrina', f: 'São Bernardo', gc: 1, gf: 3, r: 8 },
+  { c: 'São Bernardo', f: 'América-MG', gc: 1, gf: 1, r: 9 },
+  { c: 'Operário-PR', f: 'Náutico', gc: 2, gf: 6, r: 9 },
+  { c: 'Goiás', f: 'Botafogo-SP', gc: 1, gf: 0, r: 9 },
+  { c: 'Cuiabá', f: 'Novorizontino', gc: 0, gf: 0, r: 9 },
+  { c: 'Athletic', f: 'Juventude', gc: 1, gf: 1, r: 9 },
+  { c: 'Vila Nova', f: 'Avaí', gc: 2, gf: 0, r: 9 },
+  { c: 'Criciúma', f: 'Atlético-GO', gc: 1, gf: 1, r: 9 },
+  { c: 'Ceará', f: 'Fortaleza', gc: 2, gf: 1, r: 9 },
+  { c: 'Sport', f: 'CRB', gc: 1, gf: 2, r: 9 },
+  { c: 'Ponte Preta', f: 'Londrina', gc: 1, gf: 4, r: 9 },
+  { c: 'Náutico', f: 'Cuiabá', gc: 1, gf: 0, r: 10 },
+  { c: 'Novorizontino', f: 'Ceará', gc: 2, gf: 1, r: 10 },
+  { c: 'Fortaleza', f: 'Londrina', gc: 3, gf: 0, r: 10 },
+  { c: 'Juventude', f: 'Sport', gc: 0, gf: 1, r: 10 },
+  { c: 'Atlético-GO', f: 'São Bernardo', gc: 0, gf: 1, r: 10 },
+  { c: 'CRB', f: 'Ponte Preta', gc: 4, gf: 2, r: 10 },
+  { c: 'América-MG', f: 'Vila Nova', gc: 1, gf: 2, r: 10 },
+  { c: 'Avaí', f: 'Goiás', gc: 0, gf: 2, r: 10 },
+  { c: 'Operário-PR', f: 'Criciúma', gc: 1, gf: 1, r: 10 },
+  { c: 'Botafogo-SP', f: 'Athletic', gc: 1, gf: 2, r: 10 },
+  { c: 'Juventude', f: 'América-MG', gc: 3, gf: 0, r: 11 },
+  { c: 'Atlético-GO', f: 'Goiás', gc: 1, gf: 1, r: 11 },
+  { c: 'Avaí', f: 'Criciúma', gc: 1, gf: 2, r: 11 },
+  { c: 'Athletic', f: 'Fortaleza', gc: 1, gf: 0, r: 11 },
+  { c: 'Sport', f: 'Náutico', gc: 2, gf: 0, r: 11 },
+  { c: 'São Bernardo', f: 'Novorizontino', gc: 1, gf: 1, r: 11 },
+  { c: 'Londrina', f: 'Vila Nova', gc: 0, gf: 1, r: 11 },
+  { c: 'Ceará', f: 'Operário-PR', gc: 1, gf: 2, r: 11 },
+  { c: 'Cuiabá', f: 'CRB', gc: 2, gf: 0, r: 11 },
+  { c: 'Ponte Preta', f: 'Botafogo-SP', gc: 0, gf: 0, r: 11 },
+  { c: 'Operário-PR', f: 'Juventude', gc: 2, gf: 1, r: 12 },
+  { c: 'Criciúma', f: 'Londrina', gc: 1, gf: 0, r: 12 },
+  { c: 'CRB', f: 'São Bernardo', gc: 2, gf: 3, r: 12 },
+  { c: 'América-MG', f: 'Atlético-GO', gc: 1, gf: 2, r: 12 },
+  { c: 'Vila Nova', f: 'Botafogo-SP', gc: 1, gf: 0, r: 12 },
+  { c: 'Ponte Preta', f: 'Cuiabá', gc: 1, gf: 2, r: 12 },
+  { c: 'Náutico', f: 'Fortaleza', gc: 0, gf: 1, r: 12 },
+  { c: 'Ceará', f: 'Avaí', gc: 2, gf: 1, r: 12 },
+  { c: 'Goiás', f: 'Novorizontino', gc: 0, gf: 4, r: 12 },
+  { c: 'Sport', f: 'Athletic', gc: 1, gf: 1, r: 12 },
+  { c: 'Atlético-GO', f: 'CRB', gc: 3, gf: 3, r: 13 },
+  { c: 'São Bernardo', f: 'Sport', gc: 0, gf: 0, r: 13 },
+  { c: 'Juventude', f: 'Ponte Preta', gc: 3, gf: 0, r: 13 },
+  { c: 'Athletic', f: 'Goiás', gc: 1, gf: 1, r: 13 },
+  { c: 'Cuiabá', f: 'Vila Nova', gc: 1, gf: 0, r: 13 },
+  { c: 'Botafogo-SP', f: 'Operário-PR', gc: 2, gf: 1, r: 13 },
+  { c: 'Novorizontino', f: 'Náutico', gc: 2, gf: 2, r: 13 },
+  { c: 'Londrina', f: 'Avaí', gc: 3, gf: 2, r: 13 },
+  { c: 'Criciúma', f: 'Ceará', gc: 1, gf: 1, r: 13 },
+  { c: 'Fortaleza', f: 'América-MG', gc: 0, gf: 3, r: 13 },
+  { c: 'Sport', f: 'Atlético-GO', gc: 1, gf: 1, r: 14 },
+  { c: 'Londrina', f: 'Athletic', gc: 2, gf: 0, r: 14 },
+  { c: 'Ceará', f: 'Botafogo-SP', gc: 0, gf: 1, r: 14 },
+  { c: 'Vila Nova', f: 'Náutico', gc: 4, gf: 3, r: 14 },
+  { c: 'Avaí', f: 'Cuiabá', gc: 1, gf: 0, r: 14 },
+  { c: 'CRB', f: 'Fortaleza', gc: 1, gf: 1, r: 14 },
+  { c: 'São Bernardo', f: 'Juventude', gc: 0, gf: 1, r: 14 },
+  { c: 'Goiás', f: 'Operário-PR', gc: 0, gf: 3, r: 14 },
+  { c: 'Ponte Preta', f: 'Novorizontino', gc: 0, gf: 2, r: 14 },
+  { c: 'América-MG', f: 'Criciúma', gc: 0, gf: 1, r: 14 },
+  { c: 'Cuiabá', f: 'Londrina', gc: 2, gf: 2, r: 15 },
+  { c: 'Novorizontino', f: 'Vila Nova', gc: 2, gf: 1, r: 15 },
+  { c: 'Operário-PR', f: 'América-MG', gc: 1, gf: 0, r: 15 },
+  { c: 'Criciúma', f: 'São Bernardo', gc: 1, gf: 0, r: 15 },
+  { c: 'Juventude', f: 'Ceará', gc: 2, gf: 0, r: 15 },
+  { c: 'Athletic', f: 'Avaí', gc: 1, gf: 0, r: 15 },
+  { c: 'Atlético-GO', f: 'Ponte Preta', gc: 2, gf: 0, r: 15 },
+  { c: 'Fortaleza', f: 'Sport', gc: 2, gf: 1, r: 15 },
+  { c: 'Náutico', f: 'Goiás', gc: 0, gf: 1, r: 15 },
+  { c: 'Botafogo-SP', f: 'CRB', gc: 0, gf: 1, r: 15 },
+  { c: 'Cuiabá', f: 'América-MG', gc: 1, gf: 0, r: 16 },
+  { c: 'Fortaleza', f: 'Ponte Preta', gc: 2, gf: 0, r: 16 },
+  { c: 'Criciúma', f: 'Sport', gc: 1, gf: 0, r: 16 },
+  { c: 'Novorizontino', f: 'Atlético-GO', gc: 3, gf: 0, r: 16 },
+  { c: 'Londrina', f: 'CRB', gc: 5, gf: 0, r: 16 },
+  { c: 'Goiás', f: 'Ceará', gc: 2, gf: 0, r: 16 },
+  { c: 'Náutico', f: 'Juventude', gc: 0, gf: 0, r: 16 },
+  { c: 'Botafogo-SP', f: 'Avaí', gc: 3, gf: 1, r: 16 },
+  { c: 'Vila Nova', f: 'São Bernardo', gc: 2, gf: 1, r: 16 },
+  { c: 'Athletic', f: 'Operário-PR', gc: 0, gf: 1, r: 16 },
+  { c: 'Ponte Preta', f: 'Criciúma', gc: 1, gf: 2, r: 17 }
 ];
 const SB_META = {
   key: 'B',
@@ -4922,702 +4217,137 @@ const SC_NM = {
   'YPI': 'Ypiranga'
 };
 const SC_TAB = ['IDL-FLR,ITU-ANA,BRQ-CAX,CON-AMA,MRA-GUA,VRD-PAY,MAR-FER,YPI-FIG,SCR-ITB,BPB-BAR', 'FER-BPB,GUA-VRD,FIG-MAR,ITB-YPI,FLR-SCR,ANA-IDL,CAX-CON,BAR-MRA,PAY-BRQ,AMA-ITU', 'IDL-ITU,GUA-ITB,FIG-BPB,CON-SCR,FLR-FER,VRD-CAX,MAR-BRQ,YPI-ANA,PAY-BAR,AMA-MRA', 'FER-GUA,ITU-MAR,BRQ-CON,ITB-PAY,MRA-VRD,ANA-FIG,CAX-YPI,BAR-IDL,SCR-AMA,BPB-FLR', 'FER-ANA,GUA-SCR,FIG-BAR,CON-IDL,FLR-MRA,VRD-BRQ,MAR-ITB,YPI-ITU,PAY-BPB,AMA-CAX', 'IDL-SCR,ITU-CON,BRQ-YPI,ITB-FLR,MRA-BPB,VRD-FER,MAR-GUA,BAR-CAX,PAY-ANA,AMA-FIG', 'FER-BRQ,GUA-ITU,FIG-ITB,CON-MRA,FLR-AMA,ANA-BAR,CAX-PAY,YPI-MAR,SCR-VRD,BPB-IDL', 'IDL-ITB,ITU-BPB,BRQ-ANA,CON-FIG,MRA-CAX,VRD-YPI,MAR-SCR,BAR-GUA,PAY-FLR,AMA-FER', 'IDL-YPI,GUA-AMA,FIG-PAY,ITB-VRD,FLR-CON,ANA-MRA,CAX-ITU,BAR-BRQ,SCR-FER,BPB-MAR', 'FER-BAR,GUA-CAX,BRQ-SCR,ITB-ITU,FLR-FIG,VRD-CON,MAR-MRA,YPI-BPB,PAY-IDL,AMA-ANA', 'FER-IDL,ITU-FIG,BRQ-FLR,CON-GUA,MRA-PAY,ANA-ITB,CAX-MAR,BAR-AMA,SCR-YPI,BPB-VRD', 'IDL-MAR,ITU-MRA,FIG-GUA,ITB-FER,FLR-BAR,VRD-AMA,CAX-ANA,YPI-CON,PAY-SCR,BPB-BRQ', 'FER-CAX,GUA-FLR,BRQ-FIG,CON-BAR,MRA-IDL,ANA-BPB,MAR-VRD,YPI-PAY,SCR-ITU,AMA-ITB', 'IDL-AMA,ITU-FER,FIG-VRD,ITB-BRQ,MRA-YPI,ANA-MAR,CAX-FLR,BAR-SCR,PAY-GUA,BPB-CON', 'FER-MRA,GUA-IDL,BRQ-ITU,CON-ITB,FLR-MAR,VRD-ANA,CAX-BPB,YPI-BAR,SCR-FIG,AMA-PAY', 'IDL-VRD,ITU-BAR,FIG-FER,ITB-CAX,MRA-BRQ,ANA-GUA,MAR-AMA,YPI-FLR,PAY-CON,BPB-SCR', 'FER-PAY,GUA-YPI,BRQ-IDL,CON-MAR,FLR-ANA,VRD-ITU,CAX-FIG,BAR-ITB,SCR-MRA,AMA-BPB', 'IDL-FIG,ITU-PAY,BRQ-AMA,CON-ANA,MRA-ITB,VRD-FLR,MAR-BAR,YPI-FER,SCR-CAX,BPB-GUA', 'FER-CON,GUA-BRQ,FIG-MRA,ITB-BPB,FLR-ITU,ANA-SCR,CAX-IDL,BAR-VRD,PAY-MAR,AMA-YPI'];
-const SC_RES = [{
-  c: 'Maranhão',
-  f: 'Guarani',
-  gc: 1,
-  gf: 1,
-  r: 1
-}, {
-  c: 'Brusque',
-  f: 'Caxias',
-  gc: 2,
-  gf: 1,
-  r: 1
-}, {
-  c: 'Maringá',
-  f: 'Ferroviária',
-  gc: 3,
-  gf: 2,
-  r: 1
-}, {
-  c: 'Botafogo-PB',
-  f: 'Barra',
-  gc: 1,
-  gf: 0,
-  r: 1
-}, {
-  c: 'Inter de Limeira',
-  f: 'Floresta',
-  gc: 1,
-  gf: 2,
-  r: 1
-}, {
-  c: 'Ituano',
-  f: 'Anápolis',
-  gc: 2,
-  gf: 0,
-  r: 1
-}, {
-  c: 'Confiança',
-  f: 'Amazonas',
-  gc: 0,
-  gf: 1,
-  r: 1
-}, {
-  c: 'Volta Redonda',
-  f: 'Paysandu',
-  gc: 0,
-  gf: 1,
-  r: 1
-}, {
-  c: 'Ypiranga',
-  f: 'Figueirense',
-  gc: 1,
-  gf: 1,
-  r: 1
-}, {
-  c: 'Santa Cruz',
-  f: 'Itabaiana',
-  gc: 1,
-  gf: 0,
-  r: 1
-}, {
-  c: 'Floresta',
-  f: 'Santa Cruz',
-  gc: 1,
-  gf: 1,
-  r: 2
-}, {
-  c: 'Ferroviária',
-  f: 'Botafogo-PB',
-  gc: 0,
-  gf: 2,
-  r: 2
-}, {
-  c: 'Barra',
-  f: 'Maranhão',
-  gc: 3,
-  gf: 0,
-  r: 2
-}, {
-  c: 'Anápolis',
-  f: 'Inter de Limeira',
-  gc: 1,
-  gf: 2,
-  r: 2
-}, {
-  c: 'Caxias',
-  f: 'Confiança',
-  gc: 1,
-  gf: 0,
-  r: 2
-}, {
-  c: 'Paysandu',
-  f: 'Brusque',
-  gc: 1,
-  gf: 1,
-  r: 2
-}, {
-  c: 'Guarani',
-  f: 'Volta Redonda',
-  gc: 2,
-  gf: 0,
-  r: 2
-}, {
-  c: 'Itabaiana',
-  f: 'Ypiranga',
-  gc: 1,
-  gf: 2,
-  r: 2
-}, {
-  c: 'Amazonas',
-  f: 'Ituano',
-  gc: 3,
-  gf: 0,
-  r: 2
-}, {
-  c: 'Figueirense',
-  f: 'Maringá',
-  gc: 1,
-  gf: 3,
-  r: 2
-}, {
-  c: 'Inter de Limeira',
-  f: 'Ituano',
-  gc: 1,
-  gf: 1,
-  r: 3
-}, {
-  c: 'Guarani',
-  f: 'Itabaiana',
-  gc: 1,
-  gf: 1,
-  r: 3
-}, {
-  c: 'Figueirense',
-  f: 'Botafogo-PB',
-  gc: 2,
-  gf: 1,
-  r: 3
-}, {
-  c: 'Confiança',
-  f: 'Santa Cruz',
-  gc: 1,
-  gf: 0,
-  r: 3
-}, {
-  c: 'Floresta',
-  f: 'Ferroviária',
-  gc: 0,
-  gf: 0,
-  r: 3
-}, {
-  c: 'Volta Redonda',
-  f: 'Caxias',
-  gc: 1,
-  gf: 0,
-  r: 3
-}, {
-  c: 'Maringá',
-  f: 'Brusque',
-  gc: 2,
-  gf: 3,
-  r: 3
-}, {
-  c: 'Ypiranga',
-  f: 'Anápolis',
-  gc: 3,
-  gf: 0,
-  r: 3
-}, {
-  c: 'Paysandu',
-  f: 'Barra',
-  gc: 1,
-  gf: 1,
-  r: 3
-}, {
-  c: 'Amazonas',
-  f: 'Maranhão',
-  gc: 2,
-  gf: 0,
-  r: 3
-}, {
-  c: 'Itabaiana',
-  f: 'Paysandu',
-  gc: 1,
-  gf: 4,
-  r: 4
-}, {
-  c: 'Brusque',
-  f: 'Confiança',
-  gc: 2,
-  gf: 1,
-  r: 4
-}, {
-  c: 'Botafogo-PB',
-  f: 'Floresta',
-  gc: 1,
-  gf: 2,
-  r: 4
-}, {
-  c: 'Maranhão',
-  f: 'Volta Redonda',
-  gc: 2,
-  gf: 1,
-  r: 4
-}, {
-  c: 'Anápolis',
-  f: 'Figueirense',
-  gc: 3,
-  gf: 1,
-  r: 4
-}, {
-  c: 'Barra',
-  f: 'Inter de Limeira',
-  gc: 2,
-  gf: 2,
-  r: 4
-}, {
-  c: 'Santa Cruz',
-  f: 'Amazonas',
-  gc: 0,
-  gf: 1,
-  r: 4
-}, {
-  c: 'Ituano',
-  f: 'Maringá',
-  gc: 4,
-  gf: 1,
-  r: 4
-}, {
-  c: 'Ferroviária',
-  f: 'Guarani',
-  gc: 2,
-  gf: 2,
-  r: 4
-}, {
-  c: 'Caxias',
-  f: 'Ypiranga',
-  gc: 2,
-  gf: 1,
-  r: 4
-},
-// R5 (02-04/05/2026)
-{
-  c: 'Ferroviária',
-  f: 'Anápolis',
-  gc: 1,
-  gf: 0,
-  r: 5
-}, {
-  c: 'Guarani',
-  f: 'Santa Cruz',
-  gc: 1,
-  gf: 0,
-  r: 5
-}, {
-  c: 'Figueirense',
-  f: 'Barra',
-  gc: 0,
-  gf: 3,
-  r: 5
-}, {
-  c: 'Confiança',
-  f: 'Inter de Limeira',
-  gc: 0,
-  gf: 1,
-  r: 5
-}, {
-  c: 'Floresta',
-  f: 'Maranhão',
-  gc: 1,
-  gf: 2,
-  r: 5
-}, {
-  c: 'Volta Redonda',
-  f: 'Brusque',
-  gc: 1,
-  gf: 1,
-  r: 5
-}, {
-  c: 'Maringá',
-  f: 'Itabaiana',
-  gc: 4,
-  gf: 2,
-  r: 5
-}, {
-  c: 'Ypiranga',
-  f: 'Ituano',
-  gc: 2,
-  gf: 0,
-  r: 5
-}, {
-  c: 'Paysandu',
-  f: 'Botafogo-PB',
-  gc: 4,
-  gf: 2,
-  r: 5
-}, {
-  c: 'Amazonas',
-  f: 'Caxias',
-  gc: 1,
-  gf: 1,
-  r: 5
-},
-// R6 (09-11/05/2026)
-{
-  c: 'Inter de Limeira',
-  f: 'Santa Cruz',
-  gc: 1,
-  gf: 2,
-  r: 6
-}, {
-  c: 'Ituano',
-  f: 'Confiança',
-  gc: 1,
-  gf: 0,
-  r: 6
-}, {
-  c: 'Brusque',
-  f: 'Ypiranga',
-  gc: 3,
-  gf: 0,
-  r: 6
-}, {
-  c: 'Itabaiana',
-  f: 'Floresta',
-  gc: 0,
-  gf: 0,
-  r: 6
-}, {
-  c: 'Maranhão',
-  f: 'Botafogo-PB',
-  gc: 3,
-  gf: 1,
-  r: 6
-}, {
-  c: 'Volta Redonda',
-  f: 'Ferroviária',
-  gc: 0,
-  gf: 0,
-  r: 6
-}, {
-  c: 'Maringá',
-  f: 'Guarani',
-  gc: 0,
-  gf: 5,
-  r: 6
-}, {
-  c: 'Barra',
-  f: 'Caxias',
-  gc: 0,
-  gf: 0,
-  r: 6
-}, {
-  c: 'Paysandu',
-  f: 'Anápolis',
-  gc: 2,
-  gf: 1,
-  r: 6
-}, {
-  c: 'Amazonas',
-  f: 'Figueirense',
-  gc: 0,
-  gf: 1,
-  r: 6
-},
-// R7 (16-18/05/2026)
-{
-  c: 'Ferroviária',
-  f: 'Brusque',
-  gc: 1,
-  gf: 0,
-  r: 7
-}, {
-  c: 'Guarani',
-  f: 'Ituano',
-  gc: 1,
-  gf: 3,
-  r: 7
-}, {
-  c: 'Figueirense',
-  f: 'Itabaiana',
-  gc: 0,
-  gf: 1,
-  r: 7
-}, {
-  c: 'Confiança',
-  f: 'Maranhão',
-  gc: 2,
-  gf: 1,
-  r: 7
-}, {
-  c: 'Floresta',
-  f: 'Amazonas',
-  gc: 3,
-  gf: 2,
-  r: 7
-}, {
-  c: 'Anápolis',
-  f: 'Barra',
-  gc: 1,
-  gf: 1,
-  r: 7
-}, {
-  c: 'Caxias',
-  f: 'Paysandu',
-  gc: 2,
-  gf: 0,
-  r: 7
-}, {
-  c: 'Ypiranga',
-  f: 'Maringá',
-  gc: 1,
-  gf: 4,
-  r: 7
-}, {
-  c: 'Santa Cruz',
-  f: 'Volta Redonda',
-  gc: 2,
-  gf: 0,
-  r: 7
-}, {
-  c: 'Botafogo-PB',
-  f: 'Inter de Limeira',
-  gc: 0,
-  gf: 1,
-  r: 7
-},
-// R8 (23-26/05/2026) — 8 placares derivados por delta de saldo (consistência+pontos
-// validados) + CON-FIG, MAR-SCR e AMA-FER/ITU-BPB confirmados por reportagem.
-{
-  c: 'Inter de Limeira',
-  f: 'Itabaiana',
-  gc: 0,
-  gf: 0,
-  r: 8
-}, {
-  c: 'Ituano',
-  f: 'Botafogo-PB',
-  gc: 1,
-  gf: 0,
-  r: 8
-}, {
-  c: 'Brusque',
-  f: 'Anápolis',
-  gc: 1,
-  gf: 0,
-  r: 8
-}, {
-  c: 'Confiança',
-  f: 'Figueirense',
-  gc: 0,
-  gf: 0,
-  r: 8
-}, {
-  c: 'Maranhão',
-  f: 'Caxias',
-  gc: 0,
-  gf: 0,
-  r: 8
-}, {
-  c: 'Volta Redonda',
-  f: 'Ypiranga',
-  gc: 2,
-  gf: 1,
-  r: 8
-}, {
-  c: 'Maringá',
-  f: 'Santa Cruz',
-  gc: 1,
-  gf: 1,
-  r: 8
-}, {
-  c: 'Barra',
-  f: 'Guarani',
-  gc: 0,
-  gf: 2,
-  r: 8
-}, {
-  c: 'Paysandu',
-  f: 'Floresta',
-  gc: 2,
-  gf: 1,
-  r: 8
-}, {
-  c: 'Amazonas',
-  f: 'Ferroviária',
-  gc: 1,
-  gf: 2,
-  r: 8
-}, {
-  c: 'Itabaiana',
-  f: 'Volta Redonda',
-  gc: 0,
-  gf: 1,
-  r: 9
-}, {
-  c: 'Floresta',
-  f: 'Confiança',
-  gc: 1,
-  gf: 0,
-  r: 9
-}, {
-  c: 'Botafogo-PB',
-  f: 'Maringá',
-  gc: 2,
-  gf: 1,
-  r: 9
-}, {
-  c: 'Caxias',
-  f: 'Ituano',
-  gc: 2,
-  gf: 1,
-  r: 9
-}, {
-  c: 'Inter de Limeira',
-  f: 'Ypiranga',
-  gc: 2,
-  gf: 1,
-  r: 9
-}, {
-  c: 'Guarani',
-  f: 'Amazonas',
-  gc: 5,
-  gf: 0,
-  r: 9
-}, {
-  c: 'Santa Cruz',
-  f: 'Ferroviária',
-  gc: 1,
-  gf: 1,
-  r: 9
-}, {
-  c: 'Anápolis',
-  f: 'Maranhão',
-  gc: 0,
-  gf: 0,
-  r: 9
-}, {
-  c: 'Figueirense',
-  f: 'Paysandu',
-  gc: 2,
-  gf: 1,
-  r: 9
-}, {
-  c: 'Barra',
-  f: 'Brusque',
-  gc: 2,
-  gf: 2,
-  r: 9
-}
-// +junho C (R10-12, jogos pós-PDF 01/06; fontes web ge/CBF/ogol)
-, {
-  c: "Guarani",
-  f: "Caxias",
-  gc: 2,
-  gf: 1,
-  r: 10
-}, {
-  c: "Amazonas",
-  f: "Anápolis",
-  gc: 1,
-  gf: 0,
-  r: 10
-}, {
-  c: "Floresta",
-  f: "Figueirense",
-  gc: 1,
-  gf: 2,
-  r: 10
-}, {
-  c: "Itabaiana",
-  f: "Ituano",
-  gc: 2,
-  gf: 2,
-  r: 10
-}, {
-  c: "Paysandu",
-  f: "Inter de Limeira",
-  gc: 1,
-  gf: 2,
-  r: 10
-}, {
-  c: "Brusque",
-  f: "Santa Cruz",
-  gc: 0,
-  gf: 1,
-  r: 10
-}, {
-  c: "Volta Redonda",
-  f: "Confiança",
-  gc: 1,
-  gf: 0,
-  r: 10
-}, {
-  c: "Maringá",
-  f: "Maranhão",
-  gc: 0,
-  gf: 0,
-  r: 10
-}, {
-  c: "Ferroviária",
-  f: "Barra",
-  gc: 1,
-  gf: 0,
-  r: 10
-}, {
-  c: "Ypiranga",
-  f: "Botafogo-PB",
-  gc: 1,
-  gf: 1,
-  r: 10
-}, {
-  c: "Maranhão",
-  f: "Paysandu",
-  gc: 0,
-  gf: 1,
-  r: 11
-}, {
-  c: "Ituano",
-  f: "Figueirense",
-  gc: 0,
-  gf: 0,
-  r: 11
-}, {
-  c: "Brusque",
-  f: "Floresta",
-  gc: 2,
-  gf: 1,
-  r: 11
-}, {
-  c: "Barra",
-  f: "Amazonas",
-  gc: 1,
-  gf: 1,
-  r: 11
-}, {
-  c: "Caxias",
-  f: "Maringá",
-  gc: 1,
-  gf: 1,
-  r: 11
-}, {
-  c: "Anápolis",
-  f: "Itabaiana",
-  gc: 2,
-  gf: 0,
-  r: 11
-}, {
-  c: "Botafogo-PB",
-  f: "Volta Redonda",
-  gc: 2,
-  gf: 0,
-  r: 11
-}, {
-  c: "Santa Cruz",
-  f: "Ypiranga",
-  gc: 0,
-  gf: 1,
-  r: 11
-}, {
-  c: "Ferroviária",
-  f: "Inter de Limeira",
-  gc: 2,
-  gf: 0,
-  r: 11
-}, {
-  c: "Confiança",
-  f: "Guarani",
-  gc: 2,
-  gf: 0,
-  r: 11
-}, {
-  c: "Inter de Limeira",
-  f: "Maringá",
-  gc: 2,
-  gf: 2,
-  r: 12
-}, {
-  c: "Paysandu",
-  f: "Santa Cruz",
-  gc: 1,
-  gf: 3,
-  r: 12
-}, {
-  c: "Floresta",
-  f: "Barra",
-  gc: 2,
-  gf: 1,
-  r: 12
-}, {
-  c: "Itabaiana",
-  f: "Ferroviária",
-  gc: 1,
-  gf: 0,
-  r: 12
-}
+const SC_RES = [
+  { c: 'Maranhão', f: 'Guarani', gc: 1, gf: 1, r: 1 },
+  { c: 'Brusque', f: 'Caxias', gc: 2, gf: 1, r: 1 },
+  { c: 'Maringá', f: 'Ferroviária', gc: 3, gf: 2, r: 1 },
+  { c: 'Botafogo-PB', f: 'Barra', gc: 1, gf: 0, r: 1 },
+  { c: 'Inter de Limeira', f: 'Floresta', gc: 1, gf: 2, r: 1 },
+  { c: 'Ituano', f: 'Anápolis', gc: 2, gf: 0, r: 1 },
+  { c: 'Confiança', f: 'Amazonas', gc: 0, gf: 1, r: 1 },
+  { c: 'Volta Redonda', f: 'Paysandu', gc: 0, gf: 1, r: 1 },
+  { c: 'Ypiranga', f: 'Figueirense', gc: 1, gf: 1, r: 1 },
+  { c: 'Santa Cruz', f: 'Itabaiana', gc: 1, gf: 0, r: 1 },
+  { c: 'Floresta', f: 'Santa Cruz', gc: 1, gf: 1, r: 2 },
+  { c: 'Ferroviária', f: 'Botafogo-PB', gc: 0, gf: 2, r: 2 },
+  { c: 'Barra', f: 'Maranhão', gc: 3, gf: 0, r: 2 },
+  { c: 'Anápolis', f: 'Inter de Limeira', gc: 1, gf: 2, r: 2 },
+  { c: 'Caxias', f: 'Confiança', gc: 1, gf: 0, r: 2 },
+  { c: 'Paysandu', f: 'Brusque', gc: 1, gf: 1, r: 2 },
+  { c: 'Guarani', f: 'Volta Redonda', gc: 2, gf: 0, r: 2 },
+  { c: 'Itabaiana', f: 'Ypiranga', gc: 1, gf: 2, r: 2 },
+  { c: 'Amazonas', f: 'Ituano', gc: 3, gf: 0, r: 2 },
+  { c: 'Figueirense', f: 'Maringá', gc: 1, gf: 3, r: 2 },
+  { c: 'Inter de Limeira', f: 'Ituano', gc: 1, gf: 1, r: 3 },
+  { c: 'Guarani', f: 'Itabaiana', gc: 1, gf: 1, r: 3 },
+  { c: 'Figueirense', f: 'Botafogo-PB', gc: 2, gf: 1, r: 3 },
+  { c: 'Confiança', f: 'Santa Cruz', gc: 1, gf: 0, r: 3 },
+  { c: 'Floresta', f: 'Ferroviária', gc: 0, gf: 0, r: 3 },
+  { c: 'Volta Redonda', f: 'Caxias', gc: 1, gf: 0, r: 3 },
+  { c: 'Maringá', f: 'Brusque', gc: 2, gf: 3, r: 3 },
+  { c: 'Ypiranga', f: 'Anápolis', gc: 3, gf: 0, r: 3 },
+  { c: 'Paysandu', f: 'Barra', gc: 1, gf: 1, r: 3 },
+  { c: 'Amazonas', f: 'Maranhão', gc: 2, gf: 0, r: 3 },
+  { c: 'Itabaiana', f: 'Paysandu', gc: 1, gf: 4, r: 4 },
+  { c: 'Brusque', f: 'Confiança', gc: 2, gf: 1, r: 4 },
+  { c: 'Botafogo-PB', f: 'Floresta', gc: 1, gf: 2, r: 4 },
+  { c: 'Maranhão', f: 'Volta Redonda', gc: 2, gf: 1, r: 4 },
+  { c: 'Anápolis', f: 'Figueirense', gc: 3, gf: 1, r: 4 },
+  { c: 'Barra', f: 'Inter de Limeira', gc: 2, gf: 2, r: 4 },
+  { c: 'Santa Cruz', f: 'Amazonas', gc: 0, gf: 1, r: 4 },
+  { c: 'Ituano', f: 'Maringá', gc: 4, gf: 1, r: 4 },
+  { c: 'Ferroviária', f: 'Guarani', gc: 2, gf: 2, r: 4 },
+  { c: 'Caxias', f: 'Ypiranga', gc: 2, gf: 1, r: 4 },
+  { c: 'Ferroviária', f: 'Anápolis', gc: 1, gf: 0, r: 5 },
+  { c: 'Guarani', f: 'Santa Cruz', gc: 1, gf: 0, r: 5 },
+  { c: 'Figueirense', f: 'Barra', gc: 0, gf: 3, r: 5 },
+  { c: 'Confiança', f: 'Inter de Limeira', gc: 0, gf: 1, r: 5 },
+  { c: 'Floresta', f: 'Maranhão', gc: 1, gf: 2, r: 5 },
+  { c: 'Volta Redonda', f: 'Brusque', gc: 1, gf: 1, r: 5 },
+  { c: 'Maringá', f: 'Itabaiana', gc: 4, gf: 2, r: 5 },
+  { c: 'Ypiranga', f: 'Ituano', gc: 2, gf: 0, r: 5 },
+  { c: 'Paysandu', f: 'Botafogo-PB', gc: 4, gf: 2, r: 5 },
+  { c: 'Amazonas', f: 'Caxias', gc: 1, gf: 1, r: 5 },
+  { c: 'Inter de Limeira', f: 'Santa Cruz', gc: 1, gf: 2, r: 6 },
+  { c: 'Ituano', f: 'Confiança', gc: 1, gf: 0, r: 6 },
+  { c: 'Brusque', f: 'Ypiranga', gc: 3, gf: 0, r: 6 },
+  { c: 'Itabaiana', f: 'Floresta', gc: 0, gf: 0, r: 6 },
+  { c: 'Maranhão', f: 'Botafogo-PB', gc: 3, gf: 1, r: 6 },
+  { c: 'Volta Redonda', f: 'Ferroviária', gc: 0, gf: 0, r: 6 },
+  { c: 'Maringá', f: 'Guarani', gc: 0, gf: 5, r: 6 },
+  { c: 'Barra', f: 'Caxias', gc: 0, gf: 0, r: 6 },
+  { c: 'Paysandu', f: 'Anápolis', gc: 2, gf: 1, r: 6 },
+  { c: 'Amazonas', f: 'Figueirense', gc: 0, gf: 1, r: 6 },
+  { c: 'Ferroviária', f: 'Brusque', gc: 1, gf: 0, r: 7 },
+  { c: 'Guarani', f: 'Ituano', gc: 1, gf: 3, r: 7 },
+  { c: 'Figueirense', f: 'Itabaiana', gc: 0, gf: 1, r: 7 },
+  { c: 'Confiança', f: 'Maranhão', gc: 2, gf: 1, r: 7 },
+  { c: 'Floresta', f: 'Amazonas', gc: 3, gf: 2, r: 7 },
+  { c: 'Anápolis', f: 'Barra', gc: 1, gf: 1, r: 7 },
+  { c: 'Caxias', f: 'Paysandu', gc: 2, gf: 0, r: 7 },
+  { c: 'Ypiranga', f: 'Maringá', gc: 1, gf: 4, r: 7 },
+  { c: 'Santa Cruz', f: 'Volta Redonda', gc: 2, gf: 0, r: 7 },
+  { c: 'Botafogo-PB', f: 'Inter de Limeira', gc: 0, gf: 1, r: 7 },
+  { c: 'Inter de Limeira', f: 'Itabaiana', gc: 0, gf: 0, r: 8 },
+  { c: 'Ituano', f: 'Botafogo-PB', gc: 1, gf: 0, r: 8 },
+  { c: 'Brusque', f: 'Anápolis', gc: 1, gf: 0, r: 8 },
+  { c: 'Confiança', f: 'Figueirense', gc: 0, gf: 0, r: 8 },
+  { c: 'Maranhão', f: 'Caxias', gc: 0, gf: 0, r: 8 },
+  { c: 'Volta Redonda', f: 'Ypiranga', gc: 2, gf: 1, r: 8 },
+  { c: 'Maringá', f: 'Santa Cruz', gc: 1, gf: 1, r: 8 },
+  { c: 'Barra', f: 'Guarani', gc: 0, gf: 2, r: 8 },
+  { c: 'Paysandu', f: 'Floresta', gc: 2, gf: 1, r: 8 },
+  { c: 'Amazonas', f: 'Ferroviária', gc: 1, gf: 2, r: 8 },
+  { c: 'Itabaiana', f: 'Volta Redonda', gc: 0, gf: 1, r: 9 },
+  { c: 'Floresta', f: 'Confiança', gc: 1, gf: 0, r: 9 },
+  { c: 'Botafogo-PB', f: 'Maringá', gc: 2, gf: 1, r: 9 },
+  { c: 'Caxias', f: 'Ituano', gc: 2, gf: 1, r: 9 },
+  { c: 'Inter de Limeira', f: 'Ypiranga', gc: 2, gf: 1, r: 9 },
+  { c: 'Guarani', f: 'Amazonas', gc: 5, gf: 0, r: 9 },
+  { c: 'Santa Cruz', f: 'Ferroviária', gc: 1, gf: 1, r: 9 },
+  { c: 'Anápolis', f: 'Maranhão', gc: 0, gf: 0, r: 9 },
+  { c: 'Figueirense', f: 'Paysandu', gc: 2, gf: 1, r: 9 },
+  { c: 'Barra', f: 'Brusque', gc: 2, gf: 2, r: 9 },
+  { c: 'Guarani', f: 'Caxias', gc: 2, gf: 1, r: 10 },
+  { c: 'Amazonas', f: 'Anápolis', gc: 1, gf: 0, r: 10 },
+  { c: 'Brusque', f: 'Santa Cruz', gc: 0, gf: 1, r: 10 },
+  { c: 'Floresta', f: 'Figueirense', gc: 1, gf: 2, r: 10 },
+  { c: 'Paysandu', f: 'Inter de Limeira', gc: 1, gf: 2, r: 10 },
+  { c: 'Itabaiana', f: 'Ituano', gc: 2, gf: 2, r: 10 },
+  { c: 'Volta Redonda', f: 'Confiança', gc: 1, gf: 0, r: 10 },
+  { c: 'Maringá', f: 'Maranhão', gc: 0, gf: 0, r: 10 },
+  { c: 'Ferroviária', f: 'Barra', gc: 1, gf: 0, r: 10 },
+  { c: 'Ypiranga', f: 'Botafogo-PB', gc: 1, gf: 1, r: 10 },
+  { c: 'Anápolis', f: 'Itabaiana', gc: 2, gf: 0, r: 11 },
+  { c: 'Botafogo-PB', f: 'Volta Redonda', gc: 2, gf: 0, r: 11 },
+  { c: 'Santa Cruz', f: 'Ypiranga', gc: 0, gf: 1, r: 11 },
+  { c: 'Ituano', f: 'Figueirense', gc: 0, gf: 0, r: 11 },
+  { c: 'Maranhão', f: 'Paysandu', gc: 0, gf: 1, r: 11 },
+  { c: 'Caxias', f: 'Maringá', gc: 1, gf: 1, r: 11 },
+  { c: 'Brusque', f: 'Floresta', gc: 2, gf: 1, r: 11 },
+  { c: 'Ferroviária', f: 'Inter de Limeira', gc: 2, gf: 0, r: 11 },
+  { c: 'Barra', f: 'Amazonas', gc: 1, gf: 1, r: 11 },
+  { c: 'Confiança', f: 'Guarani', gc: 2, gf: 0, r: 11 },
+  { c: 'Inter de Limeira', f: 'Maringá', gc: 2, gf: 2, r: 12 },
+  { c: 'Paysandu', f: 'Santa Cruz', gc: 1, gf: 3, r: 12 },
+  { c: 'Itabaiana', f: 'Ferroviária', gc: 1, gf: 0, r: 12 },
+  { c: 'Floresta', f: 'Barra', gc: 2, gf: 1, r: 12 },
+  { c: 'Figueirense', f: 'Guarani', gc: 1, gf: 1, r: 12 },
+  { c: 'Ituano', f: 'Maranhão', gc: 0, gf: 0, r: 12 },
+  { c: 'Ypiranga', f: 'Confiança', gc: 1, gf: 1, r: 12 },
+  { c: 'Caxias', f: 'Anápolis', gc: 1, gf: 1, r: 12 },
+  { c: 'Volta Redonda', f: 'Amazonas', gc: 3, gf: 0, r: 12 },
+  { c: 'Botafogo-PB', f: 'Brusque', gc: 2, gf: 0, r: 12 },
+  { c: 'Maranhão', f: 'Inter de Limeira', gc: 0, gf: 1, r: 13 },
+  { c: 'Confiança', f: 'Barra', gc: 1, gf: 2, r: 13 },
+  { c: 'Maringá', f: 'Volta Redonda', gc: 4, gf: 0, r: 13 },
+  { c: 'Santa Cruz', f: 'Ituano', gc: 1, gf: 0, r: 13 },
+  { c: 'Ferroviária', f: 'Caxias', gc: 0, gf: 1, r: 13 },
+  { c: 'Guarani', f: 'Floresta', gc: 0, gf: 0, r: 13 },
+  { c: 'Ypiranga', f: 'Paysandu', gc: 1, gf: 0, r: 13 },
+  { c: 'Anápolis', f: 'Botafogo-PB', gc: 0, gf: 2, r: 13 },
+  { c: 'Brusque', f: 'Figueirense', gc: 3, gf: 1, r: 13 },
+  { c: 'Amazonas', f: 'Itabaiana', gc: 0, gf: 2, r: 13 }
 ];
 const SC_META = {
   key: 'C',
@@ -9051,27 +7781,7 @@ const SD_MM_DATES = {
 // OBS: o .jsx fonte está ausente do repo; esta cópia vive no HTML. Ao restaurar o .jsx,
 // portar SD_KO_REAL + os dois ajustes em s180 para lá, senão somem no próximo build.
 const sdKoKey = (a, b) => [a, b].sort().join('|');
-const SD_KO_REAL = {
-  // Derivado de SD_F2_REAL — confrontos do mata-mata JÁ DECIDIDOS (ida+volta). Chave = par ordenado.
-  [sdKoKey("Independência", "Manauara")]: { w: "Manauara", ga: 0, gb: 4, pen: false }, // B01
-  [sdKoKey("Brasiliense", "Goiatuba")]: { w: "Goiatuba", ga: 0, gb: 1, pen: false }, // B06
-  [sdKoKey("Aparecidense", "Capital")]: { w: "Capital", ga: 1, gb: 5, pen: false }, // B07
-  [sdKoKey("Sampaio Corrêa", "Trem")]: { w: "Trem", ga: 1, gb: 4, pen: false }, // B09
-  [sdKoKey("Imperatriz", "Maracanã")]: { w: "Imperatriz", ga: 1, gb: 1, pen: true }, // B10
-  [sdKoKey("Tuna Luso", "Iguatu")]: { w: "Iguatu", ga: 3, gb: 2, pen: false }, // B11
-  [sdKoKey("Parnahyba", "Águia de Marabá")]: { w: "Águia de Marabá", ga: 2, gb: 3, pen: false }, // B12
-  [sdKoKey("Fluminense-PI", "América-RN")]: { w: "América-RN", ga: 4, gb: 0, pen: false }, // B14
-  [sdKoKey("Maguary", "Piauí")]: { w: "Maguary", ga: 2, gb: 1, pen: false }, // B16
-  [sdKoKey("Lagarto", "CSA")]: { w: "CSA", ga: 3, gb: 1, pen: false }, // B19
-  [sdKoKey("ASA", "Sergipe")]: { w: "ASA", ga: 2, gb: 1, pen: false }, // B20
-  [sdKoKey("Rio Branco-ES", "Uberlândia")]: { w: "Uberlândia", ga: 2, gb: 4, pen: false }, // B21
-  [sdKoKey("CRAC", "Tombense")]: { w: "CRAC", ga: 1, gb: 0, pen: false }, // B22
-  [sdKoKey("Sampaio Corrêa-RJ", "Portuguesa-SP")]: { w: "Portuguesa-SP", ga: 2, gb: 1, pen: false }, // B25
-  [sdKoKey("America-RJ", "XV de Piracicaba")]: { w: "XV de Piracicaba", ga: 1, gb: 3, pen: false }, // B27
-  [sdKoKey("Velo Clube", "Água Santa")]: { w: "Velo Clube", ga: 1, gb: 1, pen: true }, // B28
-  [sdKoKey("São José-RS", "Santa Catarina")]: { w: "São José-RS", ga: 2, gb: 2, pen: true }, // B29
-  [sdKoKey("São Luiz-RS", "Blumenau")]: { w: "São Luiz-RS", ga: 2, gb: 2, pen: true }, // B31
-};
+const SD_KO_REAL = {}; // preenchido a partir de SD_F2_REAL logo após sua definição (v4.54)
 // SD_KO_USER: overlay das EDIÇÕES do usuário no bracket (localStorage), tem prioridade sobre o oficial.
 let SD_KO_USER = {};
 const sdKoReal = (a, b) => SD_KO_USER[sdKoKey(a, b)] || SD_KO_REAL[sdKoKey(a, b)] || null;
@@ -9110,39 +7820,69 @@ function refreshSdKoUser() { try { const r = sdBracketResolve(JSON.parse(localSt
 // === 2ª fase REAL da Série D (por perna) — exibição na sub-aba "Jogos". ida 21/06, volta 27-29/06.
 // volta=null => ainda não disputada (segue simulada). Decididos espelham SD_KO_REAL (conferido).
 const SD_F2_REAL = [
-  { code: "B01", a: "Independência", b: "Manauara", ida: { c: "Independência", gc: 0, gf: 2 }, volta: { c: "Manauara", gc: 2, gf: 0 }, w: "Manauara", pen: false },
-  { code: "B02", a: "São Raimundo-RR", b: "Porto Velho", ida: { c: "São Raimundo-RR", gc: 1, gf: 1 }, volta: null, w: null, pen: false },
-  { code: "B03", a: "Monte Roraima", b: "Guaporé", ida: { c: "Monte Roraima", gc: 3, gf: 2 }, volta: null, w: null, pen: false },
-  { code: "B04", a: "Araguaína", b: "Nacional-AM", ida: { c: "Araguaína", gc: 0, gf: 1 }, volta: null, w: null, pen: false },
-  { code: "B05", a: "Mixto", b: "Gama", ida: { c: "Mixto", gc: 1, gf: 2 }, volta: null, w: null, pen: false },
-  { code: "B06", a: "Brasiliense", b: "Goiatuba", ida: { c: "Brasiliense", gc: 0, gf: 0 }, volta: { c: "Goiatuba", gc: 1, gf: 0 }, w: "Goiatuba", pen: false },
-  { code: "B07", a: "Aparecidense", b: "Capital", ida: { c: "Aparecidense", gc: 1, gf: 1 }, volta: { c: "Capital", gc: 4, gf: 0 }, w: "Capital", pen: false },
-  { code: "B08", a: "Ceilândia", b: "Luverdense", ida: { c: "Ceilândia", gc: 1, gf: 2 }, volta: null, w: null, pen: false },
-  { code: "B09", a: "Sampaio Corrêa", b: "Trem", ida: { c: "Sampaio Corrêa", gc: 0, gf: 2 }, volta: { c: "Trem", gc: 2, gf: 1 }, w: "Trem", pen: false },
-  { code: "B10", a: "Imperatriz", b: "Maracanã", ida: { c: "Imperatriz", gc: 1, gf: 1 }, volta: { c: "Maracanã", gc: 0, gf: 0 }, w: "Imperatriz", pen: true },
-  { code: "B11", a: "Tuna Luso", b: "Iguatu", ida: { c: "Tuna Luso", gc: 1, gf: 2 }, volta: { c: "Iguatu", gc: 1, gf: 1 }, w: "Iguatu", pen: false },
-  { code: "B12", a: "Parnahyba", b: "Águia de Marabá", ida: { c: "Parnahyba", gc: 2, gf: 1 }, volta: { c: "Águia de Marabá", gc: 2, gf: 0 }, w: "Águia de Marabá", pen: false },
-  { code: "B13", a: "Central", b: "Ferroviário", ida: { c: "Central", gc: 1, gf: 1 }, volta: null, w: null, pen: false },
-  { code: "B14", a: "Fluminense-PI", b: "América-RN", ida: { c: "Fluminense-PI", gc: 0, gf: 3 }, volta: { c: "América-RN", gc: 1, gf: 0 }, w: "América-RN", pen: false },
-  { code: "B15", a: "Altos", b: "ABC", ida: { c: "Altos", gc: 0, gf: 1 }, volta: null, w: null, pen: false },
-  { code: "B16", a: "Maguary", b: "Piauí", ida: { c: "Maguary", gc: 2, gf: 0 }, volta: { c: "Piauí", gc: 1, gf: 0 }, w: "Maguary", pen: false },
-  { code: "B17", a: "Jacuipense", b: "Treze", ida: { c: "Jacuipense", gc: 1, gf: 3 }, volta: null, w: null, pen: false },
-  { code: "B18", a: "Serra Branca", b: "Juazeirense", ida: { c: "Serra Branca", gc: 2, gf: 0 }, volta: null, w: null, pen: false },
-  { code: "B19", a: "Lagarto", b: "CSA", ida: { c: "Lagarto", gc: 1, gf: 1 }, volta: { c: "CSA", gc: 2, gf: 0 }, w: "CSA", pen: false },
-  { code: "B20", a: "ASA", b: "Sergipe", ida: { c: "ASA", gc: 1, gf: 1 }, volta: { c: "Sergipe", gc: 0, gf: 1 }, w: "ASA", pen: false },
-  { code: "B21", a: "Rio Branco-ES", b: "Uberlândia", ida: { c: "Rio Branco-ES", gc: 0, gf: 2 }, volta: { c: "Uberlândia", gc: 2, gf: 2 }, w: "Uberlândia", pen: false },
-  { code: "B22", a: "CRAC", b: "Tombense", ida: { c: "CRAC", gc: 1, gf: 0 }, volta: { c: "Tombense", gc: 0, gf: 0 }, w: "CRAC", pen: false },
-  { code: "B23", a: "Ivinhema", b: "Democrata GV", ida: { c: "Ivinhema", gc: 3, gf: 1 }, volta: null, w: null, pen: false },
-  { code: "B24", a: "Vitória-ES", b: "Betim", ida: { c: "Vitória-ES", gc: 1, gf: 0 }, volta: { c: "Betim", gc: 2, gf: 1 }, w: null, pen: false },
-  { code: "B25", a: "Sampaio Corrêa-RJ", b: "Portuguesa-SP", ida: { c: "Sampaio Corrêa-RJ", gc: 1, gf: 1 }, volta: { c: "Portuguesa-SP", gc: 1, gf: 0 }, w: "Portuguesa-SP", pen: false },
-  { code: "B26", a: "Portuguesa-RJ", b: "Noroeste", ida: { c: "Portuguesa-RJ", gc: 1, gf: 1 }, volta: null, w: null, pen: false },
-  { code: "B27", a: "America-RJ", b: "XV de Piracicaba", ida: { c: "America-RJ", gc: 1, gf: 1 }, volta: { c: "XV de Piracicaba", gc: 2, gf: 0 }, w: "XV de Piracicaba", pen: false },
-  { code: "B28", a: "Velo Clube", b: "Água Santa", ida: { c: "Velo Clube", gc: 0, gf: 0 }, volta: { c: "Água Santa", gc: 1, gf: 1 }, w: "Velo Clube", pen: true },
-  { code: "B29", a: "São José-RS", b: "Santa Catarina", ida: { c: "São José-RS", gc: 1, gf: 1 }, volta: { c: "Santa Catarina", gc: 1, gf: 1 }, w: "São José-RS", pen: true },
-  { code: "B30", a: "FC Cascavel", b: "Marcílio Dias", ida: { c: "FC Cascavel", gc: 2, gf: 2 }, volta: null, w: null, pen: false },
-  { code: "B31", a: "São Luiz-RS", b: "Blumenau", ida: { c: "São Luiz-RS", gc: 1, gf: 1 }, volta: { c: "Blumenau", gc: 1, gf: 1 }, w: "São Luiz-RS", pen: true },
-  { code: "B32", a: "São Joseense", b: "Cianorte", ida: { c: "São Joseense", gc: 0, gf: 1 }, volta: null, w: null, pen: false },
+  { code: 'B01', a: 'Independência', b: 'Manauara', ida: { c: 'Independência', gc: 0, gf: 2 }, volta: { c: 'Manauara', gc: 1, gf: 1 }, w: 'Manauara', pen: false },
+  { code: 'B02', a: 'São Raimundo-RR', b: 'Porto Velho', ida: { c: 'São Raimundo-RR', gc: 1, gf: 1 }, volta: { c: 'Porto Velho', gc: 1, gf: 1 }, w: 'Porto Velho', pen: true },
+  { code: 'B03', a: 'Monte Roraima', b: 'Guaporé', ida: { c: 'Monte Roraima', gc: 3, gf: 2 }, volta: { c: 'Guaporé', gc: 2, gf: 0 }, w: 'Guaporé', pen: false },
+  { code: 'B04', a: 'Araguaína', b: 'Nacional-AM', ida: { c: 'Araguaína', gc: 0, gf: 1 }, volta: { c: 'Nacional-AM', gc: 0, gf: 0 }, w: 'Nacional-AM', pen: false },
+  { code: 'B05', a: 'Mixto', b: 'Gama', ida: { c: 'Mixto', gc: 1, gf: 2 }, volta: { c: 'Gama', gc: 1, gf: 0 }, w: 'Gama', pen: false },
+  { code: 'B06', a: 'Brasiliense', b: 'Goiatuba', ida: { c: 'Brasiliense', gc: 0, gf: 0 }, volta: { c: 'Goiatuba', gc: 1, gf: 0 }, w: 'Goiatuba', pen: false },
+  { code: 'B07', a: 'Aparecidense', b: 'Capital', ida: { c: 'Aparecidense', gc: 1, gf: 1 }, volta: { c: 'Capital', gc: 4, gf: 0 }, w: 'Capital', pen: false },
+  { code: 'B08', a: 'Ceilândia', b: 'Luverdense', ida: { c: 'Ceilândia', gc: 1, gf: 2 }, volta: { c: 'Luverdense', gc: 1, gf: 1 }, w: 'Luverdense', pen: false },
+  { code: 'B09', a: 'Sampaio Corrêa', b: 'Trem', ida: { c: 'Sampaio Corrêa', gc: 0, gf: 2 }, volta: { c: 'Trem', gc: 1, gf: 2 }, w: 'Trem', pen: false },
+  { code: 'B10', a: 'Imperatriz', b: 'Maracanã', ida: { c: 'Imperatriz', gc: 1, gf: 1 }, volta: { c: 'Maracanã', gc: 0, gf: 0 }, w: 'Imperatriz', pen: true },
+  { code: 'B11', a: 'Tuna Luso', b: 'Iguatu', ida: { c: 'Tuna Luso', gc: 1, gf: 2 }, volta: { c: 'Iguatu', gc: 1, gf: 1 }, w: 'Iguatu', pen: false },
+  { code: 'B12', a: 'Parnahyba', b: 'Águia de Marabá', ida: { c: 'Parnahyba', gc: 2, gf: 1 }, volta: { c: 'Águia de Marabá', gc: 2, gf: 0 }, w: 'Águia de Marabá', pen: false },
+  { code: 'B13', a: 'Central', b: 'Ferroviário', ida: { c: 'Central', gc: 1, gf: 1 }, volta: { c: 'Ferroviário', gc: 2, gf: 0 }, w: 'Ferroviário', pen: false },
+  { code: 'B14', a: 'Fluminense-PI', b: 'América-RN', ida: { c: 'Fluminense-PI', gc: 0, gf: 3 }, volta: { c: 'América-RN', gc: 1, gf: 0 }, w: 'América-RN', pen: false },
+  { code: 'B15', a: 'Altos', b: 'ABC', ida: { c: 'Altos', gc: 0, gf: 1 }, volta: { c: 'ABC', gc: 1, gf: 1 }, w: 'ABC', pen: false },
+  { code: 'B16', a: 'Maguary', b: 'Piauí', ida: { c: 'Maguary', gc: 2, gf: 0 }, volta: { c: 'Piauí', gc: 1, gf: 0 }, w: 'Maguary', pen: false },
+  { code: 'B17', a: 'Jacuipense', b: 'Treze', ida: { c: 'Jacuipense', gc: 1, gf: 3 }, volta: { c: 'Treze', gc: 0, gf: 0 }, w: 'Treze', pen: false },
+  { code: 'B18', a: 'Serra Branca', b: 'Juazeirense', ida: { c: 'Serra Branca', gc: 2, gf: 0 }, volta: { c: 'Juazeirense', gc: 0, gf: 1 }, w: 'Serra Branca', pen: false },
+  { code: 'B19', a: 'Lagarto', b: 'CSA', ida: { c: 'Lagarto', gc: 1, gf: 1 }, volta: { c: 'CSA', gc: 2, gf: 0 }, w: 'CSA', pen: false },
+  { code: 'B20', a: 'ASA', b: 'Sergipe', ida: { c: 'ASA', gc: 1, gf: 1 }, volta: { c: 'Sergipe', gc: 0, gf: 1 }, w: 'ASA', pen: false },
+  { code: 'B21', a: 'Rio Branco-ES', b: 'Uberlândia', ida: { c: 'Rio Branco-ES', gc: 0, gf: 2 }, volta: { c: 'Uberlândia', gc: 2, gf: 2 }, w: 'Uberlândia', pen: false },
+  { code: 'B22', a: 'CRAC', b: 'Tombense', ida: { c: 'CRAC', gc: 1, gf: 0 }, volta: { c: 'Tombense', gc: 0, gf: 0 }, w: 'CRAC', pen: false },
+  { code: 'B23', a: 'Ivinhema', b: 'Democrata GV', ida: { c: 'Ivinhema', gc: 3, gf: 1 }, volta: { c: 'Democrata GV', gc: 1, gf: 1 }, w: 'Ivinhema', pen: false },
+  { code: 'B24', a: 'Vitória-ES', b: 'Betim', ida: { c: 'Vitória-ES', gc: 1, gf: 0 }, volta: { c: 'Betim', gc: 2, gf: 0 }, w: 'Betim', pen: false },
+  { code: 'B25', a: 'Sampaio Corrêa-RJ', b: 'Portuguesa-SP', ida: { c: 'Sampaio Corrêa-RJ', gc: 1, gf: 1 }, volta: { c: 'Portuguesa-SP', gc: 1, gf: 0 }, w: 'Portuguesa-SP', pen: false },
+  { code: 'B26', a: 'Portuguesa-RJ', b: 'Noroeste', ida: { c: 'Portuguesa-RJ', gc: 1, gf: 1 }, volta: { c: 'Noroeste', gc: 1, gf: 3 }, w: 'Portuguesa-RJ', pen: false },
+  { code: 'B27', a: 'America-RJ', b: 'XV de Piracicaba', ida: { c: 'America-RJ', gc: 1, gf: 1 }, volta: { c: 'XV de Piracicaba', gc: 2, gf: 0 }, w: 'XV de Piracicaba', pen: false },
+  { code: 'B28', a: 'Velo Clube', b: 'Água Santa', ida: { c: 'Velo Clube', gc: 0, gf: 0 }, volta: { c: 'Água Santa', gc: 1, gf: 1 }, w: 'Velo Clube', pen: true },
+  { code: 'B29', a: 'São José-RS', b: 'Santa Catarina', ida: { c: 'São José-RS', gc: 1, gf: 1 }, volta: { c: 'Santa Catarina', gc: 1, gf: 1 }, w: 'São José-RS', pen: true },
+  { code: 'B30', a: 'FC Cascavel', b: 'Marcílio Dias', ida: { c: 'FC Cascavel', gc: 2, gf: 2 }, volta: { c: 'Marcílio Dias', gc: 2, gf: 1 }, w: 'Marcílio Dias', pen: false },
+  { code: 'B31', a: 'São Luiz-RS', b: 'Blumenau', ida: { c: 'São Luiz-RS', gc: 1, gf: 1 }, volta: { c: 'Blumenau', gc: 1, gf: 1 }, w: 'São Luiz-RS', pen: true },
+  { code: 'B32', a: 'São Joseense', b: 'Cianorte', ida: { c: 'São Joseense', gc: 0, gf: 1 }, volta: { c: 'Cianorte', gc: 0, gf: 1 }, w: 'Cianorte', pen: true }
 ];
+
+// v4.54: SD_KO_REAL derivado automaticamente de SD_F2_REAL (ida+volta reais decididos) —
+// elimina o risco de drift entre as duas fontes. SD_F3_IDA alimenta SD_KO_PART_REAL (v4.53).
+for (const t of SD_F2_REAL) {
+  if (!t.ida || !t.volta || !t.w) continue;
+  const gA = (t.ida.c === t.a ? t.ida.gc : t.ida.gf) + (t.volta.c === t.a ? t.volta.gc : t.volta.gf);
+  const gB = (t.ida.c === t.b ? t.ida.gc : t.ida.gf) + (t.volta.c === t.b ? t.volta.gc : t.volta.gf);
+  const k0 = [t.a, t.b].sort()[0];
+  SD_KO_REAL[sdKoKey(t.a, t.b)] = { w: t.w, ga: k0 === t.a ? gA : gB, gb: k0 === t.a ? gB : gA, pen: !!t.pen };
+}
+// 3ª fase — jogos de IDA reais (04-06/07/2026); volta pendente → s180 fixa a ida e simula só a volta.
+const SD_F3_IDA = [
+  { code: 'C01', a: 'Goiatuba', b: 'Manauara', iA: 0, iB: 1 },
+  { code: 'C02', a: 'Porto Velho', b: 'Gama', iA: 2, iB: 0 },
+  { code: 'C03', a: 'Luverdense', b: 'Guaporé', iA: 1, iB: 0 },
+  { code: 'C04', a: 'Nacional-AM', b: 'Capital', iA: 1, iB: 0 },
+  { code: 'C05', a: 'Trem', b: 'América-RN', iA: 1, iB: 4 },
+  { code: 'C06', a: 'Imperatriz', b: 'Ferroviário', iA: 1, iB: 1 },
+  { code: 'C07', a: 'Maguary', b: 'Iguatu', iA: 2, iB: 3 },
+  { code: 'C08', a: 'Águia de Marabá', b: 'ABC', iA: 2, iB: 1 },
+  { code: 'C09', a: 'CRAC', b: 'Treze', iA: 2, iB: 1 },
+  { code: 'C10', a: 'Serra Branca', b: 'Uberlândia', iA: 0, iB: 1 },
+  { code: 'C11', a: 'Betim', b: 'CSA', iA: 1, iB: 0 },
+  { code: 'C12', a: 'Ivinhema', b: 'ASA', iA: 1, iB: 2 },
+  { code: 'C13', a: 'Marcílio Dias', b: 'Portuguesa-SP', iA: 1, iB: 1 },
+  { code: 'C14', a: 'São José-RS', b: 'Portuguesa-RJ', iA: 1, iB: 0 },
+  { code: 'C15', a: 'Cianorte', b: 'XV de Piracicaba', iA: 4, iB: 0 },
+  { code: 'C16', a: 'Velo Clube', b: 'São Luiz-RS', iA: 2, iB: 1 }
+];
+for (const t of SD_F3_IDA) SD_KO_PART_REAL[sdKoKey(t.a, t.b)] = { a: t.a, b: t.b, iA: t.iA, iB: t.iB, vA: null, vB: null };
 const genGrpTab = g => {
   const n = g.length,
     j = [],
@@ -16286,6 +15026,8 @@ function SerieDBracket({ rMC }) {
       if (t.pen) e.pen = (t.w === t.a ? 'A' : 'B');
       d[t.code] = e;
     }
+    // 3ª fase: idas oficiais (orientação conferida — mandante do PDF = ordIda por campanha).
+    for (const t of SD_F3_IDA) d[t.code] = { iA: t.iA, iB: t.iB };
     return d;
   }, [f2map]);
   const [res, setRes] = useState(() => {
@@ -19775,7 +18517,7 @@ function SimuladorUnificado() {
     })
   }), /*#__PURE__*/React.createElement("div", {
     className: "mt-4 text-center text-slate-500 text-xs"
-  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R11) | C:", SC_RES.length, " (R9) | D:", SD_RES.length, " (R9) | Copa BR: R16 (edit\xE1vel) | v4.53 \u2014 perna parcial do mata-mata fixa a ida e simula s\u00f3 a volta"))));
+  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R16+) | C:", SC_RES.length, " (R13) | D:", SD_RES.length, " (grupos) + mata-mata | Copa BR: R16 (edit\xE1vel) | v4.54 \u2014 Tabelas CBF 08-10/07 reconciliadas"))));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(SimuladorUnificado));
 </script>
