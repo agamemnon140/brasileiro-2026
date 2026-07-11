@@ -31,7 +31,14 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.54
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.55
+// v4.55 (11/07/2026): "Por Estado" nas Chaves de B e C, como na Série D — sub-visão
+//        [Confrontos | Por Estado] com a distribuição CONJUNTA por UF de ACESSO e
+//        REBAIXAMENTO: simMC acumula por sim (via extraStats.__uf; acesso B = top-2 +
+//        2 vencedores do playoff; acesso C = top-2 de cada grupo do quadrangular;
+//        rebaixamento = últimos nReb) e simMC_finalize emite rMC.ufDist.
+//        buildUfDist e SerieDStateView generalizados (phases/note como props;
+//        Série D continua com os defaults). (Port ao .jsx pendente.)
 // v4.54 (11/07/2026): reconciliação vs Tabelas Detalhadas CBF (B 09/07, C 10/07, D 08/07).
 //        B: +17 jogos (R15 restante, R16 completa, 1º jogo da R17) — 34 já registrados
 //        confirmados 1:1, total 161. C: +16 (R12 restante, R13 completa), total 130.
@@ -503,6 +510,9 @@ const ufOf = name => {
   if (/-[A-Z]{2}$/.test(name)) return '';
   return UF_MAP[name] || '';
 };
+// UF real do time (para agrupamentos por estado): extrai do sufixo -XX quando houver
+// (ufOf devolve '' nesses casos porque o TN já exibe a UF do próprio nome).
+const ufOfTeam = name => (/-([A-Z]{2})$/.exec(name) || [])[1] || UF_MAP[name] || '??';
 const TN = ({
   name
 }) => {
@@ -1108,6 +1118,26 @@ const simMC = (times, ranking, tab, res, cfg, sk, nS, ak, eo) => {
     atFinal = {},
     dfFinal = {};
   const extraStats = sk === 'C' || sk === 'B' ? {} : null;
+  // v4.55: distribuição CONJUNTA por UF (acesso/rebaixamento) para B/C, como na Série D.
+  // Chave especial __uf (não é nome de time; simMC_single acumula e simMC_finalize emite rMC.ufDist).
+  if (extraStats) {
+    const ufTeams = {};
+    times.forEach(t => {
+      const u = ufOfTeam(t);
+      (ufTeams[u] = ufTeams[u] || []).push(t);
+    });
+    const acc = {};
+    Object.keys(ufTeams).forEach(u => {
+      acc[u] = {
+        acesso: new Array(ufTeams[u].length + 1).fill(0),
+        reb: new Array(ufTeams[u].length + 1).fill(0)
+      };
+    });
+    extraStats.__uf = {
+      ufTeams,
+      acc
+    };
+  }
   const ptsAtPos = Array.from({
     length: times.length
   }, () => []);
@@ -1243,15 +1273,30 @@ const simMC_single = (times, ranking, tab, res, cfg, sk, ak, eo, lg, mc, mf, ct,
   //   Série C: top-8 (quadrangular — simulado abaixo)
   //   Série D: top-4 dentro do grupo (simulação dedicada simMC_D)
   const g4cut = sk === 'C' ? 8 : sk === 'B' ? 2 : 4;
+  const nRebN = sk === 'C' ? 2 : 4;
   cl.forEach((c, i) => {
     pts[c.time].push(c.P);
     posF[c.time][i]++;
     ptsAtPos[i].push(c.P);
     if (i === 0) ct[c.time].t++;
     if (i < g4cut) ct[c.time].g4++;
-    const nReb = sk === 'C' ? 2 : 4;
-    if (i >= times.length - nReb) ct[c.time].z4++;
+    if (i >= times.length - nRebN) ct[c.time].z4++;
   });
+  // v4.55: tally conjunto por UF — para a lista de times, incrementa a contagem k
+  // (quantos da UF entraram) em cada UF, inclusive k=0 para as demais.
+  const ufTally = (list, field) => {
+    const u = extraStats && extraStats.__uf;
+    if (!u) return;
+    const cnt = {};
+    list.forEach(t => {
+      const k = ufOfTeam(t);
+      cnt[k] = (cnt[k] || 0) + 1;
+    });
+    Object.keys(u.acc).forEach(k => {
+      u.acc[k][field][cnt[k] || 0]++;
+    });
+  };
+  ufTally(cl.slice(times.length - nRebN).map(c => c.time), 'reb');
   // Acumula Elo final por time (amostra no fim da temporada simulada).
   if (elFinal) {
     times.forEach(t => {
@@ -1309,6 +1354,7 @@ const simMC_single = (times, ranking, tab, res, cfg, sk, ak, eo, lg, mc, mf, ct,
     const w2 = bcWinB(playoff[1], playoff[2]) || ttest(playoff[1], playoff[2]); // 4º×5º
     extraStats[w1].bAccess++;
     extraStats[w2].bAccess++;
+    ufTally([top2[0], top2[1], w1, w2], 'acesso'); // v4.55: acessos reais desta sim, por UF
   }
   // Série C: simula quadrangular final (G8→top-4 sobem).
   // Regulamento: 2 grupos de 4 times sorteados pela colocação (1º, 4º, 5º, 8º em
@@ -1382,6 +1428,7 @@ const simMC_single = (times, ranking, tab, res, cfg, sk, ak, eo, lg, mc, mf, ct,
       resB = quadGroupSim(gB);
     // Top-2 de cada grupo acessam; 1º de cada grupo joga a final (título Série C)
     [resA[0], resA[1], resB[0], resB[1]].forEach(r => extraStats[r.time].q4++);
+    ufTally([resA[0].time, resA[1].time, resB[0].time, resB[1].time], 'acesso'); // v4.55
     // Final Série C: 1º A × 1º B em ida e volta, agregado de gols, empate → pênaltis.
     // Mandante da volta = melhor campanha (aproximação: melhor pontuação na fase
     // de grupos do quadrangular; usamos P como tiebreaker).
@@ -1481,6 +1528,8 @@ const simMC_finalize = (times, ct, pts, posF, ptsAtPos, nS, elFinal, extraStats,
       return o;
     }).sort((a, b) => b.mediaPts - a.mediaPts),
     nSims: nS,
+    // v4.55: distribuição conjunta por UF (B/C) — consumida pela sub-aba "Por Estado" das Chaves.
+    ufDist: extraStats && extraStats.__uf ? buildUfDist(extraStats.__uf.acc, extraStats.__uf.ufTeams, nS, ['acesso', 'reb'], 'acesso') : null,
     cortes: {
       titulo: pc(0),
       g4: pc(3),
@@ -1513,6 +1562,26 @@ const simMC_async = (times, ranking, tab, res, cfg, sk, nS, ak, eo, onProgress, 
     atFinal = {},
     dfFinal = {};
   const extraStats = sk === 'C' || sk === 'B' ? {} : null;
+  // v4.55: distribuição CONJUNTA por UF (acesso/rebaixamento) para B/C, como na Série D.
+  // Chave especial __uf (não é nome de time; simMC_single acumula e simMC_finalize emite rMC.ufDist).
+  if (extraStats) {
+    const ufTeams = {};
+    times.forEach(t => {
+      const u = ufOfTeam(t);
+      (ufTeams[u] = ufTeams[u] || []).push(t);
+    });
+    const acc = {};
+    Object.keys(ufTeams).forEach(u => {
+      acc[u] = {
+        acesso: new Array(ufTeams[u].length + 1).fill(0),
+        reb: new Array(ufTeams[u].length + 1).fill(0)
+      };
+    });
+    extraStats.__uf = {
+      ufTeams,
+      acc
+    };
+  }
   const ptsAtPos = Array.from({
     length: times.length
   }, () => []);
@@ -2086,15 +2155,18 @@ const simMC_D_finalize = (snap, ct, nS, gpts, ufAcc, ufTeams) => {
   };
 };
 // Normaliza ufAcc em ufDist: por UF e fase, {pcts:[P(k)%], E:nº esperado}.
-// Ordenado por E[acesso] desc (mesma lógica do ranking principal). null se ausente.
-const buildUfDist = (ufAcc, ufTeams, nS) => {
+// Ordenado por E[sortKey] desc. Genérico (v4.55): a Série D usa SD_UF_PHASES/'ac';
+// B/C usam ['acesso','reb']/'acesso'. null se ausente.
+const buildUfDist = (ufAcc, ufTeams, nS, phases, sortKey) => {
   if (!ufAcc) return null;
+  const ph = phases || SD_UF_PHASES;
+  const sy = sortKey || 'ac';
   return Object.keys(ufAcc).map(u => {
     const o = {
       uf: u,
       n: ufTeams[u].length
     };
-    SD_UF_PHASES.forEach(p => {
+    ph.forEach(p => {
       const arr = ufAcc[u][p];
       o[p] = {
         pcts: arr.map(c => c / nS * 100),
@@ -2102,7 +2174,7 @@ const buildUfDist = (ufAcc, ufTeams, nS) => {
       };
     });
     return o;
-  }).sort((a, b) => b.ac.E - a.ac.E);
+  }).sort((a, b) => b[sy].E - a[sy].E);
 };
 const simMC_D = (cfg, nS, ak, eo) => {
   refreshSdKoUser();
@@ -12827,9 +12899,13 @@ const SD_STATE_PHASES = [{
 const sdHeat = p => p <= 0 ? 'transparent' : `rgba(16,185,129,${(0.06 + Math.min(1, p / 100) * 0.55).toFixed(3)})`;
 const SerieDStateView = ({
   ufDist,
-  nSims
+  nSims,
+  phases,
+  note
 }) => {
-  const [phase, setPhase] = useState('ac');
+  // v4.55: genérico — Série D usa os defaults; B/C passam phases [acesso, reb] + note próprio.
+  const PH = phases || SD_STATE_PHASES;
+  const [phase, setPhase] = useState(phases ? PH[0].key : 'ac');
   if (!ufDist || !ufDist.length) return /*#__PURE__*/React.createElement("p", {
     className: "text-slate-400 text-center py-8"
   }, "Rode \"\u26A1 Simular Tudo\" novamente para gerar a distribui\xE7\xE3o por estado.");
@@ -12846,7 +12922,7 @@ const SerieDStateView = ({
     value: phase,
     onChange: e => setPhase(e.target.value),
     className: "bg-slate-700 text-white text-xs rounded-lg px-2 py-1 border border-slate-600"
-  }, SD_STATE_PHASES.map(p => /*#__PURE__*/React.createElement("option", {
+  }, PH.map(p => /*#__PURE__*/React.createElement("option", {
     key: p.key,
     value: p.key
   }, p.label))), /*#__PURE__*/React.createElement("span", {
@@ -12891,7 +12967,7 @@ const SerieDStateView = ({
     className: "py-1 px-2 text-right font-mono text-emerald-300"
   }, (r[phase]?.E || 0).toFixed(2))))))), /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-slate-500 mt-2 italic"
-  }, "Distribui\xE7\xE3o conjunta: P(k) = fra\xE7\xE3o de simula\xE7\xF5es em que exatamente k times do estado chegaram \xE0 fase. Acesso = 6 vagas (4 semifinalistas + 2 vencedores do playoff). \xB7 = 0%, ~0 = <0,05%."));
+  }, "Distribui\xE7\xE3o conjunta: P(k) = fra\xE7\xE3o de simula\xE7\xF5es em que exatamente k times do estado chegaram \xE0 fase. ", note || "Acesso = 6 vagas (4 semifinalistas + 2 vencedores do playoff).", " \xB7 = 0%, ~0 = <0,05%."));
 };
 // ProbChip: pílula de probabilidade pré-jogo (estilo FIFA 2026).
 // tone: 'h' casa (emerald) | 'd' empate (slate) | 'a' fora (orange).
@@ -14162,6 +14238,7 @@ function LeagueSim({
   const [rSU, setRSU] = useState(null);
   const [busy, setBusy] = useState(false);
   const [rF, setRF] = useState(0);
+  const [chView, setChView] = useState('confrontos'); // sub-visão da aba Chaves (v4.55)
   // Drift efetivo: usa valor do dashboard (ou 0 se não definido)
   const effCfg = useMemo(() => ({
     ...cfg,
@@ -14944,11 +15021,30 @@ function LeagueSim({
     className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"
   }, !rMC ? /*#__PURE__*/React.createElement("p", {
     className: "text-slate-400 text-center py-8"
-  }, "Rode \"\u26A1 Simular Tudo\" no dashboard acima para ver os cruzamentos.") : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h2", {
-    className: "text-base font-semibold text-emerald-300 mb-3"
-  }, "Cruzamentos mais prov\xE1veis ", /*#__PURE__*/React.createElement("span", {
+  }, "Rode \"\u26A1 Simular Tudo\" no dashboard acima para ver os cruzamentos.") : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between mb-3 flex-wrap gap-2"
+  }, /*#__PURE__*/React.createElement("h2", {
+    className: "text-base font-semibold text-emerald-300"
+  }, chView === 'estados' ? 'Acesso e rebaixamento por estado ' : "Cruzamentos mais prov\xE1veis ", /*#__PURE__*/React.createElement("span", {
     className: "text-slate-500 text-xs italic"
-  }, "\xB7 ", rMC.nSims.toLocaleString(), " sims")), meta.key === 'B' && /*#__PURE__*/React.createElement(MatchupsView, {
+  }, "\xB7 ", rMC.nSims.toLocaleString(), " sims")), /*#__PURE__*/React.createElement("div", {
+    className: "flex bg-slate-800/60 rounded-lg p-0.5 border border-slate-600/50"
+  }, [['confrontos', 'Confrontos'], ['estados', 'Por Estado']].map(([v, l]) => /*#__PURE__*/React.createElement("button", {
+    key: v,
+    onClick: () => setChView(v),
+    className: 'px-2 py-0.5 rounded-md text-[11px] ' + (chView === v ? 'bg-emerald-600/80 text-white shadow' : 'text-slate-400 hover:text-white')
+  }, l)))), chView === 'estados' ? /*#__PURE__*/React.createElement(SerieDStateView, {
+    ufDist: rMC.ufDist,
+    nSims: rMC.nSims,
+    phases: [{
+      key: 'acesso',
+      label: 'Acesso'
+    }, {
+      key: 'reb',
+      label: 'Rebaixamento'
+    }],
+    note: meta.key === 'B' ? 'Acesso = 4 vagas (1\u00BA-2\u00BA direto + 2 vencedores do playoff 3\u00BA-6\u00BA); rebaixamento = 4 \u00FAltimos.' : 'Acesso = 4 vagas (top-2 de cada grupo do quadrangular); rebaixamento = 2 \u00FAltimos (formato 2026).'
+  }) : /*#__PURE__*/React.createElement(React.Fragment, null, meta.key === 'B' && /*#__PURE__*/React.createElement(MatchupsView, {
     probs: rMC.probs.filter(p => (p.bPlayoff || 0) >= 1),
     phases: [{
       key: 'po',
@@ -14968,7 +15064,7 @@ function LeagueSim({
       probKey: 'qChamp'
     }],
     sortKey: "g4"
-  }))), aba === 'simU' && /*#__PURE__*/React.createElement("div", {
+  })))), aba === 'simU' && /*#__PURE__*/React.createElement("div", {
     className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"
   }, !rSU ? /*#__PURE__*/React.createElement("p", {
     className: "text-slate-400 text-center py-8"
@@ -18517,7 +18613,7 @@ function SimuladorUnificado() {
     })
   }), /*#__PURE__*/React.createElement("div", {
     className: "mt-4 text-center text-slate-500 text-xs"
-  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R16+) | C:", SC_RES.length, " (R13) | D:", SD_RES.length, " (grupos) + mata-mata | Copa BR: R16 (edit\xE1vel) | v4.54 \u2014 Tabelas CBF 08-10/07 reconciliadas"))));
+  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R16+) | C:", SC_RES.length, " (R13) | D:", SD_RES.length, " (grupos) + mata-mata | Copa BR: R16 (edit\xE1vel) | v4.55 \u2014 acesso/rebaixamento por estado nas Chaves de B e C"))));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(SimuladorUnificado));
 </script>
