@@ -1,5 +1,16 @@
 {
   "schema": 1,
-  "updated_at": "2026-06-06T00:00:00Z",
-  "results": []
+  "updated_at": "2026-07-12T00:46:55.880Z",
+  "results": [
+    {
+      "serie": "B",
+      "rodada": 17,
+      "casa": "Ponte Preta",
+      "gc": 1,
+      "gf": 2,
+      "fora": "Criciúma",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_09_07_0bfcf98409.pdf",
+      "confirmed_at": "2026-07-12T00:46:09.164Z"
+    }
+  ]
 }
