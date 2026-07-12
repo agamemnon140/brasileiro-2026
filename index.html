@@ -31,7 +31,13 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.55c
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.56
+// v4.56 (12/07/2026): Classificação Geral da Série D (times vivos) ficou DINÂMICA — o novo
+//        sdEliminatedSet() percorre o chaveamento inteiro (2ª fase → 3ª → oitavas → quartas
+//        por reseed → semis → final) com a mesma precedência do MC (edições do usuário via
+//        simUni_sdMM > oficiais). Antes só descontava os eliminados da 2ª fase oficial:
+//        editar um placar que elimina um time agora o remove da tabela na hora (perna
+//        parcial não elimina). (Port ao .jsx pendente.)
 // v4.55c (12/07/2026): corrige CORRIDA no auto-run — o "Simular Tudo" automático disparava
 //        no mount, antes de o fetch assíncrono do results.json assentar; a 1ª simulação
 //        rodava SEM os resultados publicados pela automação (o display os mostrava, o MC
@@ -7884,22 +7890,72 @@ function sdBracketResolve(edits) {
   const ordIda = (x, y) => (!x || !y) ? [x, y] : (camp(x) <= camp(y) ? [x, y] : [y, x]);
   function qSeeds() { const ws = SD_D_CODES.map(winOf); if (ws.some(w => !w)) return []; return ws.slice().sort((a, b) => camp(b) - camp(a)); }
   function teamsOf(code) { if (f2[code]) return [f2[code].a, f2[code].b]; if (code[0] === 'E') { const s = qSeeds(); const [i, j] = SD_BRK_QSEED[code]; return ordIda(s[i] || null, s[j] || null); } const p = SD_BRK_PAIRS[code]; if (!p) return [null, null]; return ordIda(winOf(p[0]), winOf(p[1])); }
-  function winOf(code) { const tm = teamsOf(code); if (!tm[0] || !tm[1]) return null; const r = edits[code] || {}; if (r.iA == null || r.iB == null || r.vA == null || r.vB == null) return null; const aA = r.iA + r.vA, aB = r.iB + r.vB; if (aA > aB) return tm[0]; if (aB > aA) return tm[1]; return r.pen === 'A' ? tm[0] : r.pen === 'B' ? tm[1] : null; }
+  // v4.56: sem edição COMPLETA do confronto, winOf cai no resultado OFICIAL já decidido
+  // (SD_KO_REAL) — assim uma edição isolada em fase profunda (ex.: só a volta da 3ª fase)
+  // resolve a cadeia de vencedores sem o usuário precisar abrir/persistir o bracket inteiro.
+  function winOf(code) {
+    const tm = teamsOf(code); if (!tm[0] || !tm[1]) return null;
+    const r = edits[code] || {};
+    if (r.iA == null || r.iB == null || r.vA == null || r.vB == null) {
+      const off = SD_KO_REAL[sdKoKey(tm[0], tm[1])];
+      return off ? off.w : null;
+    }
+    const aA = r.iA + r.vA, aB = r.iB + r.vB;
+    if (aA > aB) return tm[0]; if (aB > aA) return tm[1];
+    return r.pen === 'A' ? tm[0] : r.pen === 'B' ? tm[1] : null;
+  }
   const overlay = {};
   const partial = {};
   const allCodes = [...SD_F2_REAL.map(t => t.code), ...SD_C_CODES, ...SD_D_CODES, 'E01', 'E02', 'E03', 'E04', 'F01', 'F02', 'G01'];
   for (const code of allCodes) {
     const tm = teamsOf(code); if (!tm[0] || !tm[1]) continue;
     const r = edits[code] || {};
-    const w = winOf(code);
-    if (w) { const ga = (r.iA || 0) + (r.vA || 0), gb = (r.iB || 0) + (r.vB || 0); const k0 = [tm[0], tm[1]].sort()[0]; overlay[sdKoKey(tm[0], tm[1])] = { w, ga: k0 === tm[0] ? ga : gb, gb: k0 === tm[0] ? gb : ga, pen: !!r.pen }; continue; }
-    // Edição PARCIAL: uma perna completa (ida ou volta) sem a outra → o MC fixa a perna conhecida.
     const hasIda = r.iA != null && r.iB != null, hasVolta = r.vA != null && r.vB != null;
+    if (hasIda && hasVolta) {
+      // Edição completa: overlay só quando EDITADA (não emitir para vencedor vindo do oficial,
+      // senão o overlay sobrescreveria o SD_KO_REAL com agregado zerado).
+      const aA = r.iA + r.vA, aB = r.iB + r.vB;
+      const w = aA > aB ? tm[0] : aB > aA ? tm[1] : r.pen === 'A' ? tm[0] : r.pen === 'B' ? tm[1] : null;
+      const k0 = [tm[0], tm[1]].sort()[0];
+      if (w) { overlay[sdKoKey(tm[0], tm[1])] = { w, ga: k0 === tm[0] ? aA : aB, gb: k0 === tm[0] ? aB : aA, pen: !!r.pen }; continue; }
+      // agregado empatado sem pênalti escolhido: fixa as duas pernas e o MC decide nos pênaltis 50/50
+      partial[sdKoKey(tm[0], tm[1])] = { a: tm[0], b: tm[1], iA: r.iA, iB: r.iB, vA: r.vA, vB: r.vB };
+      continue;
+    }
+    // Edição PARCIAL: uma perna completa (ida ou volta) sem a outra → o MC fixa a perna conhecida.
     if (hasIda || hasVolta) partial[sdKoKey(tm[0], tm[1])] = { a: tm[0], b: tm[1], iA: hasIda ? r.iA : null, iB: hasIda ? r.iB : null, vA: hasVolta ? r.vA : null, vB: hasVolta ? r.vB : null };
   }
   return { overlay, partial };
 }
 function refreshSdKoUser() { try { const r = sdBracketResolve(JSON.parse(localStorage.getItem('simUni_sdMM') || '{}')); SD_KO_USER = r.overlay; SD_KO_PART_USER = r.partial; } catch (e) { SD_KO_USER = {}; SD_KO_PART_USER = {}; } }
+// v4.56: conjunto DINÂMICO de eliminados no mata-mata — percorre o chaveamento inteiro
+// (2ª fase → quartas por reseed → final) com a MESMA precedência do MC: edições do usuário
+// (SD_KO_USER, simUni_sdMM) > oficiais (SD_KO_REAL). Perna parcial não elimina ninguém.
+function sdEliminatedSet() {
+  refreshSdKoUser();
+  const elim = new Set();
+  const winByCode = {};
+  const decide = (code, a, b) => {
+    winByCode[code] = null;
+    if (!a || !b) return;
+    const r = sdKoReal(a, b);
+    if (r && r.w) { winByCode[code] = r.w; elim.add(r.w === a ? b : a); }
+  };
+  for (const t of SD_F2_REAL) decide(t.code, t.a, t.b);
+  for (const code of [...SD_C_CODES, ...SD_D_CODES]) { const p = SD_BRK_PAIRS[code]; decide(code, winByCode[p[0]], winByCode[p[1]]); }
+  // Quartas (E): reseed por campanha dos 8 vencedores das oitavas; depois semis e final.
+  const ws = SD_D_CODES.map(c => winByCode[c]);
+  if (ws.every(Boolean)) {
+    const st = {};
+    SD_GRUPOS.flat().forEach(t => st[t] = { P: 0, GP: 0, GC: 0 });
+    SD_RES.forEach(r => { const c = r.c, f = r.f; if (!st[c] || !st[f]) return; st[c].GP += r.gc; st[c].GC += r.gf; st[f].GP += r.gf; st[f].GC += r.gc; if (r.gc > r.gf) st[c].P += 3; else if (r.gc === r.gf) { st[c].P++; st[f].P++; } else st[f].P += 3; });
+    const camp = t => st[t] ? st[t].P * 1e6 + (st[t].GP - st[t].GC) * 1e3 + st[t].GP : 0;
+    const seeds = ws.slice().sort((a, b) => camp(b) - camp(a));
+    for (const code of ['E01', 'E02', 'E03', 'E04']) { const ij = SD_BRK_QSEED[code]; decide(code, seeds[ij[0]], seeds[ij[1]]); }
+    for (const code of ['F01', 'F02', 'G01']) { const p = SD_BRK_PAIRS[code]; decide(code, winByCode[p[0]], winByCode[p[1]]); }
+  }
+  return elim;
+}
 // === 2ª fase REAL da Série D (por perna) — exibição na sub-aba "Jogos". ida 21/06, volta 27-29/06.
 // volta=null => ainda não disputada (segue simulada). Decididos espelham SD_KO_REAL (conferido).
 const SD_F2_REAL = [
@@ -15835,14 +15891,14 @@ function SerieDSim({
     SD_GRUPOS.forEach((g, gi) => g.forEach(t => grpOf[t] = gi));
     const top4 = new Set();
     SD_GRUPOS.forEach(g => g.map(t => ({ t, ...st[t], SG: st[t].GP - st[t].GC })).sort((a, b) => b.P - a.P || b.V - a.V || b.SG - a.SG || b.GP - a.GP).slice(0, 4).forEach(x => top4.add(x.t)));
-    const elim2 = new Set();
-    SD_F2_REAL.forEach(t => { if (t.w) elim2.add(t.w === t.a ? t.b : t.a); });
+    // v4.56: eliminados DINÂMICOS — chaveamento inteiro (todas as fases), oficiais + edições do usuário.
+    const elim2 = sdEliminatedSet();
     const alive = [...top4].filter(t => !elim2.has(t)).map(t => ({ t, ...st[t], SG: st[t].GP - st[t].GC, g: grpOf[t] })).sort((a, b) => b.P - a.P || b.SG - a.SG || b.GP - a.GP);
     return /*#__PURE__*/React.createElement("div", {
       className: "overflow-x-auto max-h-[520px]"
     }, /*#__PURE__*/React.createElement("p", {
       className: "text-[10px] text-slate-500 mb-2"
-    }, alive.length, " times vivos \xB7 ", elim2.size, " eliminados na 2\xAA fase (confrontos j\xE1 decididos)"), /*#__PURE__*/React.createElement("table", {
+    }, alive.length, " times vivos \xB7 ", elim2.size, " eliminados no mata-mata (oficiais + suas edi\xE7\xF5es do bracket)"), /*#__PURE__*/React.createElement("table", {
       className: "w-full text-xs"
     }, /*#__PURE__*/React.createElement("thead", {
       className: "sticky top-0 bg-slate-900"
@@ -18641,7 +18697,7 @@ function SimuladorUnificado() {
     })
   }), /*#__PURE__*/React.createElement("div", {
     className: "mt-4 text-center text-slate-500 text-xs"
-  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R16+) | C:", SC_RES.length, " (R13) | D:", SD_RES.length, " (grupos) + mata-mata | Copa BR: R16 (edit\xE1vel) | v4.55c \u2014 auto-run espera o results.json (fim da corrida do 1\u00ba MC)"))));
+  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R16+) | C:", SC_RES.length, " (R13) | D:", SD_RES.length, " (grupos) + mata-mata | Copa BR: R16 (edit\xE1vel) | v4.56 \u2014 Geral da S\u00e9rie D din\u00e2mica (eliminados somem na hora)"))));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(SimuladorUnificado));
 </script>
