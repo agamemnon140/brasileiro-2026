@@ -48,7 +48,29 @@ const dedupKey = (r) => `${r.serie}|${norm(r.casa).toLowerCase()}|${norm(r.fora)
 // da competição aponta para o arquivo no Azure Blob (file.data.attributes.url).
 // Confirmado em 11/07/2026: GET /api/championship-documents?filters[slug][$eq]=
 // campeonato-brasileiro/serie-b/2026&filters[type][$eq]=Complemento de Tabela&populate=*
+// O WAF da CBF pode recusar IPs de datacenter (ex.: runners do GitHub) — por isso
+// todo fetch tem fallback via proxy allorigins.win (o mesmo que o app usa no browser).
 const CMS_API = 'https://cms.cbf.com.br/api/championship-documents';
+const FETCH_HEADERS = {
+  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+  'accept': 'application/json, application/pdf, text/plain, */*',
+  'accept-language': 'pt-BR,pt;q=0.9',
+};
+
+async function fetchWithFallback(url, kind) {
+  const grab = async (target) => {
+    const resp = await fetch(target, { headers: FETCH_HEADERS });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    return kind === 'json' ? resp.json() : Buffer.from(await resp.arrayBuffer());
+  };
+  try {
+    return await grab(url);
+  } catch (e) {
+    const detail = e.cause ? ` (${e.cause.code || e.cause.message})` : '';
+    console.error(`::warning::fetch direto falhou: ${e.message}${detail} — tentando via proxy allorigins`);
+    return await grab('https://api.allorigins.win/raw?url=' + encodeURIComponent(url));
+  }
+}
 
 async function findPdfUrl(serie) {
   const slug = `campeonato-brasileiro/serie-${serie.toLowerCase()}/2026`;
@@ -60,9 +82,7 @@ async function findPdfUrl(serie) {
     'pagination[pageSize]': '5',
   });
   try {
-    const resp = await fetch(`${CMS_API}?${qs}`, { headers: { 'user-agent': 'Mozilla/5.0 (tabela-bot)' } });
-    if (!resp.ok) throw new Error(`CMS ${resp.status}`);
-    const data = await resp.json();
+    const data = await fetchWithFallback(`${CMS_API}?${qs}`, 'json');
     for (const doc of data.data || []) {
       const at = doc.attributes || {};
       const url = at.url || (at.file && at.file.data && at.file.data.attributes && at.file.data.attributes.url);
@@ -75,10 +95,9 @@ async function findPdfUrl(serie) {
 }
 
 async function downloadPdfB64(url) {
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`download ${resp.status}`);
-  const buf = Buffer.from(await resp.arrayBuffer());
+  const buf = await fetchWithFallback(url, 'buffer');
   if (buf.length > 15 * 1024 * 1024) throw new Error('PDF grande demais');
+  if (buf.slice(0, 5).toString('latin1') !== '%PDF-') throw new Error('resposta não é um PDF');
   return buf.toString('base64');
 }
 
