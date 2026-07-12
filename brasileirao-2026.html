@@ -31,7 +31,12 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.55b
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.55c
+// v4.55c (12/07/2026): corrige CORRIDA no auto-run — o "Simular Tudo" automático disparava
+//        no mount, antes de o fetch assíncrono do results.json assentar; a 1ª simulação
+//        rodava SEM os resultados publicados pela automação (o display os mostrava, o MC
+//        não). Agora o auto-run espera resReady (sucesso/erro/timeout 5s do fetch).
+//        Detectado no teste ponta-a-ponta da automação (Criciúma 63 vs 65 pts medianos).
 // v4.55b (11/07/2026): nova fase no "Por Estado" de B/C — Top-6 (B: 2 diretos + 4 do
 //        playoff) e Top-8 (C: classificados ao quadrangular), p/ estimar quantos times
 //        da UF AVANÇAM à fase seguinte (campo topN no ufDist).
@@ -18139,17 +18144,29 @@ function SimuladorUnificado() {
   };
   // AUTO-LOAD: resultados publicados pela GitHub Action (results.json, mesmo domínio do Pages).
   // Reaproveita TODO o pipeline de handleSearchResults (normalização, dedup, inferência de rodada).
+  // resReady (v4.55c): o auto-run do "Simular Tudo" espera este fetch assentar (sucesso, erro ou
+  // timeout de 5s) — senão a 1ª simulação corria SEM os resultados do results.json (o display os
+  // mostrava, mas o MC inicial não os incluía até re-rodar manualmente).
+  const [resReady, setResReady] = useState(false);
   useEffect(() => {
     let cancelled = false;
+    const done = () => {
+      if (!cancelled) setResReady(true);
+    };
+    const failsafe = setTimeout(done, 5000);
     fetch('results.json?t=' + Date.now(), {
       cache: 'no-store'
     }).then(r => r.ok ? r.json() : null).then(d => {
       if (cancelled || !d) return; // 404 no 1º deploy => no-op
       const arr = Array.isArray(d) ? d : d && d.results;
       if (Array.isArray(arr) && arr.length) handleSearchResults(arr);
-    }).catch(() => {}); // rede/JSON quebrado => no-op
+    }).catch(() => {}).finally(() => {
+      clearTimeout(failsafe);
+      done();
+    }); // rede/JSON quebrado => no-op
     return () => {
       cancelled = true;
+      clearTimeout(failsafe);
     };
   }, []);
   const SAT = useMemo(() => parseTab(SA_TAB, SA_NM, SA_DATES), []);
@@ -18290,14 +18307,16 @@ function SimuladorUnificado() {
 
   // Auto-rodar "Simular Tudo" na primeira carga da página, com defaults atuais
   // (10k sims, drift médio, todas as séries). Useref garante que dispara apenas
-  // uma vez (não dispara em re-renders subsequentes).
+  // uma vez (não dispara em re-renders subsequentes). v4.55c: espera resReady —
+  // o fetch do results.json precisa assentar antes, para a 1ª simulação já
+  // incluir os resultados publicados pela automação.
   const autoRanRef = useRef(false);
   useEffect(() => {
-    if (!autoRanRef.current) {
+    if (resReady && !autoRanRef.current) {
       autoRanRef.current = true;
       runAll();
     }
-  }, [runAll]);
+  }, [runAll, resReady]);
   const tabs = [{
     id: 'serieA',
     l: 'Série A',
@@ -18622,7 +18641,7 @@ function SimuladorUnificado() {
     })
   }), /*#__PURE__*/React.createElement("div", {
     className: "mt-4 text-center text-slate-500 text-xs"
-  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R16+) | C:", SC_RES.length, " (R13) | D:", SD_RES.length, " (grupos) + mata-mata | Copa BR: R16 (edit\xE1vel) | v4.55b \u2014 acesso/top-6\u00b78/rebaixamento por estado nas Chaves de B e C"))));
+  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R16+) | C:", SC_RES.length, " (R13) | D:", SD_RES.length, " (grupos) + mata-mata | Copa BR: R16 (edit\xE1vel) | v4.55c \u2014 auto-run espera o results.json (fim da corrida do 1\u00ba MC)"))));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(SimuladorUnificado));
 </script>
