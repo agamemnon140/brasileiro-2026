@@ -1,6 +1,6 @@
 {
-  "schema": 1,
-  "updated_at": "2026-07-18T00:41:19.857Z",
+  "schema": 2,
+  "updated_at": "2026-07-18T01:34:53.643Z",
   "results": [
     {
       "serie": "B",
@@ -231,6 +231,104 @@
       "fora": "Náutico",
       "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_17_07_0e6d2b42f8.pdf",
       "confirmed_at": "2026-07-18T00:40:30.443Z"
+    }
+  ],
+  "ko_d": [
+    {
+      "code": "D01",
+      "leg": "ida",
+      "mand": "Goiatuba",
+      "gm": 0,
+      "gv": 1,
+      "vis": "Ferroviário",
+      "pen_m": null,
+      "pen_v": null,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_D_2026_14_07_afa09eee32.pdf",
+      "confirmed_at": "2026-07-18T01:34:53.635Z"
+    },
+    {
+      "code": "D02",
+      "leg": "ida",
+      "mand": "América-RN",
+      "gm": 0,
+      "gv": 0,
+      "vis": "Gama",
+      "pen_m": null,
+      "pen_v": null,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_D_2026_14_07_afa09eee32.pdf",
+      "confirmed_at": "2026-07-18T01:34:53.635Z"
+    },
+    {
+      "code": "D03",
+      "leg": "ida",
+      "mand": "Luverdense",
+      "gm": 0,
+      "gv": 0,
+      "vis": "ABC",
+      "pen_m": null,
+      "pen_v": null,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_D_2026_14_07_afa09eee32.pdf",
+      "confirmed_at": "2026-07-18T01:34:53.635Z"
+    },
+    {
+      "code": "D04",
+      "leg": "ida",
+      "mand": "Nacional-AM",
+      "gm": 0,
+      "gv": 0,
+      "vis": "Iguatu",
+      "pen_m": null,
+      "pen_v": null,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_D_2026_14_07_afa09eee32.pdf",
+      "confirmed_at": "2026-07-18T01:34:53.635Z"
+    },
+    {
+      "code": "D05",
+      "leg": "ida",
+      "mand": "São José-RS",
+      "gm": 0,
+      "gv": 0,
+      "vis": "Treze",
+      "pen_m": null,
+      "pen_v": null,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_D_2026_14_07_afa09eee32.pdf",
+      "confirmed_at": "2026-07-18T01:34:53.635Z"
+    },
+    {
+      "code": "D06",
+      "leg": "ida",
+      "mand": "Uberlândia",
+      "gm": 0,
+      "gv": 0,
+      "vis": "Portuguesa-SP",
+      "pen_m": null,
+      "pen_v": null,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_D_2026_14_07_afa09eee32.pdf",
+      "confirmed_at": "2026-07-18T01:34:53.635Z"
+    },
+    {
+      "code": "D07",
+      "leg": "ida",
+      "mand": "São Luiz-RS",
+      "gm": 0,
+      "gv": 0,
+      "vis": "CSA",
+      "pen_m": null,
+      "pen_v": null,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_D_2026_14_07_afa09eee32.pdf",
+      "confirmed_at": "2026-07-18T01:34:53.635Z"
+    },
+    {
+      "code": "D08",
+      "leg": "ida",
+      "mand": "Cianorte",
+      "gm": 0,
+      "gv": 0,
+      "vis": "ASA",
+      "pen_m": null,
+      "pen_v": null,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_D_2026_14_07_afa09eee32.pdf",
+      "confirmed_at": "2026-07-18T01:34:53.635Z"
     }
   ]
 }
