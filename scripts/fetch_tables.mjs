@@ -230,13 +230,18 @@ function buildPromptD(names) {
     `Pênaltis aparecem entre parênteses ao redor do placar: "(5) 1 x 1 (4)" significa 5 cobranças convertidas pelo mandante e 4 pelo visitante.`,
     `Use EXATAMENTE estes nomes de times: ${[...names].join(', ')}.`,
     `Responda APENAS com UM ÚNICO array JSON (todas as fases juntas, sem dividir em blocos) no formato:`,
-    `[{"code":"D01","leg":"ida","mand":"Goiatuba","gm":1,"gv":0,"vis":"Ferroviário","pen_m":null,"pen_v":null}]`,
-    `gm/gv = gols de mandante/visitante no jogo; pen_m/pen_v = pênaltis (null quando não houve). Jogos sem placar ficam de fora.`,
+    `[{"code":"D01","leg":"ida","data":"04/07","mand":"Goiatuba","gm":1,"gv":0,"vis":"Ferroviário","pen_m":null,"pen_v":null}]`,
+    `data = a data DD/MM da linha; gm/gv = gols de mandante/visitante no jogo; pen_m/pen_v = pênaltis (null quando não houve).`,
+    `ATENÇÃO: jogo SEM placar preenchido (apenas "x" entre os times) NÃO pode aparecer na resposta — NUNCA invente 0x0 para jogo futuro; na dúvida, omita a linha.`,
   ].join(' ');
 }
 
 function sanitizeKoD(rows, source, names) {
   const out = [];
+  let futureDropped = 0;
+  // "Hoje" em horário de Brasília (UTC-3): jogo com data FUTURA não pode ter placar —
+  // guarda determinística contra placar alucinado de jogo apenas agendado.
+  const nowBrt = new Date(Date.now() - 3 * 3600 * 1000);
   for (const r of rows || []) {
     const code = String(r.code || '').toUpperCase().trim();
     const leg = String(r.leg || '').toLowerCase().trim();
@@ -245,11 +250,16 @@ function sanitizeKoD(rows, source, names) {
     if (!/^[BCDEFG]\d{2}$/.test(code) || (leg !== 'ida' && leg !== 'volta')) continue;
     if (!names.has(mand) || !names.has(vis) || mand === vis) continue;
     if (!Number.isInteger(gm) || !Number.isInteger(gv) || gm < 0 || gm > 14 || gv < 0 || gv > 14) continue;
+    const dm = /^(\d{1,2})\/(\d{1,2})$/.exec(String(r.data || '').trim());
+    if (!dm) continue; // sem data legível => descarta (o PDF sempre traz a data)
+    const gameDate = new Date(Date.UTC(2026, Number(dm[2]) - 1, Number(dm[1])));
+    if (gameDate.getTime() > nowBrt.getTime()) { futureDropped++; continue; }
     const pm = r.pen_m == null ? null : Number(r.pen_m), pv = r.pen_v == null ? null : Number(r.pen_v);
     if (pm != null && (!Number.isInteger(pm) || pm < 0 || pm > 30)) continue;
     if (pv != null && (!Number.isInteger(pv) || pv < 0 || pv > 30)) continue;
-    out.push({ code, leg, mand, gm, gv, vis, pen_m: pm, pen_v: pv, source });
+    out.push({ code, leg, data: dm[0], mand, gm, gv, vis, pen_m: pm, pen_v: pv, source });
   }
+  if (futureDropped) console.error(`::warning::Série D: ${futureDropped} perna(s) com DATA FUTURA descartada(s) (provável placar inventado para jogo agendado).`);
   return out;
 }
 
