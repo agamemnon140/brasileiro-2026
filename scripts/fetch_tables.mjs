@@ -114,7 +114,7 @@ function buildPrompt(serie) {
   ].join(' ');
 }
 
-async function extractFromPdf(serie, pdfB64) {
+async function extractFromPdf(serie, pdfB64, customPrompt) {
   const body = {
     model: MODEL,
     max_tokens: 30000,
@@ -123,7 +123,7 @@ async function extractFromPdf(serie, pdfB64) {
       role: 'user',
       content: [
         { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdfB64 } },
-        { type: 'text', text: buildPrompt(serie) },
+        { type: 'text', text: customPrompt || buildPrompt(serie) },
       ],
     }],
   };
@@ -173,16 +173,90 @@ async function loadBuiltIn() {
   return built;
 }
 
+// ---------------------------------------------------------------------------
+// Série D — MATA-MATA (2ª fase em diante). O PDF traz cada perna com código do
+// confronto (GR: B01..G01), coluna I/V e pênaltis entre parênteses. Vai para o
+// campo ko_d do results.json; o app aplica como overlay no chaveamento
+// (precedência: edições do usuário > dados embutidos > automação).
+// ---------------------------------------------------------------------------
+const SD_NORM = {
+  'América RN': 'América-RN', 'Nacional AM': 'Nacional-AM', 'São José RS': 'São José-RS',
+  'São Luiz RS': 'São Luiz-RS', 'XV Piracicaba': 'XV de Piracicaba', 'XV de Piracaciba': 'XV de Piracicaba',
+  'Sampaio Corrêa MA': 'Sampaio Corrêa', 'Sampaio Corrêa RJ': 'Sampaio Corrêa-RJ',
+  'Democrata MG': 'Democrata GV', 'Democrata': 'Democrata GV', 'Cascavel': 'FC Cascavel',
+  'Portuguesa RJ': 'Portuguesa-RJ', 'Portuguesa SP': 'Portuguesa-SP', 'Vitória ES': 'Vitória-ES',
+  'Rio Branco ES': 'Rio Branco-ES', 'Fluminense PI': 'Fluminense-PI', 'América RJ': 'America-RJ',
+  'São Raimundo RR': 'São Raimundo-RR', 'São Raimundo': 'São Raimundo-RR', 'Independência AC': 'Independência',
+};
+const sdNorm = (n) => SD_NORM[(n || '').trim()] || (n || '').trim();
+
+// Nomes canônicos da D direto do app (SD_GRUPOS) + pernas já embutidas (SD_F2_REAL/SD_F3_REAL).
+// IMPORTANTE: ao consolidar novas fases no app (oitavas+), manter esses parses cobrindo-as.
+async function loadSdContext() {
+  const ctx = { names: new Set(), builtLegs: new Set() };
+  try {
+    const src = await readFile(APP_HTML_PATH, 'utf8');
+    const g = src.match(/const SD_GRUPOS = (\[[\s\S]*?\]);/);
+    if (g) for (const t of new Function('return ' + g[1])().flat()) ctx.names.add(t);
+    for (const cname of ['SD_F2_REAL', 'SD_F3_REAL']) {
+      const m = src.match(new RegExp(`const ${cname} = (\\[[\\s\\S]*?\\]);`));
+      if (!m) continue;
+      for (const t of new Function('return ' + m[1])()) {
+        if (t.ida || t.iA != null) ctx.builtLegs.add(t.code + '|ida');
+        if (t.volta || t.vA != null) ctx.builtLegs.add(t.code + '|volta');
+      }
+    }
+  } catch (e) {
+    console.error(`::warning::não consegui ler o contexto da Série D do app: ${e.message}`);
+  }
+  return ctx;
+}
+
+function buildPromptD(names) {
+  return [
+    `Este PDF é a Tabela Detalhada oficial da CBF do Campeonato Brasileiro Série D 2026.`,
+    `Extraia APENAS os jogos de MATA-MATA (SEGUNDA FASE em diante — códigos de confronto na coluna GR: B01..B32, C01..C16, D01..D08, E01..E04, F01..F04, G01) que JÁ TÊM PLACAR preenchido.`,
+    `IGNORE completamente a fase de grupos (TURNO/RETURNO, grupos A01-A16, rodadas 1-10).`,
+    `Cada linha tem a coluna I/V (I = jogo de ida, V = volta), o código GR, mandante, placar e visitante.`,
+    `Pênaltis aparecem entre parênteses ao redor do placar: "(5) 1 x 1 (4)" significa 5 cobranças convertidas pelo mandante e 4 pelo visitante.`,
+    `Use EXATAMENTE estes nomes de times: ${[...names].join(', ')}.`,
+    `Responda APENAS com um array JSON no formato:`,
+    `[{"code":"D01","leg":"ida","mand":"Goiatuba","gm":1,"gv":0,"vis":"Ferroviário","pen_m":null,"pen_v":null}]`,
+    `gm/gv = gols de mandante/visitante no jogo; pen_m/pen_v = pênaltis (null quando não houve). Jogos sem placar ficam de fora.`,
+  ].join(' ');
+}
+
+function sanitizeKoD(rows, source, names) {
+  const out = [];
+  for (const r of rows || []) {
+    const code = String(r.code || '').toUpperCase().trim();
+    const leg = String(r.leg || '').toLowerCase().trim();
+    const mand = sdNorm(r.mand), vis = sdNorm(r.vis);
+    const gm = Number(r.gm), gv = Number(r.gv);
+    if (!/^[BCDEFG]\d{2}$/.test(code) || (leg !== 'ida' && leg !== 'volta')) continue;
+    if (!names.has(mand) || !names.has(vis) || mand === vis) continue;
+    if (!Number.isInteger(gm) || !Number.isInteger(gv) || gm < 0 || gm > 14 || gv < 0 || gv > 14) continue;
+    const pm = r.pen_m == null ? null : Number(r.pen_m), pv = r.pen_v == null ? null : Number(r.pen_v);
+    if (pm != null && (!Number.isInteger(pm) || pm < 0 || pm > 30)) continue;
+    if (pv != null && (!Number.isInteger(pv) || pv < 0 || pv > 30)) continue;
+    out.push({ code, leg, mand, gm, gv, vis, pen_m: pm, pen_v: pv, source });
+  }
+  return out;
+}
+
 async function main() {
   if (!API_KEY) { console.error('ANTHROPIC_API_KEY ausente.'); process.exit(1); }
 
-  let existing = [];
+  let existing = [], existingKo = [];
   try {
     const raw = JSON.parse(await readFile(RESULTS_PATH, 'utf8'));
     existing = Array.isArray(raw) ? raw : (raw && Array.isArray(raw.results) ? raw.results : []);
-  } catch { existing = []; }
+    existingKo = !Array.isArray(raw) && Array.isArray(raw.ko_d) ? raw.ko_d : [];
+  } catch { existing = []; existingKo = []; }
   const byKey = new Map();
   for (const r of existing) byKey.set(dedupKey(r), r);
+  const koByKey = new Map();
+  for (const r of existingKo) koByKey.set(`${r.code}|${r.leg}`, r);
 
   const builtIn = await loadBuiltIn();
   const conflicts = [];
@@ -214,21 +288,56 @@ async function main() {
     }
   }
 
-  if (added > MAX_NEW_PER_RUN) {
-    console.error(`::error::Adicionaria ${added} jogos (> ${MAX_NEW_PER_RUN}) — implausível para 1 semana. Abortando sem gravar.`);
+  // ---- Série D: mata-mata → ko_d ----
+  let koAdded = 0, koSkipped = 0, koUnchanged = 0;
+  {
+    const url = await findPdfUrl('D');
+    if (!url) console.error('::warning::Série D: PDF da Tabela Detalhada não encontrado.');
+    else {
+      console.log(`Série D: ${url}`);
+      try {
+        const sd = await loadSdContext();
+        if (!sd.names.size) throw new Error('lista de times da D não encontrada no app');
+        const candidates = sanitizeKoD(await extractFromPdf('D', await downloadPdfB64(url), buildPromptD(sd.names)), url, sd.names);
+        console.log(`Série D: ${candidates.length} perna(s) de mata-mata com placar no PDF.`);
+        for (const c of candidates) {
+          const k = `${c.code}|${c.leg}`;
+          if (sd.builtLegs.has(k)) { koSkipped++; continue; }
+          const prev = koByKey.get(k);
+          if (!prev) {
+            koByKey.set(k, { ...c, confirmed_at: new Date().toISOString() });
+            koAdded++;
+          } else if (prev.gm !== c.gm || prev.gv !== c.gv || prev.mand !== c.mand) {
+            conflicts.push(k);
+            console.error(`::warning::Conflito D ${k}: gravado ${prev.mand} ${prev.gm}-${prev.gv} vs PDF ${c.mand} ${c.gm}-${c.gv} (mantido o gravado)`);
+          } else koUnchanged++;
+        }
+      } catch (e) {
+        console.error(`::warning::Série D falhou: ${e.message}`);
+      }
+    }
+  }
+
+  if (added + koAdded > MAX_NEW_PER_RUN) {
+    console.error(`::error::Adicionaria ${added + koAdded} jogos (> ${MAX_NEW_PER_RUN}) — implausível para 1 semana. Abortando sem gravar.`);
     process.exit(1);
   }
 
   const merged = [...byKey.values()];
+  const mergedKo = [...koByKey.values()];
   const canon = (arr) => JSON.stringify(
     arr.map((r) => ({ serie: r.serie, casa: r.casa, fora: r.fora, gc: r.gc, gf: r.gf, rodada: r.rodada }))
        .sort((a, b) => dedupKey(a).localeCompare(dedupKey(b)))
   );
-  console.log(`Resumo: +${added} novos, ${unchanged} iguais, ${skippedBuiltIn} já embutidos no app, ${conflicts.length} conflito(s).`);
-  if (canon(merged) === canon(existing)) { console.log('Sem mudanças em results.json.'); return; }
+  const canonKo = (arr) => JSON.stringify(
+    arr.map((r) => ({ code: r.code, leg: r.leg, mand: r.mand, gm: r.gm, gv: r.gv, vis: r.vis, pen_m: r.pen_m, pen_v: r.pen_v }))
+       .sort((a, b) => `${a.code}|${a.leg}`.localeCompare(`${b.code}|${b.leg}`))
+  );
+  console.log(`Resumo: +${added} liga + ${koAdded} mata-mata D novos, ${unchanged + koUnchanged} iguais, ${skippedBuiltIn + koSkipped} já embutidos no app, ${conflicts.length} conflito(s).`);
+  if (canon(merged) === canon(existing) && canonKo(mergedKo) === canonKo(existingKo)) { console.log('Sem mudanças em results.json.'); return; }
 
-  await writeFile(RESULTS_PATH, JSON.stringify({ schema: 1, updated_at: new Date().toISOString(), results: merged }, null, 2) + '\n', 'utf8');
-  console.log(`results.json atualizado (${merged.length} resultado(s)).`);
+  await writeFile(RESULTS_PATH, JSON.stringify({ schema: 2, updated_at: new Date().toISOString(), results: merged, ko_d: mergedKo }, null, 2) + '\n', 'utf8');
+  console.log(`results.json atualizado (${merged.length} resultado(s) de liga + ${mergedKo.length} perna(s) de mata-mata D).`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
