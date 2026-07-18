@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updated_at": "2026-07-17T10:49:44.542Z",
+  "updated_at": "2026-07-18T00:41:19.857Z",
   "results": [
     {
       "serie": "B",
@@ -201,6 +201,36 @@
       "fora": "Volta Redonda",
       "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_07_4c00810d2f.pdf",
       "confirmed_at": "2026-07-17T10:49:44.535Z"
+    },
+    {
+      "serie": "A",
+      "rodada": 19,
+      "casa": "Botafogo",
+      "gc": 2,
+      "gf": 1,
+      "fora": "Santos",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_BSA_2026_17_07_f7ee4dab22.pdf",
+      "confirmed_at": "2026-07-18T00:39:30.369Z"
+    },
+    {
+      "serie": "A",
+      "rodada": 19,
+      "casa": "Vitória",
+      "gc": 1,
+      "gf": 0,
+      "fora": "Vasco",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_BSA_2026_17_07_f7ee4dab22.pdf",
+      "confirmed_at": "2026-07-18T00:39:30.369Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 18,
+      "casa": "CRB",
+      "gc": 2,
+      "gf": 1,
+      "fora": "Náutico",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_17_07_0e6d2b42f8.pdf",
+      "confirmed_at": "2026-07-18T00:40:30.443Z"
     }
   ]
 }
