@@ -31,7 +31,12 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.56
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.57
+// v4.57 (12/07/2026): visibilidade da automação — (a) selo no topo com data/hora da última
+//        execução do update-tables (updated_at do results.json) e nº de resultados via
+//        automação; (b) card "Atualizações automáticas" na aba Config com o LOG das
+//        inserções (série, rodada, placar, quando entrou, link da fonte/PDF) e a nota de
+//        escopo: fase de liga A/B/C — mata-mata da D e Copa BR entram por versão do app.
 // v4.56 (12/07/2026): Classificação Geral da Série D (times vivos) ficou DINÂMICA — o novo
 //        sdEliminatedSet() percorre o chaveamento inteiro (2ª fase → 3ª → oitavas → quartas
 //        por reseed → semis → final) com a mesma precedência do MC (edições do usuário via
@@ -18204,6 +18209,10 @@ function SimuladorUnificado() {
   // timeout de 5s) — senão a 1ª simulação corria SEM os resultados do results.json (o display os
   // mostrava, mas o MC inicial não os incluía até re-rodar manualmente).
   const [resReady, setResReady] = useState(false);
+  // v4.57: metadados da última atualização automática (Tabelas CBF) — updated_at do
+  // envelope do results.json + lista bruta com confirmed_at/source, para o selo no
+  // topo e o log de inserções na aba Config.
+  const [resMeta, setResMeta] = useState(null);
   useEffect(() => {
     let cancelled = false;
     const done = () => {
@@ -18215,7 +18224,13 @@ function SimuladorUnificado() {
     }).then(r => r.ok ? r.json() : null).then(d => {
       if (cancelled || !d) return; // 404 no 1º deploy => no-op
       const arr = Array.isArray(d) ? d : d && d.results;
-      if (Array.isArray(arr) && arr.length) handleSearchResults(arr);
+      if (Array.isArray(arr)) {
+        setResMeta({
+          updatedAt: !Array.isArray(d) && d.updated_at || null,
+          results: arr
+        });
+        if (arr.length) handleSearchResults(arr);
+      }
     }).catch(() => {}).finally(() => {
       clearTimeout(failsafe);
       done();
@@ -18418,7 +18433,15 @@ function SimuladorUnificado() {
     className: "text-2xl sm:text-3xl font-bold bg-gradient-to-r from-emerald-300 via-white to-emerald-300 bg-clip-text text-transparent tracking-tight"
   }, "Simulador Brasileir\xE3o 2026"), /*#__PURE__*/React.createElement("p", {
     className: "text-slate-400 text-xs mt-1"
-  }, "Motor unificado | Poisson + ELO + ATK/DEF | Config: total+pesoCasa"), /*#__PURE__*/React.createElement("div", {
+  }, "Motor unificado | Poisson + ELO + ATK/DEF | Config: total+pesoCasa"), resMeta && resMeta.updatedAt && /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-emerald-400/70 mt-0.5",
+    title: "Última execução da automação que baixa as Tabelas Detalhadas da CBF (fase de liga A/B/C). Log completo na aba Config."
+  }, "📡 Tabelas CBF atualizadas em ", new Date(resMeta.updatedAt).toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }), " \xB7 ", resMeta.results.length, " resultado(s) via automa\xE7\xE3o"), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-center gap-2 mt-2 flex-wrap"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1 bg-slate-800/60 rounded-lg px-2 py-1 border border-slate-700",
@@ -18695,9 +18718,52 @@ function SimuladorUnificado() {
       C: [],
       D: []
     })
-  }), /*#__PURE__*/React.createElement("div", {
+  }), tab === 'config' && /*#__PURE__*/React.createElement("div", {
+    className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50 mt-4"
+  }, /*#__PURE__*/React.createElement("h2", {
+    className: "text-base font-semibold text-emerald-300 mb-1"
+  }, "\ud83d\udce1 Atualiza\xE7\xF5es autom\xE1ticas \u2014 Tabelas CBF"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-slate-500 mb-2 italic"
+  }, "Toda sexta a automa\xE7\xE3o baixa as Tabelas Detalhadas oficiais da CBF e publica no results.json os jogos da FASE DE LIGA de A/B/C que ainda n\xE3o est\xE3o embutidos no app. Mata-mata da S\xE9rie D e Copa do Brasil entram por atualiza\xE7\xE3o versionada do app, n\xE3o por aqui."), !resMeta ? /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-400"
+  }, "results.json ainda n\xE3o carregado nesta sess\xE3o (offline, file:// ou primeiro deploy).") : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-300 mb-2"
+  }, "\xDAltima execu\xE7\xE3o: ", /*#__PURE__*/React.createElement("span", {
+    className: "font-mono text-emerald-300"
+  }, resMeta.updatedAt ? new Date(resMeta.updatedAt).toLocaleString('pt-BR') : '\u2014'), " \xB7 ", resMeta.results.length, " resultado(s) acumulados"), resMeta.results.length === 0 ? /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-500"
+  }, "Nenhuma inser\xE7\xE3o ainda \u2014 tudo que os PDFs trazem j\xE1 est\xE1 embutido no app.") : /*#__PURE__*/React.createElement("div", {
+    className: "space-y-0.5 max-h-[320px] overflow-y-auto"
+  }, [...resMeta.results].sort((a, b) => new Date(b.confirmed_at || 0) - new Date(a.confirmed_at || 0)).map((r, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    className: "flex items-center gap-2 text-xs bg-slate-700/30 rounded p-1.5 flex-wrap"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-mono text-emerald-400 w-5 shrink-0"
+  }, r.serie), /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-500 w-8 shrink-0 font-mono"
+  }, "R", r.rodada), /*#__PURE__*/React.createElement("span", {
+    className: "flex-1 min-w-[180px]"
+  }, /*#__PURE__*/React.createElement(TN, {
+    name: r.casa
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono font-bold mx-1"
+  }, r.gc, " x ", r.gf), /*#__PURE__*/React.createElement(TN, {
+    name: r.fora
+  })), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] text-slate-500 font-mono shrink-0"
+  }, r.confirmed_at ? new Date(r.confirmed_at).toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }) : ''), r.source && /*#__PURE__*/React.createElement("a", {
+    href: r.source,
+    target: "_blank",
+    rel: "noreferrer",
+    className: "text-[10px] text-blue-400 hover:text-blue-300 shrink-0"
+  }, "fonte")))))), /*#__PURE__*/React.createElement("div", {
     className: "mt-4 text-center text-slate-500 text-xs"
-  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R16+) | C:", SC_RES.length, " (R13) | D:", SD_RES.length, " (grupos) + mata-mata | Copa BR: R16 (edit\xE1vel) | v4.56 \u2014 Geral da S\u00e9rie D din\u00e2mica (eliminados somem na hora)"))));
+  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R16+) | C:", SC_RES.length, " (R13) | D:", SD_RES.length, " (grupos) + mata-mata | Copa BR: R16 (edit\xE1vel) | v4.57 \u2014 selo e log das atualiza\xE7\xF5es autom\xE1ticas"))));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(SimuladorUnificado));
 </script>
