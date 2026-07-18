@@ -141,6 +141,13 @@ async function extractFromPdf(serie, pdfB64, customPrompt) {
   try { const a = JSON.parse(t); if (Array.isArray(a)) return a; } catch {}
   const m = t.match(/\[[\s\S]*\]/);
   if (m) { try { return JSON.parse(m[0]); } catch {} }
+  // O modelo às vezes divide a resposta em VÁRIOS arrays (um por fase/bloco ```json).
+  // Como as linhas são objetos planos (sem colchetes internos), dá para capturar cada
+  // array de nível único e concatenar.
+  const parts = [...t.matchAll(/\[[^\[\]]*\]/g)]
+    .map((mm) => { try { return JSON.parse(mm[0]); } catch { return null; } })
+    .filter(Array.isArray);
+  if (parts.length) return parts.flat();
   console.error(`::warning::Série ${serie}: resposta não parseou como array (${txt.length} chars): ${txt.slice(0, 300).replace(/\n/g, ' ')}`);
   return [];
 }
@@ -222,7 +229,7 @@ function buildPromptD(names) {
     `Cada linha tem a coluna I/V (I = jogo de ida, V = volta), o código GR, mandante, placar e visitante.`,
     `Pênaltis aparecem entre parênteses ao redor do placar: "(5) 1 x 1 (4)" significa 5 cobranças convertidas pelo mandante e 4 pelo visitante.`,
     `Use EXATAMENTE estes nomes de times: ${[...names].join(', ')}.`,
-    `Responda APENAS com um array JSON no formato:`,
+    `Responda APENAS com UM ÚNICO array JSON (todas as fases juntas, sem dividir em blocos) no formato:`,
     `[{"code":"D01","leg":"ida","mand":"Goiatuba","gm":1,"gv":0,"vis":"Ferroviário","pen_m":null,"pen_v":null}]`,
     `gm/gv = gols de mandante/visitante no jogo; pen_m/pen_v = pênaltis (null quando não houve). Jogos sem placar ficam de fora.`,
   ].join(' ');
