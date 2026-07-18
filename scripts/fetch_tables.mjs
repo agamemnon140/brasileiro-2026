@@ -134,12 +134,14 @@ async function extractFromPdf(serie, pdfB64, customPrompt) {
   });
   if (!resp.ok) throw new Error(`API ${resp.status}: ${(await resp.text()).slice(0, 300)}`);
   const data = await resp.json();
+  if (data.stop_reason === 'max_tokens') console.error(`::warning::Série ${serie}: resposta truncada em max_tokens — extração possivelmente incompleta.`);
   let txt = '';
   for (const b of data.content || []) if (b.type === 'text') txt += b.text;
   let t = txt.replace(/```json\s*/g, '').replace(/```/g, '').trim();
   try { const a = JSON.parse(t); if (Array.isArray(a)) return a; } catch {}
   const m = t.match(/\[[\s\S]*\]/);
   if (m) { try { return JSON.parse(m[0]); } catch {} }
+  console.error(`::warning::Série ${serie}: resposta não parseou como array (${txt.length} chars): ${txt.slice(0, 300).replace(/\n/g, ' ')}`);
   return [];
 }
 
@@ -298,8 +300,10 @@ async function main() {
       try {
         const sd = await loadSdContext();
         if (!sd.names.size) throw new Error('lista de times da D não encontrada no app');
-        const candidates = sanitizeKoD(await extractFromPdf('D', await downloadPdfB64(url), buildPromptD(sd.names)), url, sd.names);
-        console.log(`Série D: ${candidates.length} perna(s) de mata-mata com placar no PDF.`);
+        const raw = await extractFromPdf('D', await downloadPdfB64(url), buildPromptD(sd.names));
+        const candidates = sanitizeKoD(raw, url, sd.names);
+        console.log(`Série D: ${raw.length} linha(s) brutas, ${candidates.length} perna(s) válidas após sanitização.`);
+        if (raw.length && !candidates.length) console.error(`::warning::Série D: TODAS as linhas caíram na sanitização — amostra: ${JSON.stringify(raw.slice(0, 3))}`);
         for (const c of candidates) {
           const k = `${c.code}|${c.leg}`;
           if (sd.builtLegs.has(k)) { koSkipped++; continue; }
