@@ -31,7 +31,14 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.57
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.58
+// v4.58 (17/07/2026): 3ª fase da Série D COMPLETA (voltas 11-13/07, Tabela Detalhada CBF
+//        14/07): SD_F3_IDA vira SD_F3_REAL (ida+volta+pênaltis) — confrontos completos
+//        entram no SD_KO_REAL (com zebras: Goiatuba elimina Manauara nos pênaltis, Gama
+//        elimina Porto Velho, São Luiz-RS elimina Velo Clube); oitavas definidas
+//        (Goiatuba×Ferroviário, América-RN×Gama, Luverdense×ABC, Nacional×Iguatu,
+//        São José×Treze, Uberlândia×Portuguesa-SP, São Luiz×CSA, Cianorte×ASA, idas
+//        18-19/07). Geral: 16 vivos. (Port ao .jsx pendente.)
 // v4.57 (12/07/2026): visibilidade da automação — (a) selo no topo com data/hora da última
 //        execução do update-tables (updated_at do results.json) e nº de resultados via
 //        automação; (b) card "Atualizações automáticas" na aba Config com o LOG das
@@ -129,7 +136,7 @@ const {
 //        sdBracketResolve lê simUni_sdMM e gera SD_KO_USER; s180 consulta antes do oficial). Sem
 //        edições cai no oficial. Edições de B/C ainda não entram no MC da liga.
 // Motor único | Config: total+pesoCasa | Copa do Brasil | Datas por rodada
-// Dados atualizados até 10/07/2026 | A:R18 | B:R16 (+1 da R17) | C:R13 | D: 2ª fase completa + 3ª fase ida | CB:R16 (editável)
+// Dados atualizados até 14/07/2026 (+ results.json dinâmico) | A:R18 | B:R16 | C:R13 | D: 3ª fase completa, oitavas definidas | CB:R16 (editável)
 // v4.49e: sub-aba "Chaves" de B e C agora EDITÁVEL (LeaguePhaseEdit, nos moldes do bracket da D):
 //        B = playoff de acesso (3º×6º, 4º×5º ida/volta) com vencedores subindo; C = quadrangular
 //        (2 grupos de 4 ida-volta, mini-tabela + top-2 acesso) + final do título. Times projetados
@@ -7999,7 +8006,8 @@ const SD_F2_REAL = [
 ];
 
 // v4.54: SD_KO_REAL derivado automaticamente de SD_F2_REAL (ida+volta reais decididos) —
-// elimina o risco de drift entre as duas fontes. SD_F3_IDA alimenta SD_KO_PART_REAL (v4.53).
+// elimina o risco de drift entre as duas fontes. SD_F3_REAL alimenta SD_KO_REAL (confrontos
+// completos) e SD_KO_PART_REAL (voltas pendentes, v4.53).
 for (const t of SD_F2_REAL) {
   if (!t.ida || !t.volta || !t.w) continue;
   const gA = (t.ida.c === t.a ? t.ida.gc : t.ida.gf) + (t.volta.c === t.a ? t.volta.gc : t.volta.gf);
@@ -8007,26 +8015,37 @@ for (const t of SD_F2_REAL) {
   const k0 = [t.a, t.b].sort()[0];
   SD_KO_REAL[sdKoKey(t.a, t.b)] = { w: t.w, ga: k0 === t.a ? gA : gB, gb: k0 === t.a ? gB : gA, pen: !!t.pen };
 }
-// 3ª fase — jogos de IDA reais (04-06/07/2026); volta pendente → s180 fixa a ida e simula só a volta.
-const SD_F3_IDA = [
-  { code: 'C01', a: 'Goiatuba', b: 'Manauara', iA: 0, iB: 1 },
-  { code: 'C02', a: 'Porto Velho', b: 'Gama', iA: 2, iB: 0 },
-  { code: 'C03', a: 'Luverdense', b: 'Guaporé', iA: 1, iB: 0 },
-  { code: 'C04', a: 'Nacional-AM', b: 'Capital', iA: 1, iB: 0 },
-  { code: 'C05', a: 'Trem', b: 'América-RN', iA: 1, iB: 4 },
-  { code: 'C06', a: 'Imperatriz', b: 'Ferroviário', iA: 1, iB: 1 },
-  { code: 'C07', a: 'Maguary', b: 'Iguatu', iA: 2, iB: 3 },
-  { code: 'C08', a: 'Águia de Marabá', b: 'ABC', iA: 2, iB: 1 },
-  { code: 'C09', a: 'CRAC', b: 'Treze', iA: 2, iB: 1 },
-  { code: 'C10', a: 'Serra Branca', b: 'Uberlândia', iA: 0, iB: 1 },
-  { code: 'C11', a: 'Betim', b: 'CSA', iA: 1, iB: 0 },
-  { code: 'C12', a: 'Ivinhema', b: 'ASA', iA: 1, iB: 2 },
-  { code: 'C13', a: 'Marcílio Dias', b: 'Portuguesa-SP', iA: 1, iB: 1 },
-  { code: 'C14', a: 'São José-RS', b: 'Portuguesa-RJ', iA: 1, iB: 0 },
-  { code: 'C15', a: 'Cianorte', b: 'XV de Piracicaba', iA: 4, iB: 0 },
-  { code: 'C16', a: 'Velo Clube', b: 'São Luiz-RS', iA: 2, iB: 1 }
+// 3ª fase COMPLETA (ida 04-06/07, volta 11-13/07 — Tabela Detalhada CBF 14/07). vA/vB = gols
+// de a/b na VOLTA (mando de b); pen = vencedor nos pênaltis quando o agregado empatou.
+// vA null => volta pendente (entra como perna parcial via SD_KO_PART_REAL).
+const SD_F3_REAL = [
+  { code: 'C01', a: 'Goiatuba', b: 'Manauara', iA: 0, iB: 1, vA: 2, vB: 1, pen: 'A' },
+  { code: 'C02', a: 'Porto Velho', b: 'Gama', iA: 2, iB: 0, vA: 0, vB: 2, pen: 'B' },
+  { code: 'C03', a: 'Luverdense', b: 'Guaporé', iA: 1, iB: 0, vA: 0, vB: 0, pen: null },
+  { code: 'C04', a: 'Nacional-AM', b: 'Capital', iA: 1, iB: 0, vA: 0, vB: 1, pen: 'A' },
+  { code: 'C05', a: 'Trem', b: 'América-RN', iA: 1, iB: 4, vA: 1, vB: 2, pen: null },
+  { code: 'C06', a: 'Imperatriz', b: 'Ferroviário', iA: 1, iB: 1, vA: 0, vB: 3, pen: null },
+  { code: 'C07', a: 'Maguary', b: 'Iguatu', iA: 2, iB: 3, vA: 1, vB: 2, pen: null },
+  { code: 'C08', a: 'Águia de Marabá', b: 'ABC', iA: 2, iB: 1, vA: 0, vB: 3, pen: null },
+  { code: 'C09', a: 'CRAC', b: 'Treze', iA: 2, iB: 1, vA: 0, vB: 1, pen: 'B' },
+  { code: 'C10', a: 'Serra Branca', b: 'Uberlândia', iA: 0, iB: 1, vA: 2, vB: 2, pen: null },
+  { code: 'C11', a: 'Betim', b: 'CSA', iA: 1, iB: 0, vA: 0, vB: 4, pen: null },
+  { code: 'C12', a: 'Ivinhema', b: 'ASA', iA: 1, iB: 2, vA: 0, vB: 4, pen: null },
+  { code: 'C13', a: 'Marcílio Dias', b: 'Portuguesa-SP', iA: 1, iB: 1, vA: 0, vB: 2, pen: null },
+  { code: 'C14', a: 'São José-RS', b: 'Portuguesa-RJ', iA: 1, iB: 0, vA: 0, vB: 0, pen: null },
+  { code: 'C15', a: 'Cianorte', b: 'XV de Piracicaba', iA: 4, iB: 0, vA: 0, vB: 0, pen: null },
+  { code: 'C16', a: 'Velo Clube', b: 'São Luiz-RS', iA: 2, iB: 1, vA: 1, vB: 2, pen: 'B' }
 ];
-for (const t of SD_F3_IDA) SD_KO_PART_REAL[sdKoKey(t.a, t.b)] = { a: t.a, b: t.b, iA: t.iA, iB: t.iB, vA: null, vB: null };
+for (const t of SD_F3_REAL) {
+  if (t.vA == null || t.vB == null) {
+    SD_KO_PART_REAL[sdKoKey(t.a, t.b)] = { a: t.a, b: t.b, iA: t.iA, iB: t.iB, vA: null, vB: null };
+    continue;
+  }
+  const aggA = t.iA + t.vA, aggB = t.iB + t.vB;
+  const w = aggA > aggB ? t.a : aggB > aggA ? t.b : t.pen === 'A' ? t.a : t.b;
+  const k0 = [t.a, t.b].sort()[0];
+  SD_KO_REAL[sdKoKey(t.a, t.b)] = { w, ga: k0 === t.a ? aggA : aggB, gb: k0 === t.a ? aggB : aggA, pen: aggA === aggB };
+}
 const genGrpTab = g => {
   const n = g.length,
     j = [],
@@ -15178,8 +15197,8 @@ const SD_C_CODES = ['C01','C02','C03','C04','C05','C06','C07','C08','C09','C10',
 const SD_D_CODES = ['D01','D02','D03','D04','D05','D06','D07','D08'];
 const SD_BRK_PHASES = [
   { key: 'f2', label: '2ª Fase', date: '21/06 e 27-28/06', codes: ['B01','B02','B03','B04','B05','B06','B07','B08','B09','B10','B11','B12','B13','B14','B15','B16','B17','B18','B19','B20','B21','B22','B23','B24','B25','B26','B27','B28','B29','B30','B31','B32'] },
-  { key: 'f3', label: '3ª Fase', date: '05 e 12/07', codes: ['C01','C02','C03','C04','C05','C06','C07','C08','C09','C10','C11','C12','C13','C14','C15','C16'] },
-  { key: 'f4', label: 'Oitavas (4ª Fase)', date: '19 e 26/07', codes: ['D01','D02','D03','D04','D05','D06','D07','D08'] },
+  { key: 'f3', label: '3ª Fase', date: '04-06 e 11-13/07', codes: ['C01','C02','C03','C04','C05','C06','C07','C08','C09','C10','C11','C12','C13','C14','C15','C16'] },
+  { key: 'f4', label: 'Oitavas (4ª Fase)', date: '18-19 e 25-26/07', codes: ['D01','D02','D03','D04','D05','D06','D07','D08'] },
   { key: 'f5', label: 'Quartas (5ª Fase) · reseed por campanha', date: '08 e 15/08', codes: ['E01','E02','E03','E04'] },
   { key: 'f6', label: 'Semifinal', date: '23 e 30/08', codes: ['F01','F02'] },
   { key: 'f7', label: 'Final', date: '06 e 13/09', codes: ['G01'] }
@@ -15197,8 +15216,12 @@ function SerieDBracket({ rMC }) {
       if (t.pen) e.pen = (t.w === t.a ? 'A' : 'B');
       d[t.code] = e;
     }
-    // 3ª fase: idas oficiais (orientação conferida — mandante do PDF = ordIda por campanha).
-    for (const t of SD_F3_IDA) d[t.code] = { iA: t.iA, iB: t.iB };
+    // 3ª fase: resultados oficiais (orientação conferida — mandante do PDF = ordIda por campanha).
+    for (const t of SD_F3_REAL) {
+      const e = { iA: t.iA, iB: t.iB };
+      if (t.vA != null) { e.vA = t.vA; e.vB = t.vB; if (t.pen) e.pen = t.pen; }
+      d[t.code] = e;
+    }
     return d;
   }, [f2map]);
   const [res, setRes] = useState(() => {
@@ -18763,7 +18786,7 @@ function SimuladorUnificado() {
     className: "text-[10px] text-blue-400 hover:text-blue-300 shrink-0"
   }, "fonte")))))), /*#__PURE__*/React.createElement("div", {
     className: "mt-4 text-center text-slate-500 text-xs"
-  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R16+) | C:", SC_RES.length, " (R13) | D:", SD_RES.length, " (grupos) + mata-mata | Copa BR: R16 (edit\xE1vel) | v4.57 \u2014 selo e log das atualiza\xE7\xF5es autom\xE1ticas"))));
+  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R16+) | C:", SC_RES.length, " (R13) | D:", SD_RES.length, " (grupos) + mata-mata | Copa BR: R16 (edit\xE1vel) | v4.58 \u2014 3\xAA fase da S\xE9rie D completa, oitavas definidas"))));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(SimuladorUnificado));
 </script>
