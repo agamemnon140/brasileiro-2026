@@ -31,7 +31,15 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.58
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.59
+// v4.59 (17/07/2026): SÉRIE D NO ESCOPO DA AUTOMAÇÃO — fetch_tables.mjs agora baixa também
+//        o PDF da D e extrai as pernas de MATA-MATA (código GR, ida/volta, pênaltis) para o
+//        campo ko_d do results.json (pula o que já está embutido via parse de SD_F2_REAL/
+//        SD_F3_REAL — manter esses parses ao consolidar fases novas). O app converte ko_d
+//        nos overlays SD_KO_AUTO (confronto completo) e SD_KO_PART_AUTO (perna parcial, MC
+//        fixa a perna conhecida) com precedência usuário > embutido > automação; pernas
+//        também viram defaults do bracket (assunção: mandante da ida = ordIda) e entram no
+//        selo do topo e no log da aba Config ("D01·i"). (Port ao .jsx pendente.)
 // v4.58 (17/07/2026): 3ª fase da Série D COMPLETA (voltas 11-13/07, Tabela Detalhada CBF
 //        14/07): SD_F3_IDA vira SD_F3_REAL (ida+volta+pênaltis) — confrontos completos
 //        entram no SD_KO_REAL (com zebras: Goiatuba elimina Manauara nos pênaltis, Gama
@@ -7885,13 +7893,44 @@ const sdKoKey = (a, b) => [a, b].sort().join('|');
 const SD_KO_REAL = {}; // preenchido a partir de SD_F2_REAL logo após sua definição (v4.54)
 // SD_KO_USER: overlay das EDIÇÕES do usuário no bracket (localStorage), tem prioridade sobre o oficial.
 let SD_KO_USER = {};
-const sdKoReal = (a, b) => SD_KO_USER[sdKoKey(a, b)] || SD_KO_REAL[sdKoKey(a, b)] || null;
+// SD_KO_AUTO (v4.59): resultados de mata-mata vindos da AUTOMAÇÃO (campo ko_d do results.json).
+// Precedência: edições do usuário > dados embutidos no app > automação.
+let SD_KO_AUTO = {};
+const sdKoReal = (a, b) => SD_KO_USER[sdKoKey(a, b)] || SD_KO_REAL[sdKoKey(a, b)] || SD_KO_AUTO[sdKoKey(a, b)] || null;
 // Confrontos PARCIAIS (só ida ou só volta conhecida): a perna conhecida fica FIXA e o MC
 // simula apenas a perna faltante (90 min, mando correto), em vez do agregado integrado de 180.
 // Shape: { a, b, iA, iB, vA, vB } — a = mandante da ida; campos null = perna a simular.
 let SD_KO_PART_USER = {};
+let SD_KO_PART_AUTO = {};
 let SD_KO_PART_REAL = {}; // preenchido pelos jogos de ida REAIS (ex.: 3ª fase) quando a volta está pendente
-const sdKoPart = (a, b) => SD_KO_PART_USER[sdKoKey(a, b)] || SD_KO_PART_REAL[sdKoKey(a, b)] || null;
+const sdKoPart = (a, b) => SD_KO_PART_USER[sdKoKey(a, b)] || SD_KO_PART_AUTO[sdKoKey(a, b)] || SD_KO_PART_REAL[sdKoKey(a, b)] || null;
+// Converte as pernas do ko_d (results.json) nos overlays AUTO. Confronto com as duas pernas →
+// vencedor determinístico (pênaltis da volta decidem empate no agregado); uma perna → parcial.
+function applySdKoAuto(rows) {
+  SD_KO_AUTO = {};
+  SD_KO_PART_AUTO = {};
+  const byCode = {};
+  for (const r of rows || []) {
+    if (!r || !r.code || !r.leg || !r.mand || !r.vis) continue;
+    (byCode[r.code] = byCode[r.code] || {})[r.leg] = r;
+  }
+  for (const code in byCode) {
+    const ida = byCode[code].ida, volta = byCode[code].volta;
+    const a = ida ? ida.mand : volta.vis; // mandante da ida
+    const b = ida ? ida.vis : volta.mand;
+    if (!a || !b || a === b) continue;
+    const k = sdKoKey(a, b);
+    if (ida && volta) {
+      const aggA = ida.gm + volta.gv, aggB = ida.gv + volta.gm;
+      let w = aggA > aggB ? a : aggB > aggA ? b : null;
+      if (!w && volta.pen_m != null && volta.pen_v != null) w = volta.pen_m > volta.pen_v ? b : a;
+      if (!w) { SD_KO_PART_AUTO[k] = { a, b, iA: ida.gm, iB: ida.gv, vA: volta.gv, vB: volta.gm }; continue; }
+      const k0 = [a, b].sort()[0];
+      SD_KO_AUTO[k] = { w, ga: k0 === a ? aggA : aggB, gb: k0 === a ? aggB : aggA, pen: aggA === aggB };
+    } else if (ida) SD_KO_PART_AUTO[k] = { a, b, iA: ida.gm, iB: ida.gv, vA: null, vB: null };
+    else SD_KO_PART_AUTO[k] = { a, b, iA: null, iB: null, vA: volta.gv, vB: volta.gm };
+  }
+}
 // Resolve as edições do usuário (por code) em um overlay por par-ordenado {w,ga,gb,pen}.
 function sdBracketResolve(edits) {
   edits = edits || {};
@@ -7909,7 +7948,7 @@ function sdBracketResolve(edits) {
     const tm = teamsOf(code); if (!tm[0] || !tm[1]) return null;
     const r = edits[code] || {};
     if (r.iA == null || r.iB == null || r.vA == null || r.vB == null) {
-      const off = SD_KO_REAL[sdKoKey(tm[0], tm[1])];
+      const off = SD_KO_REAL[sdKoKey(tm[0], tm[1])] || SD_KO_AUTO[sdKoKey(tm[0], tm[1])];
       return off ? off.w : null;
     }
     const aA = r.iA + r.vA, aB = r.iB + r.vB;
@@ -15204,7 +15243,7 @@ const SD_BRK_PHASES = [
   { key: 'f7', label: 'Final', date: '06 e 13/09', codes: ['G01'] }
 ];
 
-function SerieDBracket({ rMC }) {
+function SerieDBracket({ rMC, koAuto }) {
   const [view, setView] = useState('lista');
   const f2map = useMemo(() => { const m = {}; for (const t of SD_F2_REAL) m[t.code] = t; return m; }, []);
   const defaults = useMemo(() => {
@@ -15222,8 +15261,22 @@ function SerieDBracket({ rMC }) {
       if (t.vA != null) { e.vA = t.vA; e.vB = t.vB; if (t.pen) e.pen = t.pen; }
       d[t.code] = e;
     }
+    // v4.59: pernas vindas da AUTOMAÇÃO (results.json ko_d) para fases ainda não embutidas.
+    // Assunção (conferida nas fases anteriores): mandante da ida oficial = tm[0] (ordIda por campanha).
+    if (koAuto && koAuto.length) {
+      const byCode = {};
+      koAuto.forEach(r => { if (r && r.code && r.leg) (byCode[r.code] = byCode[r.code] || {})[r.leg] = r; });
+      for (const code in byCode) {
+        if (d[code]) continue; // dado embutido no app tem prioridade sobre a automação
+        const ida = byCode[code].ida, volta = byCode[code].volta;
+        const e = {};
+        if (ida) { e.iA = ida.gm; e.iB = ida.gv; }
+        if (volta) { e.vA = volta.gv; e.vB = volta.gm; if (volta.pen_m != null && volta.pen_v != null) e.pen = volta.pen_m > volta.pen_v ? 'B' : 'A'; }
+        if (ida || volta) d[code] = e;
+      }
+    }
     return d;
-  }, [f2map]);
+  }, [f2map, koAuto]);
   const [res, setRes] = useState(() => {
     let saved = {};
     try { saved = JSON.parse(localStorage.getItem('simUni_sdMM') || '{}'); } catch (e) {}
@@ -15380,7 +15433,8 @@ function SerieDSim({
   initialAk,
   initialEo,
   initialDrift,
-  extraRes
+  extraRes,
+  koAuto
 }) {
   const [aba, setAba] = useState('ratings');
   const [nS, setNS] = useState(500);
@@ -15894,7 +15948,8 @@ function SerieDSim({
       })));
     }));
   })()), aba === 'bracket' && /*#__PURE__*/React.createElement(SerieDBracket, {
-    rMC: rMC
+    rMC: rMC,
+    koAuto: koAuto
   }), aba === 'geral' && /*#__PURE__*/React.createElement("div", {
     className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"
   }, /*#__PURE__*/React.createElement("h2", {
@@ -18247,12 +18302,15 @@ function SimuladorUnificado() {
     }).then(r => r.ok ? r.json() : null).then(d => {
       if (cancelled || !d) return; // 404 no 1º deploy => no-op
       const arr = Array.isArray(d) ? d : d && d.results;
+      const koD = !Array.isArray(d) && Array.isArray(d.ko_d) ? d.ko_d : [];
       if (Array.isArray(arr)) {
         setResMeta({
           updatedAt: !Array.isArray(d) && d.updated_at || null,
-          results: arr
+          results: arr,
+          koD
         });
         if (arr.length) handleSearchResults(arr);
+        applySdKoAuto(koD); // v4.59: mata-mata da D vindo da automação → overlays do chaveamento
       }
     }).catch(() => {}).finally(() => {
       clearTimeout(failsafe);
@@ -18464,7 +18522,7 @@ function SimuladorUnificado() {
     month: '2-digit',
     hour: '2-digit',
     minute: '2-digit'
-  }), " \xB7 ", resMeta.results.length, " resultado(s) via automa\xE7\xE3o"), /*#__PURE__*/React.createElement("div", {
+  }), " \xB7 ", resMeta.results.length + (resMeta.koD ? resMeta.koD.length : 0), " resultado(s) via automa\xE7\xE3o"), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-center gap-2 mt-2 flex-wrap"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1 bg-slate-800/60 rounded-lg px-2 py-1 border border-slate-700",
@@ -18716,7 +18774,8 @@ function SimuladorUnificado() {
     initialAk: dash?.ak,
     initialEo: dash?.eo,
     initialDrift: dash?.drift,
-    extraRes: fetchedRes.D
+    extraRes: fetchedRes.D,
+    koAuto: resMeta ? resMeta.koD : null
   }), tab === 'copaBR' && /*#__PURE__*/React.createElement(CopaBrasilSim, {
     cfg: cfg,
     allElos: allElos,
@@ -18747,24 +18806,33 @@ function SimuladorUnificado() {
     className: "text-base font-semibold text-emerald-300 mb-1"
   }, "\ud83d\udce1 Atualiza\xE7\xF5es autom\xE1ticas \u2014 Tabelas CBF"), /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-slate-500 mb-2 italic"
-  }, "Toda sexta a automa\xE7\xE3o baixa as Tabelas Detalhadas oficiais da CBF e publica no results.json os jogos da FASE DE LIGA de A/B/C que ainda n\xE3o est\xE3o embutidos no app. Mata-mata da S\xE9rie D e Copa do Brasil entram por atualiza\xE7\xE3o versionada do app, n\xE3o por aqui."), !resMeta ? /*#__PURE__*/React.createElement("p", {
+  }, "Toda sexta a automa\xE7\xE3o baixa as Tabelas Detalhadas oficiais da CBF e publica no results.json os jogos da FASE DE LIGA de A/B/C e as pernas de MATA-MATA da S\xE9rie D (ex.: D01\xB7i = ida do confronto D01) que ainda n\xE3o est\xE3o embutidos no app. Copa do Brasil segue por atualiza\xE7\xE3o versionada do app."), !resMeta ? /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-400"
   }, "results.json ainda n\xE3o carregado nesta sess\xE3o (offline, file:// ou primeiro deploy).") : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-300 mb-2"
   }, "\xDAltima execu\xE7\xE3o: ", /*#__PURE__*/React.createElement("span", {
     className: "font-mono text-emerald-300"
-  }, resMeta.updatedAt ? new Date(resMeta.updatedAt).toLocaleString('pt-BR') : '\u2014'), " \xB7 ", resMeta.results.length, " resultado(s) acumulados"), resMeta.results.length === 0 ? /*#__PURE__*/React.createElement("p", {
+  }, resMeta.updatedAt ? new Date(resMeta.updatedAt).toLocaleString('pt-BR') : '\u2014'), " \xB7 ", resMeta.results.length + (resMeta.koD ? resMeta.koD.length : 0), " resultado(s) acumulados"), resMeta.results.length + (resMeta.koD ? resMeta.koD.length : 0) === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500"
   }, "Nenhuma inser\xE7\xE3o ainda \u2014 tudo que os PDFs trazem j\xE1 est\xE1 embutido no app.") : /*#__PURE__*/React.createElement("div", {
     className: "space-y-0.5 max-h-[320px] overflow-y-auto"
-  }, [...resMeta.results].sort((a, b) => new Date(b.confirmed_at || 0) - new Date(a.confirmed_at || 0)).map((r, i) => /*#__PURE__*/React.createElement("div", {
+  }, [...resMeta.results, ...(resMeta.koD || []).map(r => ({
+    serie: 'D',
+    rodada: r.code + (r.leg === 'ida' ? '\xB7i' : '\xB7v'),
+    casa: r.mand,
+    gc: r.gm,
+    gf: r.gv,
+    fora: r.vis,
+    confirmed_at: r.confirmed_at,
+    source: r.source
+  }))].sort((a, b) => new Date(b.confirmed_at || 0) - new Date(a.confirmed_at || 0)).map((r, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     className: "flex items-center gap-2 text-xs bg-slate-700/30 rounded p-1.5 flex-wrap"
   }, /*#__PURE__*/React.createElement("span", {
     className: "font-mono text-emerald-400 w-5 shrink-0"
   }, r.serie), /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-500 w-8 shrink-0 font-mono"
-  }, "R", r.rodada), /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-500 w-10 shrink-0 font-mono"
+  }, typeof r.rodada === 'number' ? 'R' + r.rodada : r.rodada), /*#__PURE__*/React.createElement("span", {
     className: "flex-1 min-w-[180px]"
   }, /*#__PURE__*/React.createElement(TN, {
     name: r.casa
@@ -18786,7 +18854,7 @@ function SimuladorUnificado() {
     className: "text-[10px] text-blue-400 hover:text-blue-300 shrink-0"
   }, "fonte")))))), /*#__PURE__*/React.createElement("div", {
     className: "mt-4 text-center text-slate-500 text-xs"
-  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R16+) | C:", SC_RES.length, " (R13) | D:", SD_RES.length, " (grupos) + mata-mata | Copa BR: R16 (edit\xE1vel) | v4.58 \u2014 3\xAA fase da S\xE9rie D completa, oitavas definidas"))));
+  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R16+) | C:", SC_RES.length, " (R13) | D:", SD_RES.length, " (grupos) + mata-mata | Copa BR: R16 (edit\xE1vel) | v4.59 \u2014 mata-mata da S\xE9rie D no escopo da automa\xE7\xE3o"))));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(SimuladorUnificado));
 </script>
