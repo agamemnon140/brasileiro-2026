@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "updated_at": "2026-07-18T01:34:53.643Z",
+  "updated_at": "2026-07-24T11:07:03.645Z",
   "results": [
     {
       "serie": "B",
@@ -231,7 +231,352 @@
       "fora": "Náutico",
       "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_17_07_0e6d2b42f8.pdf",
       "confirmed_at": "2026-07-18T00:40:30.443Z"
+    },
+    {
+      "serie": "A",
+      "rodada": 4,
+      "casa": "Bahia",
+      "gc": 2,
+      "gf": 0,
+      "fora": "Chapecoense",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_BSA_2026_23_07_02aac8e204.pdf",
+      "confirmed_at": "2026-07-24T11:04:07.566Z"
+    },
+    {
+      "serie": "A",
+      "rodada": 19,
+      "casa": "Fluminense",
+      "gc": 1,
+      "gf": 1,
+      "fora": "Red Bull Bragantino",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_BSA_2026_23_07_02aac8e204.pdf",
+      "confirmed_at": "2026-07-24T11:04:07.567Z"
+    },
+    {
+      "serie": "A",
+      "rodada": 19,
+      "casa": "Mirassol",
+      "gc": 2,
+      "gf": 1,
+      "fora": "Grêmio",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_BSA_2026_23_07_02aac8e204.pdf",
+      "confirmed_at": "2026-07-24T11:04:07.567Z"
+    },
+    {
+      "serie": "A",
+      "rodada": 19,
+      "casa": "Atlético-MG",
+      "gc": 1,
+      "gf": 1,
+      "fora": "Bahia",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_BSA_2026_23_07_02aac8e204.pdf",
+      "confirmed_at": "2026-07-24T11:04:07.567Z"
+    },
+    {
+      "serie": "A",
+      "rodada": 19,
+      "casa": "Coritiba",
+      "gc": 1,
+      "gf": 3,
+      "fora": "Palmeiras",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_BSA_2026_23_07_02aac8e204.pdf",
+      "confirmed_at": "2026-07-24T11:04:07.567Z"
+    },
+    {
+      "serie": "A",
+      "rodada": 19,
+      "casa": "São Paulo",
+      "gc": 1,
+      "gf": 2,
+      "fora": "Athletico-PR",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_BSA_2026_23_07_02aac8e204.pdf",
+      "confirmed_at": "2026-07-24T11:04:07.567Z"
+    },
+    {
+      "serie": "A",
+      "rodada": 19,
+      "casa": "Internacional",
+      "gc": 1,
+      "gf": 2,
+      "fora": "Cruzeiro",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_BSA_2026_23_07_02aac8e204.pdf",
+      "confirmed_at": "2026-07-24T11:04:07.567Z"
+    },
+    {
+      "serie": "A",
+      "rodada": 19,
+      "casa": "Chapecoense",
+      "gc": 0,
+      "gf": 4,
+      "fora": "Flamengo",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_BSA_2026_23_07_02aac8e204.pdf",
+      "confirmed_at": "2026-07-24T11:04:07.567Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 18,
+      "casa": "São Bernardo",
+      "gc": 1,
+      "gf": 1,
+      "fora": "Avaí",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_23_07_385b43013f.pdf",
+      "confirmed_at": "2026-07-24T11:05:11.553Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 18,
+      "casa": "América-MG",
+      "gc": 1,
+      "gf": 1,
+      "fora": "Ceará",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_23_07_385b43013f.pdf",
+      "confirmed_at": "2026-07-24T11:05:11.553Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 18,
+      "casa": "Juventude",
+      "gc": 2,
+      "gf": 0,
+      "fora": "Cuiabá",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_23_07_385b43013f.pdf",
+      "confirmed_at": "2026-07-24T11:05:11.553Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 18,
+      "casa": "Londrina",
+      "gc": 0,
+      "gf": 0,
+      "fora": "Botafogo-SP",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_23_07_385b43013f.pdf",
+      "confirmed_at": "2026-07-24T11:05:11.553Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 18,
+      "casa": "Fortaleza",
+      "gc": 1,
+      "gf": 0,
+      "fora": "Novorizontino",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_23_07_385b43013f.pdf",
+      "confirmed_at": "2026-07-24T11:05:11.553Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 18,
+      "casa": "Ponte Preta",
+      "gc": 1,
+      "gf": 2,
+      "fora": "Goiás",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_23_07_385b43013f.pdf",
+      "confirmed_at": "2026-07-24T11:05:11.553Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 18,
+      "casa": "Criciúma",
+      "gc": 2,
+      "gf": 0,
+      "fora": "Vila Nova",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_23_07_385b43013f.pdf",
+      "confirmed_at": "2026-07-24T11:05:11.553Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 18,
+      "casa": "Sport",
+      "gc": 2,
+      "gf": 2,
+      "fora": "Operário-PR",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_23_07_385b43013f.pdf",
+      "confirmed_at": "2026-07-24T11:05:11.553Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 18,
+      "casa": "Atlético-GO",
+      "gc": 0,
+      "gf": 0,
+      "fora": "Athletic",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_23_07_385b43013f.pdf",
+      "confirmed_at": "2026-07-24T11:05:11.553Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 19,
+      "casa": "Novorizontino",
+      "gc": 0,
+      "gf": 1,
+      "fora": "Criciúma",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_23_07_385b43013f.pdf",
+      "confirmed_at": "2026-07-24T11:05:11.553Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 19,
+      "casa": "Avaí",
+      "gc": 2,
+      "gf": 1,
+      "fora": "América-MG",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_23_07_385b43013f.pdf",
+      "confirmed_at": "2026-07-24T11:05:11.553Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 19,
+      "casa": "Vila Nova",
+      "gc": 2,
+      "gf": 1,
+      "fora": "Fortaleza",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_23_07_385b43013f.pdf",
+      "confirmed_at": "2026-07-24T11:05:11.553Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 19,
+      "casa": "Operário-PR",
+      "gc": 3,
+      "gf": 2,
+      "fora": "Ponte Preta",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_23_07_385b43013f.pdf",
+      "confirmed_at": "2026-07-24T11:05:11.553Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 19,
+      "casa": "Ceará",
+      "gc": 0,
+      "gf": 1,
+      "fora": "CRB",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_23_07_385b43013f.pdf",
+      "confirmed_at": "2026-07-24T11:05:11.553Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 19,
+      "casa": "Goiás",
+      "gc": 1,
+      "gf": 1,
+      "fora": "Sport",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_23_07_385b43013f.pdf",
+      "confirmed_at": "2026-07-24T11:05:11.553Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 19,
+      "casa": "Náutico",
+      "gc": 2,
+      "gf": 1,
+      "fora": "Londrina",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_23_07_385b43013f.pdf",
+      "confirmed_at": "2026-07-24T11:05:11.553Z"
     }
   ],
-  "ko_d": []
+  "ko_d": [
+    {
+      "code": "D01",
+      "leg": "ida",
+      "data": "18/07",
+      "mand": "Goiatuba",
+      "gm": 3,
+      "gv": 0,
+      "vis": "Ferroviário",
+      "pen_m": null,
+      "pen_v": null,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_D_2026_20_07_cb1a723cba.pdf",
+      "confirmed_at": "2026-07-24T11:07:03.635Z"
+    },
+    {
+      "code": "D02",
+      "leg": "ida",
+      "data": "19/07",
+      "mand": "América-RN",
+      "gm": 1,
+      "gv": 0,
+      "vis": "Gama",
+      "pen_m": null,
+      "pen_v": null,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_D_2026_20_07_cb1a723cba.pdf",
+      "confirmed_at": "2026-07-24T11:07:03.635Z"
+    },
+    {
+      "code": "D03",
+      "leg": "ida",
+      "data": "18/07",
+      "mand": "Luverdense",
+      "gm": 0,
+      "gv": 0,
+      "vis": "ABC",
+      "pen_m": null,
+      "pen_v": null,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_D_2026_20_07_cb1a723cba.pdf",
+      "confirmed_at": "2026-07-24T11:07:03.635Z"
+    },
+    {
+      "code": "D04",
+      "leg": "ida",
+      "data": "18/07",
+      "mand": "Nacional-AM",
+      "gm": 1,
+      "gv": 1,
+      "vis": "Iguatu",
+      "pen_m": null,
+      "pen_v": null,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_D_2026_20_07_cb1a723cba.pdf",
+      "confirmed_at": "2026-07-24T11:07:03.635Z"
+    },
+    {
+      "code": "D05",
+      "leg": "ida",
+      "data": "18/07",
+      "mand": "São José-RS",
+      "gm": 2,
+      "gv": 1,
+      "vis": "Treze",
+      "pen_m": null,
+      "pen_v": null,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_D_2026_20_07_cb1a723cba.pdf",
+      "confirmed_at": "2026-07-24T11:07:03.635Z"
+    },
+    {
+      "code": "D06",
+      "leg": "ida",
+      "data": "18/07",
+      "mand": "Uberlândia",
+      "gm": 2,
+      "gv": 0,
+      "vis": "Portuguesa-SP",
+      "pen_m": null,
+      "pen_v": null,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_D_2026_20_07_cb1a723cba.pdf",
+      "confirmed_at": "2026-07-24T11:07:03.635Z"
+    },
+    {
+      "code": "D07",
+      "leg": "ida",
+      "data": "19/07",
+      "mand": "São Luiz-RS",
+      "gm": 0,
+      "gv": 0,
+      "vis": "CSA",
+      "pen_m": null,
+      "pen_v": null,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_D_2026_20_07_cb1a723cba.pdf",
+      "confirmed_at": "2026-07-24T11:07:03.635Z"
+    },
+    {
+      "code": "D08",
+      "leg": "ida",
+      "data": "18/07",
+      "mand": "Cianorte",
+      "gm": 0,
+      "gv": 1,
+      "vis": "ASA",
+      "pen_m": null,
+      "pen_v": null,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_D_2026_20_07_cb1a723cba.pdf",
+      "confirmed_at": "2026-07-24T11:07:03.635Z"
+    }
+  ]
 }
