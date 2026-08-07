@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "updated_at": "2026-07-31T11:33:08.469Z",
+  "updated_at": "2026-08-07T10:05:05.646Z",
   "results": [
     {
       "serie": "B",
@@ -761,6 +761,126 @@
       "fora": "Botafogo-SP",
       "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_30_07_6cbbba4340.pdf",
       "confirmed_at": "2026-07-31T11:31:12.395Z"
+    },
+    {
+      "serie": "A",
+      "rodada": 21,
+      "casa": "Corinthians",
+      "gc": 0,
+      "gf": 0,
+      "fora": "Athletico-PR",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_BSA_2026_05_08_2946c8341e.pdf",
+      "confirmed_at": "2026-08-07T10:02:02.536Z"
+    },
+    {
+      "serie": "A",
+      "rodada": 21,
+      "casa": "Coritiba",
+      "gc": 0,
+      "gf": 1,
+      "fora": "Cruzeiro",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_BSA_2026_05_08_2946c8341e.pdf",
+      "confirmed_at": "2026-08-07T10:02:02.536Z"
+    },
+    {
+      "serie": "C",
+      "rodada": 15,
+      "casa": "Ferroviária",
+      "gc": 0,
+      "gf": 0,
+      "fora": "Maranhão",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_05_08_dcbcfe0de1.pdf",
+      "confirmed_at": "2026-08-07T10:04:02.468Z"
+    },
+    {
+      "serie": "C",
+      "rodada": 15,
+      "casa": "Santa Cruz",
+      "gc": 0,
+      "gf": 1,
+      "fora": "Figueirense",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_05_08_dcbcfe0de1.pdf",
+      "confirmed_at": "2026-08-07T10:04:02.468Z"
+    },
+    {
+      "serie": "C",
+      "rodada": 15,
+      "casa": "Confiança",
+      "gc": 1,
+      "gf": 1,
+      "fora": "Itabaiana",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_05_08_dcbcfe0de1.pdf",
+      "confirmed_at": "2026-08-07T10:04:02.468Z"
+    },
+    {
+      "serie": "C",
+      "rodada": 15,
+      "casa": "Volta Redonda",
+      "gc": 1,
+      "gf": 4,
+      "fora": "Anápolis",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_05_08_dcbcfe0de1.pdf",
+      "confirmed_at": "2026-08-07T10:04:02.468Z"
+    },
+    {
+      "serie": "C",
+      "rodada": 15,
+      "casa": "Brusque",
+      "gc": 1,
+      "gf": 0,
+      "fora": "Ituano",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_05_08_dcbcfe0de1.pdf",
+      "confirmed_at": "2026-08-07T10:04:02.468Z"
+    },
+    {
+      "serie": "C",
+      "rodada": 15,
+      "casa": "Ypiranga",
+      "gc": 1,
+      "gf": 0,
+      "fora": "Barra",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_05_08_dcbcfe0de1.pdf",
+      "confirmed_at": "2026-08-07T10:04:02.468Z"
+    },
+    {
+      "serie": "C",
+      "rodada": 15,
+      "casa": "Caxias",
+      "gc": 1,
+      "gf": 2,
+      "fora": "Botafogo-PB",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_05_08_dcbcfe0de1.pdf",
+      "confirmed_at": "2026-08-07T10:04:02.468Z"
+    },
+    {
+      "serie": "C",
+      "rodada": 15,
+      "casa": "Amazonas",
+      "gc": 2,
+      "gf": 1,
+      "fora": "Paysandu",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_05_08_dcbcfe0de1.pdf",
+      "confirmed_at": "2026-08-07T10:04:02.468Z"
+    },
+    {
+      "serie": "C",
+      "rodada": 15,
+      "casa": "Guarani",
+      "gc": 3,
+      "gf": 1,
+      "fora": "Inter de Limeira",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_05_08_dcbcfe0de1.pdf",
+      "confirmed_at": "2026-08-07T10:04:02.468Z"
+    },
+    {
+      "serie": "C",
+      "rodada": 15,
+      "casa": "Floresta",
+      "gc": 1,
+      "gf": 1,
+      "fora": "Maringá",
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_05_08_dcbcfe0de1.pdf",
+      "confirmed_at": "2026-08-07T10:04:02.468Z"
     }
   ],
   "ko_d": [
