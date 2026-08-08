@@ -1,6 +1,12 @@
 {
   "schema": 2,
   "updated_at": "2026-08-07T10:05:05.646Z",
+  "last_run": {
+    "at": "2026-08-07T10:05:05.646Z",
+    "added": 12,
+    "ko_added": 0,
+    "total_new": 12
+  },
   "results": [
     {
       "serie": "B",
