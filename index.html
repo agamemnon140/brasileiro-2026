@@ -18306,6 +18306,7 @@ function SimuladorUnificado() {
       if (Array.isArray(arr)) {
         setResMeta({
           updatedAt: !Array.isArray(d) && d.updated_at || null,
+          lastRun: !Array.isArray(d) && d.last_run || null,
           results: arr,
           koD
         });
@@ -18516,13 +18517,13 @@ function SimuladorUnificado() {
     className: "text-slate-400 text-xs mt-1"
   }, "Motor unificado | Poisson + ELO + ATK/DEF | Config: total+pesoCasa"), resMeta && resMeta.updatedAt && /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-emerald-400/70 mt-0.5",
-    title: "Última execução da automação que baixa as Tabelas Detalhadas da CBF (fase de liga A/B/C). Log completo na aba Config."
+    title: "Última execução da automação que baixa as Tabelas Detalhadas da CBF (fase de liga A/B/C). Total acumulado via automação: " + (resMeta.results.length + (resMeta.koD ? resMeta.koD.length : 0)) + " resultado(s). Log completo na aba Config."
   }, "📡 Tabelas CBF atualizadas em ", new Date(resMeta.updatedAt).toLocaleString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     hour: '2-digit',
     minute: '2-digit'
-  }), " \xB7 ", resMeta.results.length + (resMeta.koD ? resMeta.koD.length : 0), " resultado(s) via automa\xE7\xE3o"), /*#__PURE__*/React.createElement("div", {
+  }), " \xB7 ", resMeta.lastRun && typeof resMeta.lastRun.total_new === 'number' ? '+' + resMeta.lastRun.total_new + ' novo(s) nesta atualiza\xE7\xE3o' : (resMeta.results.length + (resMeta.koD ? resMeta.koD.length : 0)) + ' resultado(s) via automa\xE7\xE3o'), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-center gap-2 mt-2 flex-wrap"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1 bg-slate-800/60 rounded-lg px-2 py-1 border border-slate-700",
