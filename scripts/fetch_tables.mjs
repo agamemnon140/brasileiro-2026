@@ -357,8 +357,12 @@ async function main() {
   console.log(`Resumo: +${added} liga + ${koAdded} mata-mata D novos, ${unchanged + koUnchanged} iguais, ${skippedBuiltIn + koSkipped} já embutidos no app, ${conflicts.length} conflito(s).`);
   if (canon(merged) === canon(existing) && canonKo(mergedKo) === canonKo(existingKo)) { console.log('Sem mudanças em results.json.'); return; }
 
-  await writeFile(RESULTS_PATH, JSON.stringify({ schema: 2, updated_at: new Date().toISOString(), results: merged, ko_d: mergedKo }, null, 2) + '\n', 'utf8');
-  console.log(`results.json atualizado (${merged.length} resultado(s) de liga + ${mergedKo.length} perna(s) de mata-mata D).`);
+  // last_run: quantos jogos ESTA execução acrescentou, para o selo do app mostrar o
+  // delta em vez do acumulado. Só é escrito quando houve mudança (o return acima corta
+  // execuções sem novidade), então ele sempre descreve a última atualização efetiva.
+  const lastRun = { at: new Date().toISOString(), added: added, ko_added: koAdded, total_new: added + koAdded };
+  await writeFile(RESULTS_PATH, JSON.stringify({ schema: 2, updated_at: new Date().toISOString(), last_run: lastRun, results: merged, ko_d: mergedKo }, null, 2) + '\n', 'utf8');
+  console.log(`results.json atualizado (${merged.length} resultado(s) de liga + ${mergedKo.length} perna(s) de mata-mata D; last_run.total_new=${lastRun.total_new}).`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
