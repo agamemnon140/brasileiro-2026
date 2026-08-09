@@ -72,8 +72,12 @@ async function fetchWithFallback(url, kind) {
   }
 }
 
+// Copa do Brasil: slug próprio no CMS. Tem vizinhos-armadilha com o mesmo prefixo
+// (copa-do-brasil/sub-15/2026, .../feminino/2026), então o filtro é por slug EXATO.
+const CB_SLUG = 'copa-do-brasil/masculino/2026';
+
 async function findPdfUrl(serie) {
-  const slug = `campeonato-brasileiro/serie-${serie.toLowerCase()}/2026`;
+  const slug = serie === 'CB' ? CB_SLUG : `campeonato-brasileiro/serie-${serie.toLowerCase()}/2026`;
   const qs = new URLSearchParams({
     'filters[slug][$eq]': slug,
     'filters[type][$eq]': 'Complemento de Tabela',
@@ -236,6 +240,49 @@ async function loadBuiltInDates() {
 }
 
 // ---------------------------------------------------------------------------
+// Copa do Brasil — OITAVAS (R16). A R32 já está 100% oficial e embutida
+// (CB_RES_IDA/VOLTA). O app indexa as oitavas por POSIÇÃO em CB_R16_PAIRS, com
+// {g1a,g1b} = ida (a manda) e {g2a,g2b} = volta (b manda; g2a são os gols de a).
+// Aqui só extraímos por NOME; quem resolve a posição e a orientação é o app, que
+// é dono de CB_R16_PAIRS — assim o scraper não duplica o chaveamento.
+// ---------------------------------------------------------------------------
+async function loadCbPairs() {
+  try {
+    const src = await readFile(APP_HTML_PATH, 'utf8');
+    const m = src.match(/const CB_R16_PAIRS = (\[[\s\S]*?\]);/);
+    if (!m) return [];
+    return new Function('return ' + m[1])();
+  } catch (e) {
+    console.error(`::warning::não consegui ler CB_R16_PAIRS do app: ${e.message}`);
+    return [];
+  }
+}
+
+function buildCbPrompt(names) {
+  return [
+    `Este PDF é a Tabela Detalhada oficial da CBF da Copa do Brasil 2026.`,
+    `Extraia APENAS os jogos das OITAVAS DE FINAL (16 avos já foram; ignore fases anteriores e posteriores) que JÁ TÊM PLACAR preenchido.`,
+    `Use EXATAMENTE estes nomes de times: ${names.join(', ')}.`,
+    `Cada confronto tem ida e volta. Responda APENAS com um array JSON no formato:`,
+    `[{"casa":"...","gc":0,"gf":0,"fora":"..."}]`,
+    `casa = mandante daquele jogo, gc = gols do mandante, gf = gols do visitante.`,
+    `Jogo SEM placar (apenas "x" entre os times) NÃO pode aparecer — NUNCA invente placar para jogo futuro; na dúvida, omita.`,
+  ].join(' ');
+}
+
+function sanitizeCb(rows, nameSet, source) {
+  const out = [];
+  for (const r of rows || []) {
+    const casa = norm(r.casa), fora = norm(r.fora);
+    const gc = Number(r.gc), gf = Number(r.gf);
+    if (!nameSet.has(casa) || !nameSet.has(fora) || casa === fora) continue;
+    if (!Number.isInteger(gc) || !Number.isInteger(gf) || gc < 0 || gc > 14 || gf < 0 || gf > 14) continue;
+    out.push({ fase: 'R16', casa, fora, gc, gf, source });
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
 // Série D — MATA-MATA (2ª fase em diante). O PDF traz cada perna com código do
 // confronto (GR: B01..G01), coluna I/V e pênaltis entre parênteses. Vai para o
 // campo ko_d do results.json; o app aplica como overlay no chaveamento
@@ -319,13 +366,14 @@ function sanitizeKoD(rows, source, names) {
 async function main() {
   if (!API_KEY) { console.error('ANTHROPIC_API_KEY ausente.'); process.exit(1); }
 
-  let existing = [], existingKo = [], existingDates = [];
+  let existing = [], existingKo = [], existingDates = [], existingCb = [];
   try {
     const raw = JSON.parse(await readFile(RESULTS_PATH, 'utf8'));
     existing = Array.isArray(raw) ? raw : (raw && Array.isArray(raw.results) ? raw.results : []);
     existingKo = !Array.isArray(raw) && Array.isArray(raw.ko_d) ? raw.ko_d : [];
     existingDates = !Array.isArray(raw) && Array.isArray(raw.dates) ? raw.dates : [];
-  } catch { existing = []; existingKo = []; existingDates = []; }
+    existingCb = !Array.isArray(raw) && Array.isArray(raw.cb) ? raw.cb : [];
+  } catch { existing = []; existingKo = []; existingDates = []; existingCb = []; }
   const byKey = new Map();
   for (const r of existing) byKey.set(dedupKey(r), r);
   const koByKey = new Map();
@@ -429,6 +477,46 @@ async function main() {
     arr.map((r) => ({ code: r.code, leg: r.leg, mand: r.mand, gm: r.gm, gv: r.gv, vis: r.vis, pen_m: r.pen_m, pen_v: r.pen_v }))
        .sort((a, b) => `${a.code}|${a.leg}`.localeCompare(`${b.code}|${b.leg}`))
   );
+  // ---- Copa do Brasil: oitavas → cb ----
+  let cbAdded = 0, cbUnchanged = 0;
+  const cbByKey = new Map();
+  for (const r of existingCb) cbByKey.set(`${r.fase}|${r.casa}|${r.fora}`, r);
+  {
+    const pairs = await loadCbPairs();
+    const names = [...new Set(pairs.flat())];
+    if (!names.length) console.error('::warning::Copa do Brasil: CB_R16_PAIRS não encontrado no app — pulando.');
+    else {
+      const url = await findPdfUrl('CB');
+      if (!url) console.error('::warning::Copa do Brasil: PDF da Tabela Detalhada não encontrado.');
+      else {
+        console.log(`Copa do Brasil: ${url}`);
+        try {
+          const nameSet = new Set(names);
+          const rows = sanitizeCb(await extractFromPdf('CB', await downloadPdfB64(url), buildCbPrompt(names)), nameSet, url);
+          // só aceita jogo entre times que formam um confronto REAL das oitavas
+          const pairKeys = new Set(pairs.map(([a, b]) => [a, b].sort().join('|')));
+          const valid = rows.filter((r) => pairKeys.has([r.casa, r.fora].sort().join('|')));
+          if (rows.length !== valid.length) console.error(`::warning::Copa do Brasil: ${rows.length - valid.length} jogo(s) descartado(s) por não formarem confronto das oitavas.`);
+          for (const c of valid) {
+            const k = `${c.fase}|${c.casa}|${c.fora}`;
+            const prev = cbByKey.get(k);
+            if (!prev) { cbByKey.set(k, { ...c, confirmed_at: new Date().toISOString() }); cbAdded++; }
+            else if (Number(prev.gc) !== c.gc || Number(prev.gf) !== c.gf) {
+              conflicts.push(k);
+              console.error(`::warning::Conflito CB ${k}: gravado ${prev.gc}-${prev.gf} vs PDF ${c.gc}-${c.gf} (mantido o gravado)`);
+            } else cbUnchanged++;
+          }
+          console.log(`Copa do Brasil: ${valid.length} jogo(s) de oitavas com placar no PDF.`);
+        } catch (e) {
+          console.error(`::warning::Copa do Brasil falhou: ${e.message}`);
+        }
+      }
+    }
+  }
+  const mergedCb = [...cbByKey.values()].sort((a, b) => `${a.fase}|${a.casa}`.localeCompare(`${b.fase}|${b.casa}`));
+  const canonCb = (arr) => JSON.stringify(arr.map((r) => ({ fase: r.fase, casa: r.casa, fora: r.fora, gc: r.gc, gf: r.gf })));
+  const cbChanged = canonCb(mergedCb) !== canonCb(existingCb);
+
   // Datas: o PDF é sempre a versão corrente, então substitui em bloco (não faz merge
   // com o existente — data removida do PDF deve sumir do overlay também). Só entra se
   // ao menos uma série respondeu, para uma falha de extração não zerar o que havia.
@@ -438,14 +526,14 @@ async function main() {
   const canonD = (arr) => JSON.stringify(arr.map((d) => ({ serie: d.serie, rodada: d.rodada, casa: d.casa, fora: d.fora, data: d.data })));
   const datesChanged = canonD(mergedDates) !== canonD(existingDates);
 
-  console.log(`Resumo: +${added} liga + ${koAdded} mata-mata D novos, ${unchanged + koUnchanged} iguais, ${skippedBuiltIn + koSkipped} já embutidos no app, ${conflicts.length} conflito(s), ${mergedDates.length} data(s) remarcada(s)${datesChanged ? ' (MUDOU)' : ''}.`);
-  if (canon(merged) === canon(existing) && canonKo(mergedKo) === canonKo(existingKo) && !datesChanged) { console.log('Sem mudanças em results.json.'); return; }
+  console.log(`Resumo: +${added} liga + ${koAdded} mata-mata D novos, ${unchanged + koUnchanged} iguais, ${skippedBuiltIn + koSkipped} já embutidos no app, ${conflicts.length} conflito(s), ${mergedDates.length} data(s) remarcada(s)${datesChanged ? ' (MUDOU)' : ''}, +${cbAdded} Copa BR nova(s) (${mergedCb.length} no total).`);
+  if (canon(merged) === canon(existing) && canonKo(mergedKo) === canonKo(existingKo) && !datesChanged && !cbChanged) { console.log('Sem mudanças em results.json.'); return; }
 
   // last_run: quantos jogos ESTA execução acrescentou, para o selo do app mostrar o
   // delta em vez do acumulado. Só é escrito quando houve mudança (o return acima corta
   // execuções sem novidade), então ele sempre descreve a última atualização efetiva.
-  const lastRun = { at: new Date().toISOString(), added: added, ko_added: koAdded, total_new: added + koAdded, dates: mergedDates.length, dates_changed: datesChanged };
-  await writeFile(RESULTS_PATH, JSON.stringify({ schema: 2, updated_at: new Date().toISOString(), last_run: lastRun, results: merged, ko_d: mergedKo, dates: mergedDates }, null, 2) + '\n', 'utf8');
+  const lastRun = { at: new Date().toISOString(), added: added, ko_added: koAdded, total_new: added + koAdded + cbAdded, cb_added: cbAdded, dates: mergedDates.length, dates_changed: datesChanged };
+  await writeFile(RESULTS_PATH, JSON.stringify({ schema: 2, updated_at: new Date().toISOString(), last_run: lastRun, results: merged, ko_d: mergedKo, cb: mergedCb, dates: mergedDates }, null, 2) + '\n', 'utf8');
   console.log(`results.json atualizado (${merged.length} resultado(s) de liga + ${mergedKo.length} perna(s) de mata-mata D + ${mergedDates.length} data(s) remarcada(s); last_run.total_new=${lastRun.total_new}).`);
 }
 
