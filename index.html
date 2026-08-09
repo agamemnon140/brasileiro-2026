@@ -31,7 +31,14 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.61
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.62
+// v4.62 (08/08/2026): DATAS REMARCADAS NA AUTOMAÇÃO — S{A,B,C}_DATES guarda UMA data por
+//        RODADA (parseTab faz data: dates[ri]), então jogo remarcado sozinho não cabia no
+//        modelo e a Série C ficava com data errada até correção manual (ver v4.49b).
+//        fetch_tables.mjs passa a fazer um 2º passe por PDF, só de datas (sem placar, para
+//        não contaminar a extração de resultados, que exige jogo disputado), e grava em
+//        results.json.dates as datas POR JOGO que divergem da data da rodada. O app aplica
+//        como overlay sobre a fixture de A/B/C (SAT/SBT/SCT).
 // v4.61 (08/08/2026): SELETOR DE RODADAS da aba "Jogos" ganha o grupo "Rodadas próximas"
 //        (janela ±2) antes da lista completa, em A/B/C e na D — antes era preciso rolar de
 //        R1 até a rodada atual em 38 opções. O centro da janela é a FRONTEIRA (1ª rodada sem
@@ -18347,6 +18354,7 @@ function SimuladorUnificado() {
         setResMeta({
           updatedAt: !Array.isArray(d) && d.updated_at || null,
           lastRun: !Array.isArray(d) && d.last_run || null,
+          dates: !Array.isArray(d) && Array.isArray(d.dates) ? d.dates : [],
           results: arr,
           koD
         });
@@ -18362,9 +18370,26 @@ function SimuladorUnificado() {
       clearTimeout(failsafe);
     };
   }, []);
-  const SAT = useMemo(() => parseTab(SA_TAB, SA_NM, SA_DATES), []);
-  const SBT = useMemo(() => parseTab(SB_TAB, SB_NM, SB_DATES), []);
-  const SCT = useMemo(() => parseTab(SC_TAB, SC_NM, SC_DATES), []);
+  // v4.62: S{A,B,C}_DATES tem UMA data por RODADA; jogo remarcado individualmente nao
+  // cabe nesse modelo. A automacao manda em results.json.dates as datas por JOGO que
+  // divergem da data da rodada, e elas sao aplicadas como overlay sobre a fixture.
+  const dtAuto = useMemo(() => {
+    const m = new Map();
+    for (const d of resMeta && resMeta.dates || []) {
+      if (d && d.serie && d.rodada && d.casa && d.fora && d.data) m.set(`${d.serie}|${d.rodada}|${d.casa}|${d.fora}`, d.data);
+    }
+    return m;
+  }, [resMeta]);
+  const applyDt = useCallback((arr, serie) => {
+    if (!dtAuto.size) return arr;
+    return arr.map(j => {
+      const nd = dtAuto.get(`${serie}|${j.rodada}|${j.casa}|${j.fora}`);
+      return nd && nd !== j.data ? { ...j, data: nd } : j;
+    });
+  }, [dtAuto]);
+  const SAT = useMemo(() => applyDt(parseTab(SA_TAB, SA_NM, SA_DATES), 'A'), [applyDt]);
+  const SBT = useMemo(() => applyDt(parseTab(SB_TAB, SB_NM, SB_DATES), 'B'), [applyDt]);
+  const SCT = useMemo(() => applyDt(parseTab(SC_TAB, SC_NM, SC_DATES), 'C'), [applyDt]);
   const fixtureCheck = useMemo(() => fixtureIntegrity(SAT, SBT, SCT), [SAT, SBT, SCT]);
   const dataHealth = useMemo(() => dataHealthReport(SAT, SBT, SCT), [SAT, SBT, SCT]);
   // allTeams/allElos: estado UNIFICADO (Elo/atk/def evoluídos por todos os resultados

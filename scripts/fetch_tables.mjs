@@ -114,6 +114,41 @@ function buildPrompt(serie) {
   ].join(' ');
 }
 
+// Datas: extração SEPARADA da de placares. O prompt de placar exige jogo já
+// disputado (guarda contra placar alucinado); data interessa justamente para jogo
+// FUTURO, que aquele prompt exclui de propósito. Mantendo os dois apartados, mexer
+// em data nunca pode degradar a extração de placar.
+function buildDatesPrompt(serie) {
+  return [
+    `Este PDF é a Tabela Detalhada oficial da CBF do Campeonato Brasileiro Série ${serie} 2026.`,
+    `Liste TODOS os jogos da FASE DE PONTOS CORRIDOS (rodadas numeradas), tendo placar ou não, com a DATA de cada um.`,
+    `IGNORE completamente fases de mata-mata/playoff/quadrangular/segunda fase.`,
+    `Use EXATAMENTE estes nomes de times: ${TEAMS[serie].join(', ')}.`,
+    `(No PDF os nomes podem vir com sufixo de UF, ex. "Operário PR" = "Operário-PR", "São Bernardo FC" = "São Bernardo", "Athletic MG" = "Athletic", "América MG" = "América-MG", "Barra SC" = "Barra".)`,
+    `NÃO inclua placares. Responda APENAS com um array JSON no formato:`,
+    `[{"rodada":12,"casa":"...","fora":"...","data":"09/08"}]`,
+    `data = dia/mês com 2 dígitos cada (dd/mm), exatamente como no PDF. Jogo sem data definida no PDF fica de fora.`,
+  ].join(' ');
+}
+
+function sanitizeDates(serie, rows) {
+  const out = [];
+  for (const r of rows || []) {
+    const casa = norm(r.casa), fora = norm(r.fora);
+    const rodada = Number(r.rodada);
+    const data = typeof r.data === 'string' ? r.data.trim() : '';
+    if (!SETS[serie].has(casa) || !SETS[serie].has(fora) || casa === fora) continue;
+    if (!Number.isInteger(rodada) || rodada < 1 || rodada > 38) continue;
+    // dd/mm estrito; recusa 32/13 e afins para não escrever lixo na fixture
+    const m = /^(\d{2})\/(\d{2})$/.exec(data);
+    if (!m) continue;
+    const dd = Number(m[1]), mm = Number(m[2]);
+    if (dd < 1 || dd > 31 || mm < 1 || mm > 12) continue;
+    out.push({ serie, rodada, casa, fora, data });
+  }
+  return out;
+}
+
 async function extractFromPdf(serie, pdfB64, customPrompt) {
   const body = {
     model: MODEL,
@@ -178,6 +213,24 @@ async function loadBuiltIn() {
     }
   } catch (e) {
     console.error(`::warning::não consegui ler os embutidos do app: ${e.message}`);
+  }
+  return built;
+}
+
+// Datas embutidas no app: S{A,B,C}_DATES é UMA data por RODADA (parseTab faz
+// data: dates[ri]). Só vai para o results.json a data que DIVERGE da rodada — jogo
+// remarcado — senão o envelope carregaria ~1100 datas iguais às que o app já tem.
+async function loadBuiltInDates() {
+  const built = { A: [], B: [], C: [] };
+  try {
+    const src = await readFile(APP_HTML_PATH, 'utf8');
+    for (const [serie, cname] of [['A', 'SA_DATES'], ['B', 'SB_DATES'], ['C', 'SC_DATES']]) {
+      const m = src.match(new RegExp(`const ${cname} = (\\[[\\s\\S]*?\\]);`));
+      if (!m) continue;
+      built[serie] = new Function('return ' + m[1])();
+    }
+  } catch (e) {
+    console.error(`::warning::não consegui ler as datas embutidas do app: ${e.message}`);
   }
   return built;
 }
@@ -266,33 +319,55 @@ function sanitizeKoD(rows, source, names) {
 async function main() {
   if (!API_KEY) { console.error('ANTHROPIC_API_KEY ausente.'); process.exit(1); }
 
-  let existing = [], existingKo = [];
+  let existing = [], existingKo = [], existingDates = [];
   try {
     const raw = JSON.parse(await readFile(RESULTS_PATH, 'utf8'));
     existing = Array.isArray(raw) ? raw : (raw && Array.isArray(raw.results) ? raw.results : []);
     existingKo = !Array.isArray(raw) && Array.isArray(raw.ko_d) ? raw.ko_d : [];
-  } catch { existing = []; existingKo = []; }
+    existingDates = !Array.isArray(raw) && Array.isArray(raw.dates) ? raw.dates : [];
+  } catch { existing = []; existingKo = []; existingDates = []; }
   const byKey = new Map();
   for (const r of existing) byKey.set(dedupKey(r), r);
   const koByKey = new Map();
   for (const r of existingKo) koByKey.set(`${r.code}|${r.leg}`, r);
 
   const builtIn = await loadBuiltIn();
+  const builtInDates = await loadBuiltInDates();
   const conflicts = [];
   let added = 0, skippedBuiltIn = 0, unchanged = 0;
+  // datas por jogo (serie|rodada|casa|fora -> {data}); o PDF é a fonte, então aqui
+  // a versão nova SEMPRE vence — jogo remarcado é justamente o caso de uso.
+  const datesByKey = new Map();
 
   for (const serie of ['A', 'B', 'C']) {
     const url = await findPdfUrl(serie);
     if (!url) { console.error(`::warning::Série ${serie}: PDF da Tabela Detalhada não encontrado nas páginas da CBF.`); continue; }
     console.log(`Série ${serie}: ${url}`);
     let candidates = [];
+    let pdfB64 = null;
     try {
-      candidates = sanitize(serie, await extractFromPdf(serie, await downloadPdfB64(url)), url);
+      pdfB64 = await downloadPdfB64(url);
+      candidates = sanitize(serie, await extractFromPdf(serie, pdfB64), url);
     } catch (e) {
       console.error(`::warning::Série ${serie} falhou: ${e.message}`);
       continue;
     }
     console.log(`Série ${serie}: ${candidates.length} jogo(s) com placar no PDF.`);
+
+    // Datas (passe separado, mesmo PDF já baixado). Falha aqui não derruba os placares.
+    try {
+      const ds = sanitizeDates(serie, await extractFromPdf(serie, pdfB64, buildDatesPrompt(serie)));
+      let diver = 0;
+      for (const d of ds) {
+        const daRodada = (builtInDates[serie] || [])[d.rodada - 1] || '';
+        if (daRodada && d.data === daRodada) continue; // igual à data da rodada: nada a overlay
+        datesByKey.set(`${d.serie}|${d.rodada}|${d.casa}|${d.fora}`, { ...d, source: url });
+        diver++;
+      }
+      console.log(`Série ${serie}: ${ds.length} data(s) no PDF, ${diver} divergente(s) da data da rodada.`);
+    } catch (e) {
+      console.error(`::warning::Série ${serie}: extração de datas falhou: ${e.message}`);
+    }
     for (const c of candidates) {
       const k = dedupKey(c);
       if (builtIn[serie] && builtIn[serie].has(k)) { skippedBuiltIn++; continue; }
@@ -354,15 +429,24 @@ async function main() {
     arr.map((r) => ({ code: r.code, leg: r.leg, mand: r.mand, gm: r.gm, gv: r.gv, vis: r.vis, pen_m: r.pen_m, pen_v: r.pen_v }))
        .sort((a, b) => `${a.code}|${a.leg}`.localeCompare(`${b.code}|${b.leg}`))
   );
-  console.log(`Resumo: +${added} liga + ${koAdded} mata-mata D novos, ${unchanged + koUnchanged} iguais, ${skippedBuiltIn + koSkipped} já embutidos no app, ${conflicts.length} conflito(s).`);
-  if (canon(merged) === canon(existing) && canonKo(mergedKo) === canonKo(existingKo)) { console.log('Sem mudanças em results.json.'); return; }
+  // Datas: o PDF é sempre a versão corrente, então substitui em bloco (não faz merge
+  // com o existente — data removida do PDF deve sumir do overlay também). Só entra se
+  // ao menos uma série respondeu, para uma falha de extração não zerar o que havia.
+  const mergedDates = datesByKey.size
+    ? [...datesByKey.values()].sort((a, b) => `${a.serie}|${String(a.rodada).padStart(2, '0')}|${a.casa}`.localeCompare(`${b.serie}|${String(b.rodada).padStart(2, '0')}|${b.casa}`))
+    : existingDates;
+  const canonD = (arr) => JSON.stringify(arr.map((d) => ({ serie: d.serie, rodada: d.rodada, casa: d.casa, fora: d.fora, data: d.data })));
+  const datesChanged = canonD(mergedDates) !== canonD(existingDates);
+
+  console.log(`Resumo: +${added} liga + ${koAdded} mata-mata D novos, ${unchanged + koUnchanged} iguais, ${skippedBuiltIn + koSkipped} já embutidos no app, ${conflicts.length} conflito(s), ${mergedDates.length} data(s) remarcada(s)${datesChanged ? ' (MUDOU)' : ''}.`);
+  if (canon(merged) === canon(existing) && canonKo(mergedKo) === canonKo(existingKo) && !datesChanged) { console.log('Sem mudanças em results.json.'); return; }
 
   // last_run: quantos jogos ESTA execução acrescentou, para o selo do app mostrar o
   // delta em vez do acumulado. Só é escrito quando houve mudança (o return acima corta
   // execuções sem novidade), então ele sempre descreve a última atualização efetiva.
-  const lastRun = { at: new Date().toISOString(), added: added, ko_added: koAdded, total_new: added + koAdded };
-  await writeFile(RESULTS_PATH, JSON.stringify({ schema: 2, updated_at: new Date().toISOString(), last_run: lastRun, results: merged, ko_d: mergedKo }, null, 2) + '\n', 'utf8');
-  console.log(`results.json atualizado (${merged.length} resultado(s) de liga + ${mergedKo.length} perna(s) de mata-mata D; last_run.total_new=${lastRun.total_new}).`);
+  const lastRun = { at: new Date().toISOString(), added: added, ko_added: koAdded, total_new: added + koAdded, dates: mergedDates.length, dates_changed: datesChanged };
+  await writeFile(RESULTS_PATH, JSON.stringify({ schema: 2, updated_at: new Date().toISOString(), last_run: lastRun, results: merged, ko_d: mergedKo, dates: mergedDates }, null, 2) + '\n', 'utf8');
+  console.log(`results.json atualizado (${merged.length} resultado(s) de liga + ${mergedKo.length} perna(s) de mata-mata D + ${mergedDates.length} data(s) remarcada(s); last_run.total_new=${lastRun.total_new}).`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
