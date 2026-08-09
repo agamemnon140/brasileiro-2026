@@ -31,7 +31,16 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.62
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.63
+// v4.63 (08/08/2026): (a) selo do topo compõe resultados E datas — total_new conta só
+//        resultados, então a run que remarcou 402 datas exibia "+0 novo(s)". (b) COPA DO
+//        BRASIL entra na automação pelo LADO DO SERVIDOR: fetch_tables.mjs descobre o PDF
+//        pelo slug copa-do-brasil/masculino/2026 (cuidado: há sub-15/feminino no mesmo
+//        prefixo) e grava as oitavas em results.json.cb, validando contra os confrontos de
+//        CB_R16_PAIRS. FALTA o overlay no app: CB_USER.r16[idx] é indexado por POSIÇÃO em
+//        CB_R16_PAIRS, com {g1a,g1b}=ida (a manda) e {g2a,g2b}=volta (b manda, g2a = gols
+//        de a), e precisa ser feito junto para simMC_CB e para o display (cb16Scores), ou o
+//        dashboard mostraria título% real com a aba da CB em branco.
 // v4.62 (08/08/2026): DATAS REMARCADAS NA AUTOMAÇÃO — S{A,B,C}_DATES guarda UMA data por
 //        RODADA (parseTab faz data: dates[ri]), então jogo remarcado sozinho não cabia no
 //        modelo e a Série C ficava com data errada até correção manual (ver v4.49b).
@@ -18588,7 +18597,14 @@ function SimuladorUnificado() {
     month: '2-digit',
     hour: '2-digit',
     minute: '2-digit'
-  }), " \xB7 ", resMeta.lastRun && typeof resMeta.lastRun.total_new === 'number' ? '+' + resMeta.lastRun.total_new + ' novo(s) nesta atualiza\xE7\xE3o' : (resMeta.results.length + (resMeta.koD ? resMeta.koD.length : 0)) + ' resultado(s) via automa\xE7\xE3o'), /*#__PURE__*/React.createElement("div", {
+  }), " \xB7 ", (() => {
+    const lr = resMeta.lastRun;
+    if (!lr || typeof lr.total_new !== 'number') return (resMeta.results.length + (resMeta.koD ? resMeta.koD.length : 0)) + ' resultado(s) via automa\xE7\xE3o';
+    const partes = [];
+    if (lr.total_new > 0) partes.push('+' + lr.total_new + ' resultado(s)');
+    if (lr.dates_changed && lr.dates) partes.push(lr.dates + ' data(s)');
+    return (partes.length ? partes.join(' \xB7 ') : '+0 novo(s)') + ' nesta atualiza\xE7\xE3o';
+  })()), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-center gap-2 mt-2 flex-wrap"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1 bg-slate-800/60 rounded-lg px-2 py-1 border border-slate-700",
