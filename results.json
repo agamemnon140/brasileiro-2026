@@ -1,13 +1,14 @@
 {
   "schema": 2,
-  "updated_at": "2026-08-09T01:20:19.805Z",
+  "updated_at": "2026-08-09T01:45:15.470Z",
   "last_run": {
-    "at": "2026-08-09T01:20:19.805Z",
+    "at": "2026-08-09T01:45:15.470Z",
     "added": 0,
     "ko_added": 0,
-    "total_new": 0,
+    "total_new": 16,
+    "cb_added": 16,
     "dates": 402,
-    "dates_changed": true
+    "dates_changed": false
   },
   "results": [
     {
@@ -1099,6 +1100,152 @@
       "pen_v": null,
       "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_D_2026_29_07_8490faa492.pdf",
       "confirmed_at": "2026-07-31T11:33:08.460Z"
+    }
+  ],
+  "cb": [
+    {
+      "fase": "R16",
+      "casa": "Athletico-PR",
+      "fora": "Vitória",
+      "gc": 2,
+      "gf": 0,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Copa_do_Brasil_2026_07_08_42f8ef0e0b.pdf",
+      "confirmed_at": "2026-08-09T01:45:15.458Z"
+    },
+    {
+      "fase": "R16",
+      "casa": "Atlético-MG",
+      "fora": "Juventude",
+      "gc": 0,
+      "gf": 0,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Copa_do_Brasil_2026_07_08_42f8ef0e0b.pdf",
+      "confirmed_at": "2026-08-09T01:45:15.458Z"
+    },
+    {
+      "fase": "R16",
+      "casa": "Chapecoense",
+      "fora": "Cruzeiro",
+      "gc": 0,
+      "gf": 0,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Copa_do_Brasil_2026_07_08_42f8ef0e0b.pdf",
+      "confirmed_at": "2026-08-09T01:45:15.458Z"
+    },
+    {
+      "fase": "R16",
+      "casa": "Corinthians",
+      "fora": "Internacional",
+      "gc": 2,
+      "gf": 1,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Copa_do_Brasil_2026_07_08_42f8ef0e0b.pdf",
+      "confirmed_at": "2026-08-09T01:45:15.458Z"
+    },
+    {
+      "fase": "R16",
+      "casa": "Cruzeiro",
+      "fora": "Chapecoense",
+      "gc": 2,
+      "gf": 0,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Copa_do_Brasil_2026_07_08_42f8ef0e0b.pdf",
+      "confirmed_at": "2026-08-09T01:45:15.458Z"
+    },
+    {
+      "fase": "R16",
+      "casa": "Fluminense",
+      "fora": "Vasco",
+      "gc": 1,
+      "gf": 3,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Copa_do_Brasil_2026_07_08_42f8ef0e0b.pdf",
+      "confirmed_at": "2026-08-09T01:45:15.458Z"
+    },
+    {
+      "fase": "R16",
+      "casa": "Fortaleza",
+      "fora": "Palmeiras",
+      "gc": 3,
+      "gf": 2,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Copa_do_Brasil_2026_07_08_42f8ef0e0b.pdf",
+      "confirmed_at": "2026-08-09T01:45:15.458Z"
+    },
+    {
+      "fase": "R16",
+      "casa": "Grêmio",
+      "fora": "Mirassol",
+      "gc": 1,
+      "gf": 0,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Copa_do_Brasil_2026_07_08_42f8ef0e0b.pdf",
+      "confirmed_at": "2026-08-09T01:45:15.458Z"
+    },
+    {
+      "fase": "R16",
+      "casa": "Internacional",
+      "fora": "Corinthians",
+      "gc": 2,
+      "gf": 0,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Copa_do_Brasil_2026_07_08_42f8ef0e0b.pdf",
+      "confirmed_at": "2026-08-09T01:45:15.458Z"
+    },
+    {
+      "fase": "R16",
+      "casa": "Juventude",
+      "fora": "Atlético-MG",
+      "gc": 0,
+      "gf": 1,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Copa_do_Brasil_2026_07_08_42f8ef0e0b.pdf",
+      "confirmed_at": "2026-08-09T01:45:15.458Z"
+    },
+    {
+      "fase": "R16",
+      "casa": "Mirassol",
+      "fora": "Grêmio",
+      "gc": 1,
+      "gf": 1,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Copa_do_Brasil_2026_07_08_42f8ef0e0b.pdf",
+      "confirmed_at": "2026-08-09T01:45:15.458Z"
+    },
+    {
+      "fase": "R16",
+      "casa": "Palmeiras",
+      "fora": "Fortaleza",
+      "gc": 3,
+      "gf": 0,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Copa_do_Brasil_2026_07_08_42f8ef0e0b.pdf",
+      "confirmed_at": "2026-08-09T01:45:15.458Z"
+    },
+    {
+      "fase": "R16",
+      "casa": "Remo",
+      "fora": "Santos",
+      "gc": 0,
+      "gf": 1,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Copa_do_Brasil_2026_07_08_42f8ef0e0b.pdf",
+      "confirmed_at": "2026-08-09T01:45:15.458Z"
+    },
+    {
+      "fase": "R16",
+      "casa": "Santos",
+      "fora": "Remo",
+      "gc": 0,
+      "gf": 0,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Copa_do_Brasil_2026_07_08_42f8ef0e0b.pdf",
+      "confirmed_at": "2026-08-09T01:45:15.458Z"
+    },
+    {
+      "fase": "R16",
+      "casa": "Vasco",
+      "fora": "Fluminense",
+      "gc": 0,
+      "gf": 0,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Copa_do_Brasil_2026_07_08_42f8ef0e0b.pdf",
+      "confirmed_at": "2026-08-09T01:45:15.458Z"
+    },
+    {
+      "fase": "R16",
+      "casa": "Vitória",
+      "fora": "Athletico-PR",
+      "gc": 4,
+      "gf": 0,
+      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Copa_do_Brasil_2026_07_08_42f8ef0e0b.pdf",
+      "confirmed_at": "2026-08-09T01:45:15.458Z"
     }
   ],
   "dates": [
