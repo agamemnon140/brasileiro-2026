@@ -532,7 +532,9 @@ async function main() {
   // last_run: quantos jogos ESTA execução acrescentou, para o selo do app mostrar o
   // delta em vez do acumulado. Só é escrito quando houve mudança (o return acima corta
   // execuções sem novidade), então ele sempre descreve a última atualização efetiva.
-  const lastRun = { at: new Date().toISOString(), added: added, ko_added: koAdded, total_new: added + koAdded + cbAdded, cb_added: cbAdded, dates: mergedDates.length, dates_changed: datesChanged };
+  // cb_added fica FORA de total_new enquanto o app nao consumir results.json.cb:
+  // o selo anunciaria "+16 resultado(s)" que nao aparecem em lugar nenhum na UI.
+  const lastRun = { at: new Date().toISOString(), added: added, ko_added: koAdded, total_new: added + koAdded, cb_added: cbAdded, dates: mergedDates.length, dates_changed: datesChanged };
   await writeFile(RESULTS_PATH, JSON.stringify({ schema: 2, updated_at: new Date().toISOString(), last_run: lastRun, results: merged, ko_d: mergedKo, cb: mergedCb, dates: mergedDates }, null, 2) + '\n', 'utf8');
   console.log(`results.json atualizado (${merged.length} resultado(s) de liga + ${mergedKo.length} perna(s) de mata-mata D + ${mergedDates.length} data(s) remarcada(s); last_run.total_new=${lastRun.total_new}).`);
 }
