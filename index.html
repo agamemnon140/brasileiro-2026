@@ -31,7 +31,17 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.59
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.61
+// v4.61 (08/08/2026): SELETOR DE RODADAS da aba "Jogos" ganha o grupo "Rodadas próximas"
+//        (janela ±2) antes da lista completa, em A/B/C e na D — antes era preciso rolar de
+//        R1 até a rodada atual em 38 opções. O centro da janela é a FRONTEIRA (1ª rodada sem
+//        NENHUM jogo disputado), não a regra da opção "Próxima" (1ª rodada não COMPLETAMENTE
+//        disputada): com jogos adiados — a R4 da Série A — a segunda trava no passado e a
+//        janela sairia inútil (R2-R6 em vez de R20-R24). "Próxima" segue inalterada.
+// v4.60 (08/08/2026): selo do topo passa a mostrar o DELTA da última execução da automação
+//        ("+N novo(s) nesta atualização") em vez do total acumulado, que era lido como se
+//        tudo tivesse entrado agora; o acumulado foi para o tooltip. Alimentado pelo campo
+//        last_run gravado por fetch_tables.mjs.
 // v4.59 (17/07/2026): SÉRIE D NO ESCOPO DA AUTOMAÇÃO — fetch_tables.mjs agora baixa também
 //        o PDF da D e extrai as pernas de MATA-MATA (código GR, ida/volta, pênaltis) para o
 //        campo ko_d do results.json (pula o que já está embutido via parse de SD_F2_REAL/
@@ -14727,15 +14737,30 @@ function LeagueSim({
     className: "bg-slate-700 text-white text-xs rounded-lg px-2 py-1 border border-slate-600"
   }, /*#__PURE__*/React.createElement("option", {
     value: 0
-  }, "Pr\xF3xima"), Array.from({
-    length: meta.nR
-  }, (_, i) => i + 1).map(r => {
-    const dt = (tabela.find(j => j.rodada === r) || {}).data || '';
-    return /*#__PURE__*/React.createElement("option", {
-      key: r,
+  }, "Pr\xF3xima"), (() => {
+    const lbl = r => {
+      const dt = (tabela.find(j => j.rodada === r) || {}).data || '';
+      return 'R' + r + (dt ? ' (' + dt + ')' : '');
+    };
+    let prox = meta.nR;
+    for (let r = 1; r <= meta.nR; r++) {
+      const jr = tabela.filter(j => j.rodada === r);
+      if (jr.length && !jr.some(j => allRes.some(x => x.c === j.casa && x.f === j.fora && x.r === j.rodada))) { prox = r; break; }
+    }
+    const todas = Array.from({ length: meta.nR }, (_, i) => i + 1);
+    const perto = todas.filter(r => Math.abs(r - prox) <= 2);
+    const mk = (pre, arr) => arr.map(r => React.createElement("option", {
+      key: pre + r,
       value: r
-    }, 'R' + r + (dt ? ' (' + dt + ')' : ''));
-  }))), /*#__PURE__*/React.createElement("div", {
+    }, lbl(r)));
+    return [React.createElement("optgroup", {
+      key: "perto",
+      label: "Rodadas pr\xF3ximas"
+    }, mk("p", perto)), React.createElement("optgroup", {
+      key: "todas",
+      label: "Todas as rodadas"
+    }, mk("t", todas))];
+  })())), /*#__PURE__*/React.createElement("div", {
     className: "space-y-0.5 max-h-[500px] overflow-y-auto"
   }, jVis.map((j, i) => {
     const builtIn = res.find(r => r.c === j.casa && r.f === j.fora && r.r === j.rodada);
@@ -15848,15 +15873,30 @@ function SerieDSim({
     value: 0
   }, "Pr\xF3xima rodada"), /*#__PURE__*/React.createElement("option", {
     value: -1
-  }, "Todas rodadas"), Array.from({
-    length: 10
-  }, (_, i) => i + 1).map(r => {
-    const dt = (tabD.find(j => j.rodada === r) || {}).data || '';
-    return /*#__PURE__*/React.createElement("option", {
-      key: r,
+  }, "Todas rodadas"), (() => {
+    const lbl = r => {
+      const dt = (tabD.find(j => j.rodada === r) || {}).data || '';
+      return 'R' + r + (dt ? ' (' + dt + ')' : '');
+    };
+    let prox = 10;
+    for (let r = 1; r <= 10; r++) {
+      const jr = tabD.filter(j => j.rodada === r);
+      if (jr.length && !jr.some(j => SD_RES.find(re => re.c === j.casa && re.f === j.fora && re.r === j.rodada))) { prox = r; break; }
+    }
+    const todas = Array.from({ length: 10 }, (_, i) => i + 1);
+    const perto = todas.filter(r => Math.abs(r - prox) <= 2);
+    const mk = (pre, arr) => arr.map(r => React.createElement("option", {
+      key: pre + r,
       value: r
-    }, "R", r, dt ? ` (${dt})` : '');
-  })), /*#__PURE__*/React.createElement("select", {
+    }, lbl(r)));
+    return [React.createElement("optgroup", {
+      key: "perto",
+      label: "Rodadas pr\xF3ximas"
+    }, mk("p", perto)), React.createElement("optgroup", {
+      key: "todas",
+      label: "Todas as rodadas"
+    }, mk("t", todas))];
+  })()), /*#__PURE__*/React.createElement("select", {
     value: gF,
     onChange: e => setGF(Number(e.target.value)),
     className: "bg-slate-700 text-white text-xs rounded-lg px-2 py-1 border border-slate-600"
