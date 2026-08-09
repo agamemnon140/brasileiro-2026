@@ -31,7 +31,15 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.63
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.64
+// v4.64 (08/08/2026): COPA DO BRASIL no app — CB_AUTO/applyCbAuto convertem results.json.cb
+//        nas oitavas, espelhando SD_KO_AUTO da v4.59. O results.json traz as pernas por NOME;
+//        a posição em CB_R16_PAIRS e a ORIENTAÇÃO são resolvidas no app: ida = a manda
+//        (g1a/g1b); volta = b manda, logo g2b = gols de b e g2a = gols de a — a mesma
+//        convenção do agregado do simMC_CB (aa = g1a + g2a). Precedência: edição do usuário
+//        > automação. cb16Scores segue sendo SÓ a edição do usuário (é o que persiste em
+//        simUni_cbR16 e o que "Limpar" zera); o display passa a ler cb16Eff = usuário, senão
+//        automação. Vale para simMC_CB (dashboard), bracket, lista da R16 e 1 Simulação.
 // v4.63 (08/08/2026): (a) selo do topo compõe resultados E datas — total_new conta só
 //        resultados, então a run que remarcou 402 datas exibia "+0 novo(s)". (b) COPA DO
 //        BRASIL entra na automação pelo LADO DO SERVIDOR: fetch_tables.mjs descobre o PDF
@@ -1164,6 +1172,34 @@ function refreshCbUser() {
   CB_USER = { r16: {} };
   try { CB_USER.r16 = JSON.parse(localStorage.getItem('simUni_cbR16') || '{}'); } catch (e) {}
 }
+// CB_AUTO (v4.64): oitavas vindas da AUTOMAÇÃO (campo cb do results.json).
+// Precedência: edições do usuário > automação (a R32 nem entra aqui — é oficial e embutida).
+// O results.json traz as pernas por NOME; a posição em CB_R16_PAIRS e a orientação são
+// resolvidas aqui: ida = a manda (g1a/g1b); volta = b manda, logo g2b são os gols de b e
+// g2a os de a — mesma convenção que o agregado do simMC_CB usa (aa = g1a + g2a).
+let CB_AUTO = { r16: {} };
+function applyCbAuto(rows) {
+  CB_AUTO = { r16: {} };
+  if (!Array.isArray(rows) || !rows.length) return CB_AUTO.r16;
+  CB_R16_PAIRS.forEach(([a, b], idx) => {
+    const sc = {};
+    for (const r of rows) {
+      if (!r || r.fase !== 'R16') continue;
+      const gc = Number(r.gc), gf = Number(r.gf);
+      if (!Number.isInteger(gc) || !Number.isInteger(gf)) continue;
+      if (r.casa === a && r.fora === b) { sc.g1a = gc; sc.g1b = gf; }
+      else if (r.casa === b && r.fora === a) { sc.g2b = gc; sc.g2a = gf; }
+    }
+    if (Object.keys(sc).length) CB_AUTO.r16[idx] = sc;
+  });
+  return CB_AUTO.r16;
+}
+// perna editada pelo usuário manda no confronto inteiro; senão, o que a automação trouxe
+const cbR16Eff = (userMap, autoMap, idx) => {
+  const u = userMap && userMap[idx];
+  if (u && (u.g1a != null || u.g1b != null || u.g2a != null || u.g2b != null)) return u;
+  return autoMap && autoMap[idx] || null;
+};
 const simMC = (times, ranking, tab, res, cfg, sk, nS, ak, eo) => {
   refreshBcUser();
   const lg = initLeague(times, t => ranking[t].elo, cfg);
@@ -2446,7 +2482,7 @@ const simMC_CB = (cfg, nS, ak, eo, teamElos, teamAD) => {
         bump(nb, 'r16', na);
         // Edições do usuário (simUni_cbR16): perna completa fica FIXA; perna faltante é simulada
         // (mando correto). Ida+volta completas = vencedor determinístico; empate = pênaltis 50/50.
-        const u = CB_USER.r16[idx] || {};
+        const u = cbR16Eff(CB_USER.r16, CB_AUTO.r16, idx) || {};
         const hasI = u.g1a != null && u.g1b != null,
           hasV = u.g2a != null && u.g2b != null;
         if (hasI || hasV) {
@@ -16831,7 +16867,8 @@ function CopaBrasilSim({
   initialMC,
   initialAk,
   initialEo,
-  initialDrift
+  initialDrift,
+  cbAuto
 }) {
   const [aba, setAba] = useState('ratings');
   const [nS, setNS] = useState(1000);
@@ -16870,6 +16907,16 @@ function CopaBrasilSim({
       localStorage.setItem('simUni_cbR16', JSON.stringify(cb16Scores));
     } catch (e) {}
   }, [cb16Scores]);
+  // cb16Scores fica sendo SÓ a edição do usuário (é o que persiste e o que "Limpar" zera);
+  // o display lê o efetivo = edição do usuário, senão o que veio da automação.
+  const cb16Eff = useMemo(() => {
+    const out = {};
+    CB_R16_PAIRS.forEach((_, idx) => {
+      const e = cbR16Eff(cb16Scores, cbAuto, idx);
+      if (e) out[idx] = e;
+    });
+    return out;
+  }, [cb16Scores, cbAuto]);
   const [rMC, setRMC] = useState(initialMC || null);
   const [rSU, setRSU] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -17022,7 +17069,7 @@ function CopaBrasilSim({
     let r16p = [];
     if (allReal) {
       r16p = CB_R16_PAIRS.map(([a, b], idx) => {
-        const sc = cb16Scores[idx];
+        const sc = cb16Eff[idx];
         if (useCbScores && sc && sc.g1a != null && sc.g1b != null && sc.g2a != null && sc.g2b != null) {
           const aa = sc.g1a + sc.g2a,
             ab = sc.g1b + sc.g2b;
@@ -17163,7 +17210,7 @@ function CopaBrasilSim({
   };
   const cbR16Tie = idx => {
     const [a, b] = CB_R16_PAIRS[idx];
-    const sc = cb16Scores[idx] || {};
+    const sc = cb16Eff[idx] || {};
     const complete = sc.g1a != null && sc.g1b != null && sc.g2a != null && sc.g2b != null;
     const aa = (sc.g1a || 0) + (sc.g2a || 0), ab = (sc.g1b || 0) + (sc.g2b || 0);
     const w = complete ? aa > ab ? a : ab > aa ? b : null : null; // agregado empatado: pênaltis indefinidos
@@ -17438,7 +17485,7 @@ function CopaBrasilSim({
   }, "Insira os placares (ida + volta) das oitavas para fixar resultados na simula\xE7\xE3o. A R32 j\xE1 est\xE1 consolidada nos ratings."), /*#__PURE__*/React.createElement("div", {
     className: "space-y-1"
   }, CB_R16_PAIRS.map(([a, b], idx) => {
-    const sc = cb16Scores[idx] || {};
+    const sc = cb16Eff[idx] || {};
     const done = sc.g1a != null && sc.g1b != null && sc.g2a != null && sc.g2b != null;
     const upd = (k, v) => {
       setCb16Scores(prev => ({
@@ -18360,10 +18407,12 @@ function SimuladorUnificado() {
       const arr = Array.isArray(d) ? d : d && d.results;
       const koD = !Array.isArray(d) && Array.isArray(d.ko_d) ? d.ko_d : [];
       if (Array.isArray(arr)) {
+        const cbR16 = applyCbAuto(!Array.isArray(d) && Array.isArray(d.cb) ? d.cb : []);
         setResMeta({
           updatedAt: !Array.isArray(d) && d.updated_at || null,
           lastRun: !Array.isArray(d) && d.last_run || null,
           dates: !Array.isArray(d) && Array.isArray(d.dates) ? d.dates : [],
+          cbR16,
           results: arr,
           koD
         });
@@ -18865,7 +18914,8 @@ function SimuladorUnificado() {
     initialMC: dash?.CB,
     initialAk: dash?.ak,
     initialEo: dash?.eo,
-    initialDrift: dash?.drift
+    initialDrift: dash?.drift,
+    cbAuto: resMeta && resMeta.cbR16 || null
   }), tab === 'h2h' && /*#__PURE__*/React.createElement(ConfrontoMerged, {
     cfg: cfg,
     allTeams: allTeams
