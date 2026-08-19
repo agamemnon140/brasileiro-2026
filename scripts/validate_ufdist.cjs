@@ -1,13 +1,6 @@
-// Validação: roda a simMC_D modificada (headless) e confere que ufDist é
+// Validação: roda a simMC_D (headless, a partir do index.html) e confere que ufDist é
 // produzido e que sum_uf E[fase] bate com as vagas da fase (64/32/16/8/4/2/6).
-const fs = require('fs');
-const path = require('path');
-const lines = fs.readFileSync(path.join(__dirname, '..', 'simulador_unificado.jsx'), 'utf8').split(/\r?\n/);
-// Engine + dados: até antes de useSortable (1147). Excisa Badge (124-137) e TN (141).
-const engine = lines.slice(0, 1146)
-  .map((l, i) => { const n = i + 1; if (n >= 124 && n <= 137) return ''; if (n === 141) return ''; return l; })
-  .filter(l => !/^\s*import\s/.test(l) && !/export\s+default/.test(l))
-  .join('\n');
+const { runWithEngine } = require('./engine.cjs');
 
 const harness = `
 (function(){
@@ -32,4 +25,4 @@ const harness = `
   console.log(ok ? '\\nRESULT: PASS' : '\\nRESULT: FAIL');
 })();
 `;
-eval(engine + '\n' + harness);
+runWithEngine(harness);
