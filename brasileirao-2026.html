@@ -31,7 +31,15 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.75
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.76
+// v4.76 (19/08/2026): EDITOR da fila de sucessão estadual (Class. 2027 › Fila estadual),
+//        persistido em localStorage (simUni_est27, padrão simUni_sdMM). Motivo prático:
+//        quando a Copa Paulista terminar, colocar o campeão no slot exigia editar
+//        constante no HTML e commitar; agora é digitar o nome — e o recálculo é
+//        instantâneo, porque a alocação (~15 ms) não re-roda o Monte Carlo.
+//        build2027Alloc ganhou cfg.fila; sem ele, o default já mescla o localStorage
+//        (estFila27Merged), então a aba Ranking CBF também enxerga as edições.
+//        localStorage corrompido cai em {} por try/catch, como os outros overlays.
 // v4.75 (19/08/2026): tabela POR ESTADO ordenável pelos cabeçalhos. Ela era fixa em E
 //        decrescente. Ordenar pelas colunas de k é o que permite perguntar "quais estados
 //        têm mais chance de emplacar exatamente 3?" em vez de só ler a esperança — que é
@@ -13497,6 +13505,19 @@ const SD27_CFG = {
   seed: 20270101
 };
 // 'total' vem primeiro de proposito: o SerieDStateView abre na primeira fase da lista.
+// Edições do usuário na fila de sucessão (Class. 2027 › Fila estadual). Overlay POR UF:
+// a UF editada substitui a fila embutida inteira; as demais seguem o default. Corrompido
+// cai em {} — mesmo contrato dos outros overlays (simUni_sdMM, simUni_cbR16).
+const EST27_LS_KEY = 'simUni_est27';
+const loadEst27User = () => {
+  try {
+    const o = JSON.parse(localStorage.getItem(EST27_LS_KEY) || '{}');
+    return o && typeof o === 'object' && !Array.isArray(o) ? o : {};
+  } catch (e) {
+    return {};
+  }
+};
+const estFila27Merged = user => Object.assign({}, EST_FILA_2027, user || loadEst27User());
 const SD27_SOURCES = [{ key: 'total', label: 'TOTAL 2027' },
                       { key: 'rebC', label: 'Reb. Série C' },
                       { key: 'estadual', label: 'Estadual' },
@@ -13528,6 +13549,9 @@ const SD27_MAXK = 14;
 
 function build2027Alloc(dashD, dashC, rncProj, cfg) {
   const C = Object.assign({}, SD27_CFG, cfg || {});
+  // A fila pode vir por cfg (o editor passa a sua versão ao vivo); sem cfg, mescla o
+  // localStorage — assim a aba Ranking CBF também enxerga as edições ao remontar.
+  const FILA = C.fila || estFila27Merged();
   if (!dashD || !dashD.trace || !dashD.trace.n) return null;
   const trD = dashD.trace;
   const rebT = dashC && dashC.rebTrace || null;
@@ -13576,7 +13600,7 @@ function build2027Alloc(dashD, dashC, rncProj, cfg) {
     // Critério 3) NÃO libera nada aqui: o clube ocupa o slot estadual e o excedente dele
     // aparece no Critério 4.
     for (const u of UFS) {
-      const fila = EST_FILA_2027[u] || [];
+      const fila = FILA[u] || [];
       let dados = 0;
       for (let i = 0; i < fila.length && dados < EST_QUOTA_2027[u]; i++) {
         const e = fila[i];
@@ -14282,11 +14306,13 @@ const Classificados2027View = ({
 }) => {
   const h = React.createElement;
   const [v, setV] = useState('estados');
+  // Fila com edições do usuário. Mudou → build2027Alloc re-roda (~15 ms), sem tocar o MC.
+  const [filaUser, setFilaUser] = useState(loadEst27User);
   const al = useMemo(() => {
     if (!dash || !dash.D || !dash.D.trace) return null;
     const proj = buildRNC(dash);
-    return proj ? build2027Alloc(dash.D, dash.C, proj, null) : null;
-  }, [dash]);
+    return proj ? build2027Alloc(dash.D, dash.C, proj, { fila: estFila27Merged(filaUser) }) : null;
+  }, [dash, filaUser]);
   // Hooks não podem viver dentro do ramo de uma visão, então a tabela do comparativo é
   // preparada aqui em cima mesmo quando outra visão está aberta.
   const comp = useMemo(() => !al ? [] : al.ufDist.map(r => ({
@@ -14325,7 +14351,8 @@ const Classificados2027View = ({
 
   const seletor = h("div", { className: "flex gap-1 mb-3 bg-slate-800/40 rounded-xl p-1 max-w-2xl" },
     [{ id: 'estados', l: 'Por estado' }, { id: 'comp', l: '2026 vs 2027' },
-     { id: 'vagas', l: 'Quem pega vaga' }, { id: 'sorteio', l: 'Sorteio dos grupos' }].map(t =>
+     { id: 'vagas', l: 'Quem pega vaga' }, { id: 'sorteio', l: 'Sorteio dos grupos' },
+     { id: 'fila', l: 'Fila estadual' }].map(t =>
       h("button", {
         key: t.id, onClick: () => setV(t.id),
         className: `flex-1 py-1 px-2.5 rounded-md text-xs font-medium ${v === t.id ? 'bg-emerald-600/80 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`
@@ -14388,10 +14415,70 @@ const Classificados2027View = ({
           h("td", { className: "text-right font-mono w-24" }, barra(x.p, 'rgba(52,211,153,.7)'),
             x.p < 0.5 ? '<1' : Math.round(x.p), "%")))))));
 
+  // --- editor da fila estadual ---
+  const filaDe = uf => (filaUser[uf] || EST_FILA_2027[uf] || []);
+  const salvaFila = (uf, arr) => {
+    const nx = Object.assign({}, filaUser);
+    if (arr === null) delete nx[uf];else nx[uf] = arr;
+    setFilaUser(nx);
+    try {
+      localStorage.setItem(EST27_LS_KEY, JSON.stringify(nx));
+    } catch (e) {}
+  };
+  const editaFila = (uf, i, val) => {
+    const arr = filaDe(uf).map(x => Object.assign({}, x));
+    arr[i].n = val;
+    arr[i].src = 'U';
+    salvaFila(uf, arr);
+  };
+  const moveFila = (uf, i, d) => {
+    const arr = filaDe(uf).map(x => Object.assign({}, x));
+    const j = i + d;
+    if (j < 0 || j >= arr.length) return;
+    const t = arr[i];arr[i] = arr[j];arr[j] = t;
+    salvaFila(uf, arr);
+  };
+  const addFila = uf => salvaFila(uf, filaDe(uf).concat([{ n: '', via: 'adicionado manualmente', st: 'ok', src: 'U' }]));
+  const delFila = (uf, i) => salvaFila(uf, filaDe(uf).filter((_, k) => k !== i));
+  const btnMini = (rot, fn, tit) => h("button", { onClick: fn, title: tit, className: "px-1 rounded text-slate-500 hover:text-white hover:bg-slate-700/60" }, rot);
+  const cardFila = uf => {
+    const arr = filaDe(uf);
+    const cota = EST_QUOTA_2027[uf] || 0;
+    return h("div", { key: uf, className: "bg-slate-800/50 rounded-xl p-2 border " + (filaUser[uf] ? 'border-emerald-700/60' : 'border-slate-700/50') },
+      h("div", { className: "flex items-center justify-between mb-1" },
+        h("span", { className: "text-[11px] font-semibold text-emerald-300" }, uf, h("span", { className: "text-slate-500 font-normal ml-1" }, "cota ", cota)),
+        filaUser[uf] && h("button", { onClick: () => salvaFila(uf, null), className: "text-[10px] text-amber-400/90 hover:text-amber-300" }, "restaurar")),
+      arr.map((e, i) => h("div", { key: i, className: "flex items-center gap-1 py-0.5" },
+        h("span", { className: "w-4 text-right font-mono text-[10px] " + (i < cota ? 'text-emerald-400' : 'text-slate-600'), title: i < cota ? 'dentro da cota' : 'sucessão' }, i + 1),
+        h("input", {
+          value: e.n,
+          placeholder: e.st === 'pend' ? 'em disputa…' : 'nome do clube',
+          title: e.via + (e.src === 'C' ? ' · confirmado' : e.src === 'U' ? ' · editado' : ' · inferido'),
+          onChange: ev => editaFila(uf, i, ev.target.value),
+          className: "flex-1 min-w-0 bg-slate-900/60 text-[11px] rounded px-1.5 py-0.5 border " + (e.src === 'U' ? 'border-emerald-700/70 text-emerald-200' : !e.n ? 'border-amber-700/60 text-amber-200' : e.src === 'I' ? 'border-slate-700 text-slate-300 border-dashed' : 'border-slate-700 text-slate-200')
+        }),
+        btnMini('↑', () => moveFila(uf, i, -1), 'subir'),
+        btnMini('↓', () => moveFila(uf, i, 1), 'descer'),
+        btnMini('✕', () => delFila(uf, i), 'remover'))),
+      h("button", { onClick: () => addFila(uf), className: "text-[10px] text-slate-500 hover:text-emerald-300 mt-0.5" }, "+ nome"));
+  };
+  const editorFila = h("div", null,
+    h("p", { className: "text-[11px] text-slate-400 leading-relaxed mb-2" },
+      "A ordem em que cada federação chama para as vagas da Série D 2027. Vaga liberada por acesso à Série C desce ao próximo da fila do ",
+      h("em", null, "mesmo estado"), ". Edite quando uma copa estadual terminar ou quando souber a ordem de um estado ",
+      h("span", { className: "border-b border-dashed border-slate-600" }, "inferido"),
+      " — o recálculo é imediato e fica salvo neste navegador (",
+      h("span", { className: "font-mono text-slate-500" }, "simUni_est27"), ")."),
+    h("div", { className: "grid sm:grid-cols-2 lg:grid-cols-3 gap-2" },
+      Object.keys(EST_QUOTA_2027).sort().map(cardFila)),
+    h("p", { className: "text-[10px] text-slate-500 mt-2" },
+      "Borda verde = editado por você · âmbar = vaga sem dono · tracejado = ordem inferida, não confirmada em fonte. Os números em verde marcam a cota; dali para baixo é a fila de sucessão."));
+
   return h("div", null, painel, seletor,
     v === 'estados' ? porEstado :
     v === 'comp' ? comparativo :
     v === 'vagas' ? listaVagas :
+    v === 'fila' ? editorFila :
     h(Sorteio2027View, { alloc: al }));
 };
 const SerieDStateView = ({
