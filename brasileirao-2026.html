@@ -31,7 +31,16 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.66
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.67
+// v4.67 (19/08/2026): ABA "Ranking CBF" — projeção do RNC 2027 dos 235 clubes. P26 sai do
+//        Monte Carlo, não de estimativa: a distribuição de colocação final de cada série
+//        (posF em A/B/C, posGe na D) vira distribuição de PONTOS pela escala da Convenção,
+//        e é convoluída com a da Copa do Brasil (cujas fases o MC dá como cumulativas, daí
+//        P(cai exatamente em X) sair por diferença). Isso dá esperança e banda p10–p90.
+//        Quem caiu antes da 5ª fase da Copa não é simulado pelo app e entra por RNC_CB26_PRE.
+//        O join app↔CBF é sempre por (nome normalizado, UF): com a UF conhecida e sem par,
+//        o clube é tratado como AUSENTE em vez de casado por nome — é assim que America-RJ
+//        viraria o América-MG. Sub-view "Dados" expõe a validação e os clubes sem RNC.
 // v4.66 (19/08/2026): DADOS do RANKING NACIONAL DE CLUBES. RNC_2026 traz os 235 clubes da
 //        tabela oficial da CBF (23/12/2025) com pontos, colocação e s5 = Σ(P2021..P2025).
 //        O s5 NÃO é publicado: foi montado das classificações gerais das Séries A/B/C/D e
@@ -13127,6 +13136,135 @@ const RNC_CB26_PRE = {
   "Águia de Marabá|PA": 'f4',
 };
 
+// ====== PROJEÇÃO DO RANKING NACIONAL DE CLUBES 2027 ======
+// RNC2027 = RNC2026 + 5·P26 − s5, onde P26 = pontos da série em 2026 + pontos da Copa do
+// Brasil 2026. A janela é móvel de 5 anos com pesos 5/4/3/2/1: o ano que entra vale ×5 e
+// o que sai leva embora a soma inteira dos cinco anteriores. Por isso s5 é subtraído.
+//
+// P26 vem do Monte Carlo, não de um chute: a distribuição de colocação final que a engine
+// já produz (posF em A/B/C, posGe na D) vira distribuição de PONTOS, e as duas se combinam
+// por convolução com a distribuição da Copa do Brasil.
+
+// UFs, para separar sufixo de nome. 'Barra-SC' tem UF no sufixo; 'São Bernardo' não.
+const RNC_UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+const rncSemUF = n => {
+  const m = /[-\s]([A-Z]{2})$/.exec(n);
+  return m && RNC_UFS.indexOf(m[1]) >= 0 ? n.slice(0, m.index) : n;
+};
+const rncKey = n => rncSemUF(n).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+
+// Índice (chave, UF) -> registro do RNC. O join NUNCA é só por nome: há três 'Operário',
+// cinco 'Atlético', dois 'Rio Branco' e dois 'Primavera' (o do app é o do MT; existe um
+// Primavera-SP). Casar por nome puro geraria falso positivo silencioso.
+const RNC_IDX = (() => {
+  const m = {};
+  RNC_2026.forEach(r => { m[rncKey(r.n) + '|' + r.u] = r; });
+  return m;
+})();
+// Com a UF conhecida e sem par (nome, UF), o clube está AUSENTE do ranking — não se
+// adivinha por nome. Ausente é legítimo: são clubes sem competição nacional em 2021-2025.
+const rncOf = nome => RNC_IDX[rncKey(RNC_NM[nome] || nome) + '|' + ufOfTeam(nome)] || null;
+
+// Escala por colocação geral final (Convenção de Pontos Rev 080, obs. c-f).
+const rncPtsSerie = (serie, pos) => RNC_BASE[serie] * RNC_PCT[Math.min(pos, 23) - 1] / 100;
+const rncPtsCB = (fase, ano) => (ano >= 2026 ? RNC_CB_PTS.de2026 : RNC_CB_PTS.ate2025)[fase] || 0;
+
+// --- distribuições de pontos como histograma {pontos: probabilidade} ---
+// posPct[i] = % de terminar na (i+1)ª colocação. Vira distribuição de pontos somando as
+// posições que caem no mesmo degrau da escala (da 24ª em diante todas valem o mesmo).
+const rncHistSerie = (posPct, serie) => {
+  const h = {};
+  posPct.forEach((pct, i) => {
+    if (pct <= 0) return;
+    const v = rncPtsSerie(serie, i + 1);
+    h[v] = (h[v] || 0) + pct / 100;
+  });
+  return h;
+};
+// Copa do Brasil: a engine dá "CHEGOU à fase" (cumulativo). P(eliminado exatamente em X)
+// sai por diferença entre fases consecutivas.
+const rncHistCB = p => {
+  const h = {};
+  const add = (prob, fase) => { if (prob > 1e-9) { const v = rncPtsCB(fase, 2026); h[v] = (h[v] || 0) + prob; } };
+  add((100 - p.r16) / 100, 'f5');   // caiu na 5ª fase (= R32, onde o MC da Copa começa)
+  add((p.r16 - p.qf) / 100, 'oit');
+  add((p.qf - p.sf) / 100, 'qf');
+  add((p.sf - p.fin) / 100, 'sf');
+  add((p.fin - p.ch) / 100, 'vice');
+  add(p.ch / 100, 'ch');
+  return h;
+};
+const rncHistFixo = v => ({ [v]: 1 });
+const rncConv = (a, b) => {
+  const out = {};
+  for (const x in a) for (const y in b) {
+    const s = +x + +y;
+    out[s] = (out[s] || 0) + a[x] * b[y];
+  }
+  return out;
+};
+const rncEsp = h => { let s = 0; for (const v in h) s += +v * h[v]; return s; };
+const rncPctl = (h, q) => {
+  const ks = Object.keys(h).map(Number).sort((a, b) => a - b);
+  let acc = 0;
+  for (const k of ks) { acc += h[k]; if (acc >= q - 1e-9) return k; }
+  return ks[ks.length - 1];
+};
+
+// --- projeção ---
+// dash = {A, B, C, D, CB} do "Simular Tudo". Séries ausentes degradam para P26 = 0 na parte
+// da liga, o que é sinalizado em `parcial`.
+function buildRNC(dash) {
+  if (!dash) return null;
+  const porClube = {};   // 'chave|UF' -> {histSerie, histCB, serie, posE}
+  const reg = (nome, hist, campo, extra) => {
+    const r = rncOf(nome);
+    const k = r ? rncKey(r.n) + '|' + r.u : 'X|' + rncKey(nome) + '|' + ufOfTeam(nome);
+    if (!porClube[k]) porClube[k] = { rnc: r, app: nome };
+    porClube[k][campo] = hist;
+    if (extra) Object.assign(porClube[k], extra);
+  };
+  for (const [s, key] of [['A', 'A'], ['B', 'B'], ['C', 'C']]) {
+    const mc = dash[key];
+    if (!mc) continue;
+    mc.probs.forEach(p => {
+      if (!p.posF) return;
+      const posE = p.posF.reduce((acc, v, i) => acc + v / 100 * (i + 1), 0);
+      reg(p.time, rncHistSerie(p.posF, s), 'hs', { serie: s, posE });
+    });
+  }
+  if (dash.D) dash.D.probs.forEach(p => {
+    if (!p.posGe) return;
+    const posE = p.posGe.reduce((acc, v, i) => acc + v / 100 * (i + 1), 0);
+    reg(p.time, rncHistSerie(p.posGe, 'D'), 'hs', { serie: 'D', posE });
+  });
+  if (dash.CB) dash.CB.probs.forEach(p => reg(p.time, rncHistCB(p), 'hc'));
+
+  const out = [];
+  RNC_2026.forEach(r => {
+    const k = rncKey(r.n) + '|' + r.u;
+    const c = porClube[k] || {};
+    // Copa do Brasil: quem caiu antes da 5ª fase não é simulado pelo app — vem do estático.
+    const hc = c.hc || (RNC_CB26_PRE[r.n + '|' + r.u] ? rncHistFixo(rncPtsCB(RNC_CB26_PRE[r.n + '|' + r.u], 2026)) : rncHistFixo(0));
+    const hs = c.hs || rncHistFixo(0);
+    const h26 = rncConv(hs, hc);
+    const e26 = rncEsp(h26);
+    // RNC2027 = RNC2026 + 5·P26 − s5
+    const h27 = {};
+    for (const v in h26) h27[r.p + 5 * (+v) - r.s5] = h26[v];
+    out.push({
+      n: r.n, u: r.u, pos26: r.pos, rnc26: r.p, s5: r.s5,
+      serie: c.serie || null, app: c.app || null, posE: c.posE || null,
+      p26: e26, rnc27: r.p + 5 * e26 - r.s5,
+      p10: rncPctl(h27, 0.10), p50: rncPctl(h27, 0.50), p90: rncPctl(h27, 0.90),
+      simulado: !!(c.hs || c.hc)
+    });
+  });
+  out.sort((a, b) => b.rnc27 - a.rnc27 || b.rnc26 - a.rnc26);
+  out.forEach((x, i) => { x.pos27 = i + 1; x.dPos = x.pos26 - x.pos27; });
+  return { clubes: out, parcial: !(dash.A && dash.B && dash.C && dash.D) };
+}
+
 // ============================================================================
 // COMPONENTES UI — helpers reutilizáveis
 // ============================================================================
@@ -18610,6 +18748,232 @@ function ConfrontoMerged({
     allTeams: allTeams
   }));
 }
+// ====== ABA: RANKING NACIONAL DE CLUBES ======
+function RankingNacionalSim({
+  dash
+}) {
+  const [q, setQ] = useState('');
+  const [vis, setVis] = useState('proj');
+  const [soSim, setSoSim] = useState(false);
+  const proj = useMemo(() => buildRNC(dash), [dash]);
+  const base = useMemo(() => {
+    if (!proj) return [];
+    return soSim ? proj.clubes.filter(c => c.simulado) : proj.clubes;
+  }, [proj, soSim]);
+  const st = useSortable(base, 'rnc27', 'desc');
+  const rows = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    return s ? st.sorted.filter(c => (c.n + ' ' + c.u).toLowerCase().includes(s)) : st.sorted;
+  }, [st.sorted, q]);
+  if (!dash) return /*#__PURE__*/React.createElement("div", {
+    className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-slate-400 text-center py-8"
+  }, "Rode \"⚡ Simular Tudo\" no dashboard acima para projetar o Ranking Nacional."));
+  const fmt = v => Math.round(v).toLocaleString('pt-BR');
+  const semRNC = [].concat(Object.keys(SA_RANKING), Object.keys(SB_RANKING), Object.keys(SC_RANKING), SD_TIMES, CB_TEAMS).filter((t, i, a) => a.indexOf(t) === i).filter(t => !rncOf(t));
+  return /*#__PURE__*/React.createElement("div", {
+    className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mb-3"
+  }, /*#__PURE__*/React.createElement("h2", {
+    className: "text-base font-semibold text-emerald-300"
+  }, "Ranking Nacional de Clubes — proje\xE7\xE3o 2027"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-slate-400 mt-1 leading-relaxed"
+  }, "A CBF usa janela m\xF3vel de cinco anos com pesos 5/4/3/2/1, ent\xE3o o RNC 2027 \xE9", ' ', /*#__PURE__*/React.createElement("span", {
+    className: "font-mono text-slate-300"
+  }, "RNC2026 + 5\xB7P26 − Σ(2021–2025)"), ". O ano que entra vale \xD75 e o que sai leva embora a soma inteira dos cinco anteriores — por isso um clube pode cair mesmo jogando bem. ", /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-300"
+  }, "P26"), " vem do Monte Carlo: a distribui\xE7\xE3o de coloca\xE7\xE3o final de cada s\xE9rie convolu\xEDda com a da Copa do Brasil."), proj.parcial && /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-amber-400 mt-1"
+  }, "⚠️ Nem todas as s\xE9ries foram simuladas: quem ficou de fora entra com P26 = 0 e aparece caindo no ranking.")), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1 mb-3 bg-slate-800/40 rounded-xl p-1 max-w-sm"
+  }, [{
+    id: 'proj',
+    l: 'Proje\xE7\xE3o'
+  }, {
+    id: 'dados',
+    l: 'Dados'
+  }].map(t => /*#__PURE__*/React.createElement("button", {
+    key: t.id,
+    onClick: () => setVis(t.id),
+    className: `flex-1 py-1 px-2.5 rounded-md text-xs font-medium ${vis === t.id ? 'bg-emerald-600/80 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`
+  }, t.l))), vis === 'proj' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 flex-wrap mb-2"
+  }, /*#__PURE__*/React.createElement(TableToolbar, {
+    query: q,
+    setQuery: setQ,
+    showing: rows.length,
+    total: base.length,
+    placeholder: "Buscar clube...",
+    onExport: () => exportCSV(rows, [{
+      label: 'Pos2027',
+      key: 'pos27'
+    }, {
+      label: 'Clube',
+      key: 'n'
+    }, {
+      label: 'UF',
+      key: 'u'
+    }, {
+      label: 'Serie2026',
+      key: 'serie'
+    }, {
+      label: 'RNC2026',
+      key: 'rnc26'
+    }, {
+      label: 'Pos2026',
+      key: 'pos26'
+    }, {
+      label: 'Sigma21_25',
+      key: 's5'
+    }, {
+      label: 'P26',
+      fn: r => r.p26.toFixed(1)
+    }, {
+      label: 'RNC2027',
+      fn: r => Math.round(r.rnc27)
+    }, {
+      label: 'p10',
+      key: 'p10'
+    }, {
+      label: 'p90',
+      key: 'p90'
+    }, {
+      label: 'DeltaPos',
+      key: 'dPos'
+    }], 'rnc_2027.csv')
+  }), /*#__PURE__*/React.createElement("label", {
+    className: "flex items-center gap-1 text-[11px] text-slate-400 cursor-pointer"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: soSim,
+    onChange: e => setSoSim(e.target.checked),
+    className: "accent-emerald-500"
+  }), "s\xF3 quem joga em 2026")), /*#__PURE__*/React.createElement("div", {
+    className: "overflow-x-auto"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "text-xs w-full"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "text-slate-400 border-b border-slate-700"
+  }, /*#__PURE__*/React.createElement(SortHeader, {
+    k: "pos27",
+    label: "#",
+    sort: st.sort,
+    onClick: st.onSort,
+    align: "center"
+  }), /*#__PURE__*/React.createElement(SortHeader, {
+    k: "n",
+    label: "Clube",
+    sort: st.sort,
+    onClick: st.onSort
+  }), /*#__PURE__*/React.createElement(SortHeader, {
+    k: "serie",
+    label: "S\xE9rie 26",
+    sort: st.sort,
+    onClick: st.onSort,
+    align: "center"
+  }), /*#__PURE__*/React.createElement(SortHeader, {
+    k: "rnc26",
+    label: "RNC 2026",
+    sort: st.sort,
+    onClick: st.onSort,
+    align: "center"
+  }), /*#__PURE__*/React.createElement(SortHeader, {
+    k: "s5",
+    label: "Σ 21-25",
+    sort: st.sort,
+    onClick: st.onSort,
+    align: "center"
+  }), /*#__PURE__*/React.createElement(SortHeader, {
+    k: "p26",
+    label: "P26",
+    sort: st.sort,
+    onClick: st.onSort,
+    align: "center"
+  }), /*#__PURE__*/React.createElement(SortHeader, {
+    k: "rnc27",
+    label: "RNC 2027",
+    sort: st.sort,
+    onClick: st.onSort,
+    align: "center"
+  }), /*#__PURE__*/React.createElement("th", {
+    className: "text-center px-1 py-1 font-medium"
+  }, "banda"), /*#__PURE__*/React.createElement(SortHeader, {
+    k: "dPos",
+    label: "Δ pos",
+    sort: st.sort,
+    onClick: st.onSort,
+    align: "center"
+  }))), /*#__PURE__*/React.createElement("tbody", null, rows.map(c => /*#__PURE__*/React.createElement("tr", {
+    key: c.n + '|' + c.u,
+    className: "border-b border-slate-800/50 hover:bg-slate-700/20"
+  }, /*#__PURE__*/React.createElement("td", {
+    className: "text-center font-mono text-slate-500 px-1"
+  }, c.pos27), /*#__PURE__*/React.createElement("td", {
+    className: "py-1 pr-1 font-medium whitespace-nowrap"
+    // TN ja desenha o badge de UF; repetir c.u aqui duplicava ("Flamengo RJ RJ").
+    // So mostra a UF para clube que nao esta no app e portanto nao tem TN.
+  }, c.app ? /*#__PURE__*/React.createElement(TN, {
+    name: c.app
+  }) : /*#__PURE__*/React.createElement(React.Fragment, null, c.n, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-500 ml-1 text-[10px]"
+  }, c.u))), /*#__PURE__*/React.createElement("td", {
+    className: "text-center"
+  }, c.serie ? /*#__PURE__*/React.createElement("span", {
+    className: "px-1 rounded bg-slate-700/60 text-slate-300 text-[10px]"
+  }, c.serie) : /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-600"
+  }, "—")), /*#__PURE__*/React.createElement("td", {
+    className: "text-center font-mono text-slate-400"
+  }, fmt(c.rnc26), /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-600 text-[10px] ml-1"
+  }, c.pos26, "\xBA")), /*#__PURE__*/React.createElement("td", {
+    className: "text-center font-mono text-rose-300/80"
+  }, "−", fmt(c.s5)), /*#__PURE__*/React.createElement("td", {
+    className: "text-center font-mono text-emerald-300/90"
+  }, "+", fmt(5 * c.p26)), /*#__PURE__*/React.createElement("td", {
+    className: "text-center font-mono font-bold text-white"
+  }, fmt(c.rnc27)), /*#__PURE__*/React.createElement("td", {
+    className: "text-center font-mono text-slate-500 text-[10px] whitespace-nowrap"
+  }, c.p10 === c.p90 ? '—' : fmt(c.p10) + '–' + fmt(c.p90)), /*#__PURE__*/React.createElement("td", {
+    className: `text-center font-mono ${c.dPos > 0 ? 'text-emerald-400' : c.dPos < 0 ? 'text-rose-400' : 'text-slate-600'}`
+  }, c.dPos > 0 ? '▲' + c.dPos : c.dPos < 0 ? '▼' + -c.dPos : '–')))))), /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-slate-500 mt-2 leading-relaxed"
+  }, "Σ 21-25 \xE9 subtra\xEDdo porque esses cinco anos saem da janela. Clube sem competi\xE7\xE3o nacional em 2026 aparece com P26 = 0 e cai o valor inteiro do Σ — \xE9 isso que faz a fila do ranking se mexer. A ", /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400"
+  }, "banda"), " \xE9 o intervalo p10–p90 sobre a distribui\xE7\xE3o simulada; \"—\" significa resultado j\xE1 determinado.")), vis === 'dados' && /*#__PURE__*/React.createElement("div", {
+    className: "text-xs text-slate-300 space-y-3"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
+    className: "font-semibold text-emerald-300 mb-1"
+  }, "Origem dos dados"), /*#__PURE__*/React.createElement("p", {
+    className: "text-slate-400 leading-relaxed"
+  }, "Tabela oficial do RNC 2026 (", RNC_2026.length, " clubes), publicada pela CBF em 23/12/2025. O Σ 2021-2025 ", /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-300"
+  }, "n\xE3o \xE9 publicado"), ": foi reconstru\xEDdo das classifica\xE7\xF5es gerais das S\xE9ries A/B/C/D e das Copas do Brasil daqueles anos, aplicando a Conven\xE7\xE3o de Pontos Rev 080.")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-slate-900/40 rounded-lg p-2 border border-slate-700/40"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-emerald-300 font-semibold mb-1"
+  }, "Valida\xE7\xE3o"), /*#__PURE__*/React.createElement("p", {
+    className: "text-slate-400 leading-relaxed"
+  }, "5\xB7P25 + 4\xB7P24 + 3\xB7P23 + 2\xB7P22 + 1\xB7P21 reproduz o valor publicado para os ", RNC_2026.length, " clubes, sem uma \xFAnica diverg\xEAncia. Como qualquer erro em um ano quebraria a soma ponderada, isso valida ao mesmo tempo a escala de pontos, as 20 classifica\xE7\xF5es de liga, as 5 Copas do Brasil e a reconcilia\xE7\xE3o de nomes.")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
+    className: "font-semibold text-emerald-300 mb-1"
+  }, "A escala da S\xE9rie D \xE9 quase plana"), /*#__PURE__*/React.createElement("p", {
+    className: "text-slate-400 leading-relaxed"
+  }, "A pontua\xE7\xE3o repete o valor da 23\xAA coloca\xE7\xE3o da 24\xAA em diante, ent\xE3o a grande maioria dos 96 clubes da S\xE9rie D soma exatamente 51 pontos pela liga, com vari\xE2ncia zero. Na pr\xE1tica, quem decide a posi\xE7\xE3o de um clube da D no ranking \xE9 a ", /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-300"
+  }, "Copa do Brasil"), ", n\xE3o a campanha na D.")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
+    className: "font-semibold text-emerald-300 mb-1"
+  }, "Clubes do app sem entrada no RNC (", semRNC.length, ")"), /*#__PURE__*/React.createElement("p", {
+    className: "text-slate-400 leading-relaxed mb-1"
+  }, "N\xE3o \xE9 falha de reconcilia\xE7\xE3o: s\xE3o clubes que n\xE3o disputaram competi\xE7\xE3o nacional entre 2021 e 2025, ent\xE3o n\xE3o pontuam. Entram no ranking de 2027 partindo de 5\xB7P26."), /*#__PURE__*/React.createElement("p", {
+    className: "text-slate-500 text-[11px]"
+  }, semRNC.map(t => t + ' (' + ufOfTeam(t) + ')').join(' \xB7 '))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
+    className: "font-semibold text-emerald-300 mb-1"
+  }, "Por que isso importa"), /*#__PURE__*/React.createElement("p", {
+    className: "text-slate-400 leading-relaxed"
+  }, "O Art. 2\xBA, Crit\xE9rio 4 do regulamento da S\xE9rie D manda preencher as vagas residuais pelo Ranking Nacional do ano da edi\xE7\xE3o. A S\xE9rie D 2026 usou o RNC 2026; a de 2027 vai usar este ranking."))));
+}
 function SimuladorUnificado() {
   const [cfg, setCfg] = useState(DEFAULT_CFG);
   const [tab, setTab] = useState('serieA');
@@ -19030,6 +19394,10 @@ function SimuladorUnificado() {
     l: 'Copa BR',
     e: '🏅'
   }, {
+    id: 'rnc',
+    l: 'Ranking CBF',
+    e: '📊'
+  }, {
     id: 'h2h',
     l: 'Confronto',
     e: '⚔️'
@@ -19332,6 +19700,8 @@ function SimuladorUnificado() {
     initialEo: dash?.eo,
     initialDrift: dash?.drift,
     cbAuto: resMeta && resMeta.cbR16 || null
+  }), tab === 'rnc' && /*#__PURE__*/React.createElement(RankingNacionalSim, {
+    dash: dash
   }), tab === 'h2h' && /*#__PURE__*/React.createElement(ConfrontoMerged, {
     cfg: cfg,
     allTeams: allTeams
@@ -19402,7 +19772,7 @@ function SimuladorUnificado() {
     className: "text-[10px] text-blue-400 hover:text-blue-300 shrink-0"
   }, "fonte")))))), /*#__PURE__*/React.createElement("div", {
     className: "mt-4 text-center text-slate-500 text-xs"
-  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R16+) | C:", SC_RES.length, " (R13) | D:", SD_RES.length, " (grupos) + mata-mata | Copa BR: R16 (edit\xE1vel) | v4.59 \u2014 mata-mata da S\xE9rie D no escopo da automa\xE7\xE3o"))));
+  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R16+) | C:", SC_RES.length, " (R13) | D:", SD_RES.length, " (grupos) + mata-mata | Copa BR: R16 (edit\xE1vel) | v4.67 \u2014 proje\xE7\xE3o do Ranking Nacional de Clubes"))));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(SimuladorUnificado));
 </script>
