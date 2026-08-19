@@ -31,7 +31,17 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.64
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.65
+// v4.65 (19/08/2026): CLASSIFICAÇÃO GERAL 1º-96º da Série D no Monte Carlo. A CBF ordena a
+//        classificação geral por fase alcançada e, dentro da fase, pela campanha — e é essa
+//        colocação (não a fase) que a Convenção de Pontos do Ranking Nacional de Clubes usa.
+//        O bracket é fechado, então as 9 bandas (campeão, vice, semis, playoff, oitavas, 3ª,
+//        2ª, grupos) saem por diferença entre quem entrou e quem venceu: nada é guardado
+//        durante a simulação. probs[].posGe[i] = % de terminar na (i+1)ª posição geral.
+//        Desempate dentro da banda por camp8 (P → SG → GP), o mesmo comparador do reseed das
+//        quartas. A CBF acumula também o mata-mata, mas s180 devolve só o vencedor, sem
+//        placares; o efeito é nulo da 33ª em diante (a escala do RNC é plana em 51 a partir
+//        da 23ª) e pequeno entre 9º e 32º.
 // v4.64 (08/08/2026): COPA DO BRASIL no app — CB_AUTO/applyCbAuto convertem results.json.cb
 //        nas oitavas, espelhando SD_KO_AUTO da v4.59. O results.json traz as pernas por NOME;
 //        a posição em CB_R16_PAIRS e a ORIENTAÇÃO são resolvidas no app: ida = a manda
@@ -2146,6 +2156,39 @@ const simMC_D_single = (cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeam
   bumpMu(sf2, 'fin', sf1);
   const champ = s180(sf1, sf2);
   ct[champ].ch++;
+  // === Classificação geral 1º-96º (v4.65) ===
+  // O bracket é fechado: todo eliminado sai por diferença entre quem entrou no confronto e
+  // quem o venceu. As 9 bandas abaixo cobrem 1+1+2+2+2+8+16+32+32 = 96 clubes, sem sobra.
+  const vice = sf1 === champ ? sf2 : sf1;
+  const perdedores = (codes, winPrev, winCur) => codes.map(c => {
+    const p = SD_BRK_PAIRS[c],
+      a = winPrev[p[0]],
+      b = winPrev[p[1]];
+    return winCur[c] === a ? b : a;
+  });
+  const bandasGe = [[champ],
+  // 1º
+  [vice],
+  // 2º
+  qW.filter(t => t !== sf1 && t !== sf2),
+  // 3º-4º   perderam a semi
+  playoff.slice(),
+  // 5º-6º   venceram o playoff
+  pL.filter(t => playoff.indexOf(t) < 0),
+  // 7º-8º   perderam o playoff
+  perdedores(SD_D_CODES, winC, winD),
+  // 9º-16º  perderam as oitavas
+  perdedores(SD_C_CODES, winB, winC),
+  // 17º-32º perderam a 3ª fase
+  SD_F2_REAL.map(t => winB[t.code] === t.a ? t.b : t.a),
+  // 33º-64º perderam a 2ª fase
+  gruposRanked.reduce((acc, g) => acc.concat(g.slice(4).map(r => r.time)), []) // 65º-96º 5º/6º dos grupos
+  ];
+  let geRank = 0;
+  for (const banda of bandasGe) {
+    banda.sort(camp8);
+    for (const t of banda) ct[t].posGe[geRank++]++;
+  }
   // === Distribuição CONJUNTA por estado (v4.47) ===
   // Para cada fase, conta quantos times de cada UF chegaram e incrementa o
   // histograma ufAcc[uf][fase][k]. Os conjuntos abaixo já têm times únicos:
@@ -2234,6 +2277,7 @@ const simMC_D_finalize = (snap, ct, nS, gpts, ufAcc, ufTeams) => {
       eloFinal: Math.round(ct[t].elFinalSum / nS),
       grupoTop1: ct[t].grupoTop1 / nS * 100,
       posGr: ct[t].posGr.map(v => v / nS * 100),
+      posGe: ct[t].posGe.map(v => v / nS * 100),
       f2: ct[t].f2 / nS * 100,
       f3: ct[t].f3 / nS * 100,
       oit: ct[t].oit / nS * 100,
@@ -2288,6 +2332,7 @@ const simMC_D = (cfg, nS, ak, eo) => {
   SD_TIMES.forEach(t => {
     ct[t] = {
       grupoTop1: 0,
+      posGe: new Array(SD_TIMES.length).fill(0),
       posGr: [0, 0, 0, 0, 0, 0],
       f2: 0,
       f3: 0,
@@ -2326,6 +2371,7 @@ const simMC_D_async = (cfg, nS, ak, eo, extra, onProgress, onDone) => {
   SD_TIMES.forEach(t => {
     ct[t] = {
       grupoTop1: 0,
+      posGe: new Array(SD_TIMES.length).fill(0),
       posGr: [0, 0, 0, 0, 0, 0],
       f2: 0,
       f3: 0,
