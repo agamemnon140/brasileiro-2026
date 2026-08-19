@@ -31,7 +31,19 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.76
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.77
+// v4.77 (19/08/2026): FILA DE SUCESSÃO nos 27 estados (antes 14 com fonte, 11 sem folga
+//        alguma sobre a cota) + coluna Copa do Brasil 2027 na aba Ranking CBF.
+//        A rodada de pesquisa corrigiu a ordem campeão/vice em SETE estados (AC, AP, MS,
+//        PI, RO, RR e TO estavam invertidos — a ordem importa porque a cascata desce por
+//        ela) e revelou que a Copa ES 2026 JÁ FOI DECIDIDA (Rio Branco de Venda Nova,
+//        01/07), resolvendo mais uma vaga pendente: caem de 5 para 4 sem dono. No MA o
+//        vice (Maranhão AC) é inelegível por ter subido à Série C e a vaga já desceu ao
+//        3º geral, o Sampaio Corrêa — cascata consumada que o modelo agora reflete.
+//        Convenção de ordem testada onde a CBF a expôs (vagas da CdB em TO/RO/PI/MA):
+//        campeão → vice → semifinalistas pela campanha → resto da 1ª fase.
+//        CB27_CLASSIFICADOS traz os ~80 já garantidos na Copa do Brasil 2027 (snapshot
+//        de 05/04/2026 + confirmações posteriores); a coluna "CdB 27" marca ✓ no ranking.
 // v4.76 (19/08/2026): EDITOR da fila de sucessão estadual (Class. 2027 › Fila estadual),
 //        persistido em localStorage (simUni_est27, padrão simUni_sdMM). Motivo prático:
 //        quando a Copa Paulista terminar, colocar o campeão no slot exigia editar
@@ -13353,15 +13365,18 @@ const EST_QUOTA_2027 = {
 //
 // DUAS regras distintas de vaga liberada, com destinos OPOSTOS — é o ponto mais fácil de
 // errar no modelo inteiro:
-//   · clube com vaga estadual que SOBE para a Série C  → cascata dentro do estado
+//   · clube com vaga estadual que SOBE para a Série C  → cascata dentro do estado, ao
+//     próximo da CLASSIFICAÇÃO GERAL do estadual (casos concretos: ABC→Potiguar de Mossoró,
+//     ASA→Murici, e o condicional Gama→Ceilândia noticiado pela imprensa do DF)
 //   · clube com vaga estadual que TAMBÉM se classifica pelo Critério 3 (vaga dupla)
 //     → o excedente vai para o RANKING NACIONAL; o estado não ganha vaga extra
-// Fonte da bifurcação: Distrito do Esporte, 01/03/2026, corroborado pelo Critério 4 do REC.
 //
-// Elegibilidade: excluem-se apenas participantes das Séries A, B e C. Clube da Série D É
-// elegível (o Retrô pegou vaga pelo Pernambucano estando na Série D 2026).
+// Convenção de ordem da classificação geral, testada onde a CBF a expôs (TO, RO, PI, MA via
+// vagas da Copa do Brasil): campeão → vice → semifinalistas pela campanha da 1ª fase → resto
+// da 1ª fase. Elegibilidade: excluem-se apenas participantes das Séries A, B e C; clube da
+// Série D 2026 É elegível (Retrô/PE é a prova).
 //
-// st: 'ok' competição encerrada · 'pend' copa estadual ainda em disputa
+// st: 'ok' competição encerrada · 'pend' ainda em disputa
 // src: 'C' confirmado em fonte · 'I' inferido da classificação do estadual
 const EST_FILA_2027 = {
   SP: [{ n: 'Portuguesa-SP', via: '5º do Paulistão', st: 'ok', src: 'C' },
@@ -13431,7 +13446,6 @@ const EST_FILA_2027 = {
        { n: 'Vitória das Tabocas', via: '7º do Pernambucano', st: 'ok', src: 'I' },
        { n: 'Jaguar', via: '8º do Pernambucano', st: 'ok', src: 'I' }],
   // A cascata de AL já se consumou: o ASA subiu à Série C e o Murici herdou a vaga.
-  // O modelo reproduz isso sozinho — o ASA sai da fila quando promovido e o 4º entra.
   AL: [{ n: 'ASA', via: '2º do Alagoano', st: 'ok', src: 'C' },
        { n: 'CSA', via: '3º do Alagoano', st: 'ok', src: 'C' },
        { n: 'Murici', via: '4º do Alagoano', st: 'ok', src: 'C' },
@@ -13456,41 +13470,87 @@ const EST_FILA_2027 = {
        { n: 'Parintins', via: '6º do Amazonense', st: 'ok', src: 'I' },
        { n: 'Itacoatiara', via: '7º do Amazonense', st: 'ok', src: 'I' }],
   // O DF fecha em 4: Capital e Brasiliense estão fora da sucessão regional por não terem
-  // chegado às semis, mesmo jogando a Série D 2026. E o 3º sai do desempenho na semifinal,
-  // não da campanha da 1ª fase.
+  // chegado às semis. E o 3º sai do desempenho na semifinal, não da campanha da 1ª fase.
   DF: [{ n: 'Gama', via: 'campeão do Candangão', st: 'ok', src: 'C' },
        { n: 'Sobradinho', via: 'vice do Candangão', st: 'ok', src: 'C' },
        { n: 'Ceilândia', via: '3º — perdeu a semi para o Gama', st: 'ok', src: 'C' },
        { n: 'Samambaia', via: '4º — perdeu a semi para o Sobradinho', st: 'ok', src: 'C' }],
   // SE: as duas vagas são o campeão do Sergipano 2026 e o campeão da Copa do Governador,
-  // que ainda vai ser disputada. O 3º colocado não tem rota própria: entra por sucessão.
+  // que ainda vai ser disputada. O 3º colocado entra apenas por sucessão.
   SE: [{ n: 'Sergipe', via: 'campeão do Sergipano 2026', st: 'ok', src: 'C' },
        { n: '', via: 'campeão da Copa do Governador, ainda a ser disputada', st: 'pend', src: 'C' },
        { n: 'Lagarto', via: '3º do Sergipano (sucessão)', st: 'ok', src: 'I' },
        { n: 'Guarany-SE', via: '5º do Sergipano', st: 'ok', src: 'I' },
        { n: 'América-SE', via: '6º do Sergipano', st: 'ok', src: 'I' }],
-  ES: [{ n: 'Porto Vitória', via: 'Capixaba', st: 'ok', src: 'C' },
-       { n: '', via: 'Copa Espírito Santo — final entre Rio Branco VN e Vitória-ES', st: 'pend', src: 'C' }],
-  PA: [{ n: 'Castanhal', via: 'Paraense', st: 'ok', src: 'I' },
-       { n: 'Cametá', via: 'Paraense', st: 'ok', src: 'I' }],
-  MT: [{ n: 'Mixto', via: 'Mato-Grossense', st: 'ok', src: 'I' },
-       { n: 'Luverdense', via: 'Mato-Grossense', st: 'ok', src: 'I' }],
-  MA: [{ n: 'IAPE', via: 'Maranhense', st: 'ok', src: 'C' },
-       { n: 'Sampaio Corrêa', via: 'Maranhense', st: 'ok', src: 'C' }],
-  PI: [{ n: 'Atlético Piauiense', via: 'Piauiense', st: 'ok', src: 'I' },
-       { n: 'Piauí', via: 'Piauiense', st: 'ok', src: 'I' }],
-  TO: [{ n: 'União Araguainense', via: 'Tocantinense', st: 'ok', src: 'I' },
-       { n: 'Tocantinópolis', via: 'Tocantinense', st: 'ok', src: 'I' }],
-  AC: [{ n: 'Rio Branco-AC', via: 'Acreano', st: 'ok', src: 'I' },
-       { n: 'Santa Cruz-AC', via: 'Acreano', st: 'ok', src: 'I' }],
-  RO: [{ n: 'Rondoniense', via: 'Rondoniense', st: 'ok', src: 'I' },
-       { n: 'Guaporé', via: 'Rondoniense', st: 'ok', src: 'I' }],
-  RR: [{ n: 'Baré', via: 'Roraimense', st: 'ok', src: 'I' },
-       { n: 'GAS', via: 'Roraimense', st: 'ok', src: 'I' }],
-  MS: [{ n: 'Bataguassu', via: 'Sul-Mato-Grossense', st: 'ok', src: 'I' },
-       { n: 'Operário-MS', via: 'Sul-Mato-Grossense', st: 'ok', src: 'I' }],
-  AP: [{ n: 'São José-AP', via: 'Amapaense', st: 'ok', src: 'I' },
-       { n: 'Santos-AP', via: 'Amapaense', st: 'ok', src: 'I' }]
+  // ES: a Copa ES 2026 JÁ FOI DECIDIDA (01/07, Rio Branco de Venda Nova 1×0 Vitória-ES no
+  // Kleber Andrade) — a vaga que estava pendente ganhou dono. Da 3ª posição em diante é
+  // buraco declarado: não achei a classificação geral final do Capixaba, só a 1ª fase.
+  ES: [{ n: 'Porto Vitória', via: 'campeão do Capixaba', st: 'ok', src: 'C' },
+       { n: 'Rio Branco de Venda Nova', via: 'campeão da Copa ES 2026', st: 'ok', src: 'C' }],
+  // PA: classificação geral completa no wikitext, com legenda de vaga por linha. Paysandu e
+  // Remo (1º e 2º) são inelegíveis; Águia de Marabá já tem vaga pela 3ª fase da D 2026.
+  PA: [{ n: 'Cametá', via: '3º geral do Paraense, semifinalista', st: 'ok', src: 'C' },
+       { n: 'Castanhal', via: '4º geral do Paraense, semifinalista', st: 'ok', src: 'C' },
+       { n: 'Águia de Marabá', via: '5º geral do Paraense', st: 'ok', src: 'C' },
+       { n: 'Capitão Poço', via: '6º geral do Paraense', st: 'ok', src: 'C' },
+       { n: 'Tuna Luso', via: '7º geral do Paraense', st: 'ok', src: 'C' },
+       { n: 'Santa Rosa', via: '8º geral do Paraense', st: 'ok', src: 'C' }],
+  MT: [{ n: 'Mixto', via: 'campeão do Mato-Grossense (pênaltis)', st: 'ok', src: 'C' },
+       { n: 'Luverdense', via: 'vice do Mato-Grossense', st: 'ok', src: 'C' },
+       { n: 'Operário-MT', via: 'semifinalista, 3º da 1ª fase (CEOV)', st: 'ok', src: 'I' },
+       { n: 'Sport Sinop', via: 'semifinalista, 4º da 1ª fase', st: 'ok', src: 'I' },
+       { n: 'Nova Mutum', via: '6º da 1ª fase (Cuiabá inelegível)', st: 'ok', src: 'I' },
+       { n: 'Chapada', via: '7º da 1ª fase', st: 'ok', src: 'I' }],
+  // MA: o vice (Maranhão AC) é inelegível — subiu à Série C — e a vaga já desceu ao 3º
+  // geral, o Sampaio Corrêa, confirmado nominalmente pela imprensa maranhense.
+  MA: [{ n: 'IAPE', via: 'campeão do Maranhense', st: 'ok', src: 'C' },
+       { n: 'Sampaio Corrêa', via: '3º geral — herdou do vice Maranhão AC, inelegível (Série C)', st: 'ok', src: 'C' },
+       { n: 'Moto Club', via: 'semifinalista — posição frágil: a tabela pública não explica Sampaio à frente do Moto', st: 'ok', src: 'I' },
+       { n: 'Luminense', via: '5º da 1ª fase', st: 'ok', src: 'I' },
+       { n: 'Tuntum', via: '6º da 1ª fase', st: 'ok', src: 'I' }],
+  PI: [{ n: 'Piauí', via: 'campeão do Piauiense', st: 'ok', src: 'C' },
+       { n: 'Atlético Piauiense', via: 'vice do Piauiense', st: 'ok', src: 'C' },
+       { n: 'Fluminense-PI', via: 'semifinalista, 3º da 1ª fase — vaga na CdB 2027 corrobora', st: 'ok', src: 'I' },
+       { n: 'Altos', via: 'semifinalista, 4º da 1ª fase', st: 'ok', src: 'I' },
+       { n: 'Oeirense', via: '5º da 1ª fase', st: 'ok', src: 'I' },
+       { n: 'Teresina', via: '6º da 1ª fase', st: 'ok', src: 'I' }],
+  // TO: fila inteira confirmada pelas legendas de vaga do próprio wikitext do Tocantinense.
+  TO: [{ n: 'Tocantinópolis', via: 'campeão do Tocantinense', st: 'ok', src: 'C' },
+       { n: 'União Araguainense', via: 'vice do Tocantinense', st: 'ok', src: 'C' },
+       { n: 'Gurupi', via: '3º geral, eliminado na semifinal', st: 'ok', src: 'C' },
+       { n: 'Capital-TO', via: '4º geral', st: 'ok', src: 'C' },
+       { n: 'Araguaína', via: '5º geral', st: 'ok', src: 'C' },
+       { n: 'Bela Vista', via: '6º geral', st: 'ok', src: 'C' }],
+  AC: [{ n: 'Santa Cruz-AC', via: 'campeão do Acreano (1×0 na final)', st: 'ok', src: 'C' },
+       { n: 'Rio Branco-AC', via: 'vice do Acreano', st: 'ok', src: 'C' },
+       { n: 'Galvez', via: 'semifinalista, 1º da 1ª fase', st: 'ok', src: 'I' },
+       { n: 'Humaitá', via: 'semifinalista, 2º da 1ª fase', st: 'ok', src: 'I' },
+       { n: 'Independência', via: '5º da 1ª fase', st: 'ok', src: 'I' },
+       { n: 'Vasco-AC', via: '6º da 1ª fase', st: 'ok', src: 'I' }],
+  RO: [{ n: 'Guaporé', via: 'campeão do Rondoniense', st: 'ok', src: 'C' },
+       { n: 'Rondoniense', via: 'vice do Rondoniense', st: 'ok', src: 'C' },
+       { n: 'Ji-Paraná', via: '3º geral — vaga na CdB 2027 em 15/03 confirma', st: 'ok', src: 'C' },
+       { n: 'Porto Velho', via: 'semifinalista, 2º da 1ª fase', st: 'ok', src: 'I' },
+       { n: 'Barcelona-RO', via: '5º da 1ª fase', st: 'ok', src: 'I' },
+       { n: 'Genus', via: '6º da 1ª fase', st: 'ok', src: 'I' }],
+  RR: [{ n: 'GAS', via: 'campeão do Roraimense (2×0 na final)', st: 'ok', src: 'C' },
+       { n: 'Baré', via: 'vice do Roraimense', st: 'ok', src: 'C' },
+       { n: 'São Raimundo-RR', via: 'semifinalista, 1º da 1ª fase', st: 'ok', src: 'I' },
+       { n: 'Monte Roraima', via: 'semifinalista, 2º da 1ª fase', st: 'ok', src: 'I' },
+       { n: 'River-RR', via: '5º da 1ª fase', st: 'ok', src: 'I' },
+       { n: 'Progresso-RR', via: '6º da 1ª fase', st: 'ok', src: 'I' }],
+  MS: [{ n: 'Operário-MS', via: 'campeão do Sul-Mato-Grossense (tri invicto)', st: 'ok', src: 'C' },
+       { n: 'Bataguassu', via: 'vice do Sul-Mato-Grossense', st: 'ok', src: 'C' },
+       { n: 'Naviraiense', via: 'semifinalista, 1º da 1ª fase', st: 'ok', src: 'I' },
+       { n: 'Corumbaense', via: 'semifinalista, 3º da 1ª fase', st: 'ok', src: 'I' },
+       { n: 'Ivinhema', via: '4º da 1ª fase', st: 'ok', src: 'I' },
+       { n: 'Dourados', via: '6º da 1ª fase', st: 'ok', src: 'I' }],
+  AP: [{ n: 'Santos-AP', via: 'campeão do Amapaense (4×0 na final)', st: 'ok', src: 'C' },
+       { n: 'São José-AP', via: 'vice do Amapaense', st: 'ok', src: 'C' },
+       { n: 'Oratório', via: 'semifinalista, 2º da 1ª fase', st: 'ok', src: 'I' },
+       { n: 'Independente-AP', via: 'semifinalista, 4º da 1ª fase', st: 'ok', src: 'I' },
+       { n: 'Trem', via: '5º da 1ª fase', st: 'ok', src: 'I' },
+       { n: 'Ypiranga-AP', via: '6º da 1ª fase', st: 'ok', src: 'I' }]
 };
 
 // Parâmetros da composição de 2027. Não existe REC da Série D 2027 (sai ~fev/2027): tudo
@@ -13505,6 +13565,37 @@ const SD27_CFG = {
   seed: 20270101
 };
 // 'total' vem primeiro de proposito: o SerieDStateView abre na primeira fase da lista.
+// Clubes já garantidos na COPA DO BRASIL 2027 (128 clubes, 9 fases). Snapshot da Revista
+// Série Z de 05/04/2026 mais confirmações posteriores (wikitext do Tocantinense; North
+// campeão do Troféu Inconfidência; CSE 3º da Copa Alagoas; campeão e vice de RO por
+// regulamento da FFER). PARCIAL por natureza: os estaduais que terminaram depois do
+// snapshot ainda não constam — a UI diz isso em vez de fingir lista completa.
+// Chave: nome como está no RNC/app + UF; o join na UI é por (rncKey, UF).
+const CB27_CLASSIFICADOS = [
+  ['Amazonas', 'AM'], ['Manauara', 'AM'], ['Manaus', 'AM'], ['Nacional-AM', 'AM'],
+  ['Remo', 'PA'], ['Paysandu', 'PA'], ['Capitão Poço', 'PA'],
+  ['Ji-Paraná', 'RO'], ['Guaporé', 'RO'], ['Rondoniense', 'RO'],
+  ['Tocantinópolis', 'TO'], ['União Araguainense', 'TO'], ['Gurupi', 'TO'],
+  ['Náutico', 'PE'], ['Retrô', 'PE'], ['Santa Cruz', 'PE'], ['Sport', 'PE'],
+  ['ASA', 'AL'], ['CRB', 'AL'], ['CSA', 'AL'], ['CSE', 'AL'],
+  ['Bahia', 'BA'], ['Vitória', 'BA'], ['Jacuipense', 'BA'], ['Juazeirense', 'BA'],
+  ['Ceará', 'CE'], ['Fortaleza', 'CE'], ['Ferroviário', 'CE'],
+  ['IAPE', 'MA'], ['Maranhão', 'MA'], ['Sampaio Corrêa', 'MA'],
+  ['Botafogo-PB', 'PB'], ['Sousa', 'PB'],
+  ['Atlético Piauiense', 'PI'], ['Piauí', 'PI'], ['Fluminense-PI', 'PI'],
+  ['ABC', 'RN'], ['América-RN', 'RN'], ['Potiguar', 'RN'],
+  ['Confiança', 'SE'], ['Itabaiana', 'SE'], ['Sergipe', 'SE'],
+  ['Atlético-GO', 'GO'], ['Goiás', 'GO'], ['Vila Nova', 'GO'], ['Anapolina', 'GO'],
+  ['Mixto', 'MT'], ['Luverdense', 'MT'], ['Sport Sinop', 'MT'],
+  ['Gama', 'DF'], ['Ceilândia', 'DF'], ['Sobradinho', 'DF'],
+  ['Cruzeiro', 'MG'], ['Atlético-MG', 'MG'], ['América-MG', 'MG'], ['Pouso Alegre', 'MG'], ['North', 'MG'],
+  ['Flamengo', 'RJ'], ['Fluminense', 'RJ'], ['Botafogo', 'RJ'], ['Vasco da Gama', 'RJ'], ['Madureira', 'RJ'],
+  ['São Paulo', 'SP'], ['Palmeiras', 'SP'], ['Corinthians', 'SP'], ['Novorizontino', 'SP'], ['Portuguesa-SP', 'SP'],
+  ['Porto Vitória', 'ES'], ['Serra', 'ES'], ['Vitória-ES', 'ES'],
+  ['Grêmio', 'RS'], ['Internacional', 'RS'], ['Juventude', 'RS'], ['São Luiz-RS', 'RS'], ['Ypiranga', 'RS'],
+  ['Athletico-PR', 'PR'], ['Coritiba', 'PR'], ['Londrina', 'PR'], ['Operário-PR', 'PR'],
+  ['Barra', 'SC'], ['Chapecoense', 'SC'], ['Criciúma', 'SC']
+];
 // Edições do usuário na fila de sucessão (Class. 2027 › Fila estadual). Overlay POR UF:
 // a UF editada substitui a fila embutida inteira; as demais seguem o default. Corrompido
 // cai em {} — mesmo contrato dos outros overlays (simUni_sdMM, simUni_cbR16).
@@ -19601,6 +19692,7 @@ function RankingNacionalSim({
   const [f26, setF26] = useState('');
   const [f27, setF27] = useState('');
   const proj = useMemo(() => buildRNC(dash), [dash]);
+  const cb27Set = useMemo(() => new Set(CB27_CLASSIFICADOS.map(x => rncKey(x[0]) + '|' + x[1])), []);
   const alloc = useMemo(() => (dash && dash.D && dash.D.trace && proj) ? build2027Alloc(dash.D, dash.C, proj, null) : null, [dash, proj]);
   const s27 = useMemo(() => build2027Series(dash, alloc), [dash, alloc]);
   const linhas = useMemo(() => {
@@ -19609,7 +19701,7 @@ function RankingNacionalSim({
       // Chave (nome, UF): sem a UF o Santa Cruz/PE emprestaria a projeção dele ao
       // Santa Cruz/RN e ao Santa Cruz/RS, que não jogam divisão nenhuma.
       const e = (s27 && s27[s27Key(c.app || c.n, c.u)]) || null;
-      return Object.assign({}, c, { s27: e ? e.mais : 'fora', s27p: e ? e.maisP : 0, s27det: e });
+      return Object.assign({}, c, { s27: e ? e.mais : 'fora', s27p: e ? e.maisP : 0, s27det: e, cb27: cb27Set.has(rncKey(c.n) + '|' + c.u) ? 1 : 0 });
     });
   }, [proj, s27]);
   const base = useMemo(() => linhas.filter(c =>
@@ -19657,7 +19749,7 @@ function RankingNacionalSim({
     h(TableToolbar, {
       query: q, setQuery: setQ, showing: rows.length, total: linhas.length, placeholder: "Buscar clube...",
       onExport: () => exportCSV(rows, [{ label: 'Pos2027', key: 'pos27' }, { label: 'Clube', key: 'n' }, { label: 'UF', key: 'u' },
-        { label: 'Serie2026', key: 'serie' }, { label: 'Serie2027', key: 's27' }, { label: 'Serie2027_prob', fn: r => r.s27p.toFixed(1) },
+        { label: 'Serie2026', key: 'serie' }, { label: 'Serie2027', key: 's27' }, { label: 'Serie2027_prob', fn: r => r.s27p.toFixed(1) }, { label: 'CdB2027', key: 'cb27' },
         { label: 'RNC2026', key: 'rnc26' }, { label: 'Pos2026', key: 'pos26' }, { label: 'Sigma21_25', key: 's5' },
         { label: 'P26', fn: r => r.p26.toFixed(1) }, { label: 'RNC2027', fn: r => Math.round(r.rnc27) },
         { label: 'p10', key: 'p10' }, { label: 'p90', key: 'p90' }, { label: 'DeltaPos', key: 'dPos' }], 'rnc_2027.csv')
@@ -19669,7 +19761,7 @@ function RankingNacionalSim({
 
   const th = (k, label, align) => h(SortHeader, { k: k, label: label, sort: st.sort, onClick: st.onSort, align: align || 'center' });
   const cabTabela = h("thead", null, h("tr", { className: "text-slate-400 border-b border-slate-700" },
-    th('pos27', '#'), th('n', 'Clube', 'left'), th('serie', 'Série 26'), th('s27', 'Série 27'),
+    th('pos27', '#'), th('n', 'Clube', 'left'), th('serie', 'Série 26'), th('s27', 'Série 27'), th('cb27', 'CdB 27'),
     th('rnc26', 'RNC 2026'), th('s5', 'Σ 21-25'), th('p26', 'P26'), th('rnc27', 'RNC 2027'),
     h("th", { className: "text-center px-1 py-1 font-medium" }, "banda"), th('dPos', 'Δ pos')));
 
@@ -19688,6 +19780,7 @@ function RankingNacionalSim({
       ? h("span", { className: "px-1 rounded bg-slate-700/60 text-slate-300 text-[10px]" }, c.serie)
       : h("span", { className: "text-slate-600" }, "—")),
     cel27(c),
+    h("td", { className: "text-center" }, c.cb27 ? h("span", { className: "text-amber-300", title: "já classificado à Copa do Brasil 2027" }, "✓") : h("span", { className: "text-slate-700" }, "·")),
     h("td", { className: "text-center font-mono text-slate-400" }, fmt(c.rnc26),
       h("span", { className: "text-slate-600 text-[10px] ml-1" }, c.pos26, "º")),
     h("td", { className: "text-center font-mono text-rose-300/80" }, "−", fmt(c.s5)),
@@ -19704,7 +19797,9 @@ function RankingNacionalSim({
   const notaTabela = h("p", { className: "text-[10px] text-slate-500 mt-2 leading-relaxed" },
     "Σ 21-25 é subtraído porque esses cinco anos saem da janela. Clube sem competição nacional em 2026 aparece com P26 = 0 e cai o valor inteiro do Σ — é isso que faz a fila do ranking se mexer. ",
     h("span", { className: "text-slate-400" }, "Série 27"),
-    " é a divisão mais provável em 2027 e a chance dela; passe o mouse para ver a distribuição completa. Para os clubes da Série D ela sai da alocação de vagas, não da campanha: dá para ir bem e não ter vaga, ou ir mal e entrar pelo estadual.");
+    " é a divisão mais provável em 2027 e a chance dela; passe o mouse para ver a distribuição completa. Para os clubes da Série D ela sai da alocação de vagas, não da campanha: dá para ir bem e não ter vaga, ou ir mal e entrar pelo estadual. ",
+    h("span", { className: "text-slate-400" }, "CdB 27"),
+    " marca quem já garantiu a Copa do Brasil 2027 (" + CB27_CLASSIFICADOS.length + " de 128 vagas; lista parcial — snapshot de abril mais confirmações posteriores).");
 
   const dados = h("div", { className: "text-xs text-slate-300 space-y-3" },
     h("div", null,
