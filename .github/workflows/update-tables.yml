@@ -49,3 +49,11 @@ jobs:
           else
             echo "No changes."
           fi
+
+      # Depois do commit, de proposito: uma invariante quebrada vira um X vermelho neste
+      # run, mas nao bloqueia o fluxo de resultados para o site. Os harnesses validam a
+      # ENGINE extraida do index.html (somas exatas, popcounts, determinismo) — se uma
+      # atualizacao de dados ou de codigo quebrar uma delas, o erro aparece aqui em vez
+      # de virar um numero silenciosamente errado na pagina.
+      - name: Sanity harnesses (engine invariants)
+        run: NS=400 node scripts/check_all.cjs
