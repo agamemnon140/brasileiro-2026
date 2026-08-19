@@ -31,7 +31,18 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.67
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.68
+// v4.68 (19/08/2026): TRACES para a composição da Série D 2027. A regra do Art. 2º do REC
+//        acopla duas simulações: quem sobe da D libera vaga estadual em cascata, e quem cai
+//        da C entra pelo Critério 1. Como o dashboard roda as séries em estágios separados,
+//        a engine grava traces compactos por sorteio e um passe puro faz o acoplamento
+//        depois — assim mexer num parâmetro recalcula em milissegundos em vez de refazer
+//        10k simulações. Isso é exato, não aproximação: as competições são independentes no
+//        modelo (não compartilham jogo), então parear a sim i da D com a sim j da C é uma
+//        amostra legítima da distribuição conjunta.
+//        ct.__trace (idioma do extraStats.__uf) guarda dois bitsets de 96 bits por sorteio:
+//        g3 = chegou à 3ª fase e NÃO subiu (26 clubes), prom = os 6 promovidos. A Série C
+//        grava extraStats.__rebTrace com os rebaixados, derivado de nRebN e não hardcoded.
 // v4.67 (19/08/2026): ABA "Ranking CBF" — projeção do RNC 2027 dos 235 clubes. P26 sai do
 //        Monte Carlo, não de estimativa: a distribuição de colocação final de cada série
 //        (posF em A/B/C, posGe na D) vira distribuição de PONTOS pela escala da Convenção,
@@ -1263,6 +1274,8 @@ const simMC = (times, ranking, tab, res, cfg, sk, nS, ak, eo) => {
       ufTeams,
       acc
     };
+    // v4.68: rebaixados da Série C por simulação, para o Critério 1 da Série D 2027.
+    if (sk === 'C') extraStats.__rebTrace = [];
   }
   const ptsAtPos = Array.from({
     length: times.length
@@ -1423,6 +1436,7 @@ const simMC_single = (times, ranking, tab, res, cfg, sk, ak, eo, lg, mc, mf, ct,
     });
   };
   ufTally(cl.slice(times.length - nRebN).map(c => c.time), 'reb');
+  if (extraStats && extraStats.__rebTrace) for (const c of cl.slice(times.length - nRebN)) extraStats.__rebTrace.push(c.time);
   // v4.55b: classificados à fase seguinte — top-6 na B (2 diretos + 4 do playoff), top-8 na C (quadrangular).
   ufTally(cl.slice(0, sk === 'C' ? 8 : 6).map(c => c.time), 'topN');
   // Acumula Elo final por time (amostra no fim da temporada simulada).
@@ -1658,6 +1672,8 @@ const simMC_finalize = (times, ct, pts, posF, ptsAtPos, nS, elFinal, extraStats,
     nSims: nS,
     // v4.55: distribuição conjunta por UF (B/C) — consumida pela sub-aba "Por Estado" das Chaves.
     ufDist: extraStats && extraStats.__uf ? buildUfDist(extraStats.__uf.acc, extraStats.__uf.ufTeams, nS, ['acesso', 'topN', 'reb'], 'acesso') : null,
+    // v4.68: nomes dos rebaixados, achatados (nRebN por simulação, na ordem dos sorteios).
+    rebTrace: extraStats && extraStats.__rebTrace || null,
     cortes: {
       titulo: pc(0),
       g4: pc(3),
@@ -1710,6 +1726,8 @@ const simMC_async = (times, ranking, tab, res, cfg, sk, nS, ak, eo, onProgress, 
       ufTeams,
       acc
     };
+    // v4.68: rebaixados da Série C por simulação, para o Critério 1 da Série D 2027.
+    if (sk === 'C') extraStats.__rebTrace = [];
   }
   const ptsAtPos = Array.from({
     length: times.length
@@ -2208,6 +2226,16 @@ const simMC_D_single = (cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeam
     banda.sort(camp8);
     for (const t of banda) ct[t].posGe[geRank++]++;
   }
+  // Traces (v4.68). grupo3 = bandas 5-7 = quem chegou à 3ª fase e não subiu: perdedores
+  // do playoff (2) + das oitavas (8) + da 3ª fase (16) = 26. promovidos = bandas 1-4 = 6.
+  if (ct.__trace) {
+    const tr = ct.__trace,
+      off = tr.n * 3;
+    const marca = (arr, t) => { const i = SD_IDX[t]; arr[off + (i >> 5)] |= 1 << (i & 31); };
+    for (let b = 4; b <= 6; b++) for (const t of bandasGe[b]) marca(tr.g3, t);
+    for (let b = 0; b <= 3; b++) for (const t of bandasGe[b]) marca(tr.prom, t);
+    tr.n++;
+  }
   // === Distribuição CONJUNTA por estado (v4.47) ===
   // Para cada fase, conta quantos times de cada UF chegaram e incrementa o
   // histograma ufAcc[uf][fase][k]. Os conjuntos abaixo já têm times únicos:
@@ -2314,7 +2342,9 @@ const simMC_D_finalize = (snap, ct, nS, gpts, ufAcc, ufTeams) => {
     })).sort((a, b) => b.ac - a.ac || b.elo - a.elo),
     nSims: nS,
     ptsCutsByGroup,
-    ufDist: buildUfDist(ufAcc, ufTeams, nS)
+    ufDist: buildUfDist(ufAcc, ufTeams, nS),
+    // Traces crus para o passe de acoplamento da Série D 2027 (v4.68).
+    trace: ct.__trace ? { g3: ct.__trace.g3, prom: ct.__trace.prom, n: ct.__trace.n } : null
   };
 };
 // Normaliza ufAcc em ufDist: por UF e fase, {pcts:[P(k)%], E:nº esperado}.
@@ -2368,6 +2398,9 @@ const simMC_D = (cfg, nS, ak, eo) => {
       matchups: {}
     };
   });
+  // Traces do sorteio (v4.68): dois bitsets de 96 bits (3 palavras de 32) por simulação.
+  // Custo ~120 KB cada em 10k sims, contra os ~7,7 MB que ptsSamples já retém.
+  ct.__trace = { g3: new Uint32Array(3 * nS), prom: new Uint32Array(3 * nS), n: 0 };
   // gpts[gIdx][pos]: amostras de pontuação dos times que terminaram na (pos+1)ª
   // posição do grupo gIdx, ao longo das nS simulações. pos: 0-3 (1º-4º).
   const gpts = SD_GRUPOS.map(() => [[], [], [], []]);
@@ -2407,6 +2440,9 @@ const simMC_D_async = (cfg, nS, ak, eo, extra, onProgress, onDone) => {
       matchups: {}
     };
   });
+  // Traces do sorteio (v4.68): dois bitsets de 96 bits (3 palavras de 32) por simulação.
+  // Custo ~120 KB cada em 10k sims, contra os ~7,7 MB que ptsSamples já retém.
+  ct.__trace = { g3: new Uint32Array(3 * nS), prom: new Uint32Array(3 * nS), n: 0 };
   const gpts = SD_GRUPOS.map(() => [[], [], [], []]);
   const {
     ufTeams,
@@ -5069,6 +5105,9 @@ Object.keys(SD_INFO).forEach(t => {
   if (!UF_MAP[t]) UF_MAP[t] = SD_INFO[t].uf;
 });
 const SD_TIMES = SD_TD.map(t => t.n);
+// Índice do clube no bitset dos traces (v4.68).
+const SD_IDX = {};
+SD_TIMES.forEach((t, i) => SD_IDX[t] = i);
 const SD_GRUPOS = [['Nacional-AM', 'Manaus', 'Manauara', 'GAS', 'Monte Roraima', 'São Raimundo-RR'], ['Independência', 'Galvez', 'Humaitá', 'Porto Velho', 'Guaporé', 'Araguaína'], ['Gama', 'Brasiliense', 'Luverdense', 'Primavera', 'Inhumas', 'Aparecidense'], ['Capital', 'Ceilândia', 'Mixto', 'Operário-MT', 'União-MT', 'Goiatuba'], ['Trem', 'Oratório', 'Tuna Luso', 'Águia de Marabá', 'Tocantinópolis', 'Imperatriz'], ['Sampaio Corrêa', 'Moto Club', 'IAPE', 'Maracanã', 'Iguatu', 'Parnahyba'], ['Ferroviário', 'Tirol', 'Atlético-CE', 'Altos', 'Piauí', 'Fluminense-PI'], ['ABC', 'América-RN', 'Laguna', 'Sousa', 'Maguary', 'Central'], ['Retrô', 'Decisão', 'Serra Branca', 'Treze', 'Lagarto', 'Sergipe'], ['ASA', 'CSA', 'CSE', 'Jacuipense', 'Atlético-BA', 'Juazeirense'], ['Uberlândia', 'Betim', 'CRAC', 'ABECAT', 'Operário-MS', 'Ivinhema'], ['Porto', 'Rio Branco-ES', 'Vitória-ES', 'Real Noroeste', 'Tombense', 'Democrata GV'], ['Madureira', 'Portuguesa-RJ', 'America-RJ', 'Portuguesa-SP', 'Água Santa', 'Pouso Alegre'], ['Nova Iguaçu', 'Sampaio Corrêa-RJ', 'Maricá', 'XV de Piracicaba', 'Noroeste', 'Velo Clube'], ['Cianorte', 'FC Cascavel', 'Santa Catarina', 'Joinville', 'Guarany de Bagé', 'São Luiz-RS'], ['Blumenau', 'Marcílio Dias', 'São Joseense', 'Azuriz', 'São José-RS', 'Brasil-RS']];
 const SD_GL = ['A1·AM+RR', 'A2·AC+RO+TO', 'A3·DF+MT+GO', 'A4·DF+MT+GO', 'A5·AP+PA+TO+MA', 'A6·MA+CE+PI', 'A7·CE+PI', 'A8·RN+PB+PE', 'A9·PE+PB+SE', 'A10·AL+BA', 'A11·MG+GO+MS', 'A12·BA+ES+MG', 'A13·RJ+SP+MG', 'A14·RJ+SP', 'A15·PR+SC+RS', 'A16·SC+PR+RS'];
 const SD_PAIRS = [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9], [10, 11], [12, 13], [14, 15]];
