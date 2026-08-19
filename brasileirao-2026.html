@@ -31,7 +31,17 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.73
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.74
+// v4.74 (19/08/2026): O CHAVEAMENTO REAL MANDA. O app assumia que as quartas da Série D
+//        são rechaveadas por campanha em 1×8, 4×5, 2×7, 3×6. A CBF chaveou diferente em
+//        2026: dos quatro confrontos que o app montava, só Gama×São José-RS existia. Os
+//        outros três resultados reais eram DESCARTADOS e simulados no lugar, e o ABC — já
+//        classificado à semifinal na vida real — aparecia com 91% de acesso em vez de 100%.
+//        A correção não é adivinhar a fórmula da CBF, é deixar o dado mandar: se o overlay
+//        já define um emparelhamento completo entre os oito, usa-se ele; senão cai no
+//        rechaveamento presumido. Mesma precedência do resto do app (usuário > embutido >
+//        automação > modelo), e se corrige sozinho se a CBF mudar de fórmula. Vale também
+//        para o playoff de acesso, que tem o mesmo problema em potencial.
 // v4.73 (19/08/2026): CORREÇÃO — a Série 27 era indexada por NOME, então o Santa Cruz/PE
 //        emprestava a projeção dele ao Santa Cruz/RN e ao Santa Cruz/RS, que não jogam
 //        divisão nenhuma. O mesmo valia para os três Rio Branco, os dois Nacional, os dois
@@ -2138,14 +2148,15 @@ const simMC_D_single = (cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeam
   }
   const winOit = Object.values(winD); // 8 → chegam às quartas
   winOit.forEach(t => ct[t].qf++);
-  // Quartas (reseed por campanha do "Bloco I": 1×8, 4×5, 2×7, 3×6)
+  // Quartas. O rechaveamento por campanha (1×8, 4×5, 2×7, 3×6) é uma PREMISSA do modelo:
+  // a CBF chaveou diferente em 2026. Quando o overlay já traz os confrontos reais, eles
+  // mandam — descartar resultado conhecido é pior que errar a fórmula do chaveamento.
   const camp8 = (a, b) => st[b].P - st[a].P || st[b].GP - st[b].GC - (st[a].GP - st[a].GC) || st[b].GP - st[a].GP;
   const r8 = [...winOit].sort(camp8);
+  const paresQF = paresConhecidos(winOit) || [[0, 7], [3, 4], [1, 6], [2, 5]].map(ij => [r8[ij[0]], r8[ij[1]]]);
   const qW = [],
     qL = [];
-  for (const [i, j] of [[0, 7], [3, 4], [1, 6], [2, 5]]) {
-    const a = r8[i],
-      b = r8[j];
+  for (const [a, b] of paresQF) {
     bumpMu(a, 'qf', b);
     bumpMu(b, 'qf', a);
     const w = s180(a, b);
@@ -2155,13 +2166,12 @@ const simMC_D_single = (cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeam
   qW.forEach(t => ct[t].sf++);
   // === Semi + Playoff + Final ===
   qW.forEach(t => ct[t].ac++); // 4 semifinalistas acessam
-  // Playoff de acesso: 4 perdedores das quartas reseed por campanha (1×4, 2×3)
+  // Playoff de acesso: 4 perdedores das quartas, reseed por campanha (1×4, 2×3) — também
+  // uma premissa, também sobreposta pelo chaveamento real quando ele existe.
   const pL = [...qL].sort(camp8);
-  bumpMu(pL[0], 'po', pL[3]);
-  bumpMu(pL[3], 'po', pL[0]);
-  bumpMu(pL[1], 'po', pL[2]);
-  bumpMu(pL[2], 'po', pL[1]);
-  const playoff = [s180(pL[0], pL[3]), s180(pL[1], pL[2])];
+  const paresPO = paresConhecidos(pL) || [[pL[0], pL[3]], [pL[1], pL[2]]];
+  for (const [a, b] of paresPO) { bumpMu(a, 'po', b); bumpMu(b, 'po', a); }
+  const playoff = paresPO.map(ab => s180(ab[0], ab[1]));
   playoff.forEach(t => ct[t].ac++); // +2 vencedores playoff
   // Semi
   bumpMu(qW[0], 'sf', qW[1]);
@@ -8080,6 +8090,22 @@ function applySdKoAuto(rows) {
     } else if (ida) SD_KO_PART_AUTO[k] = { a, b, iA: ida.gm, iB: ida.gv, vA: null, vB: null };
     else SD_KO_PART_AUTO[k] = { a, b, iA: null, iB: null, vA: volta.gv, vB: volta.gm };
   }
+}
+// Emparelhamento já conhecido entre um conjunto de clubes: procura, para cada um, um
+// adversário com quem ele tenha confronto no overlay (real, do usuário ou da automação).
+// Devolve os pares só se cobrir TODOS — meio emparelhamento seria pior que nenhum,
+// porque misturaria chaveamento real com presumido no mesmo bracket.
+function paresConhecidos(times) {
+  const usados = {},
+    pares = [];
+  for (const a of times) {
+    if (usados[a]) continue;
+    for (const b of times) {
+      if (b === a || usados[b]) continue;
+      if (sdKoReal(a, b) || sdKoPart(a, b)) { pares.push([a, b]); usados[a] = usados[b] = 1; break; }
+    }
+  }
+  return pares.length * 2 === times.length ? pares : null;
 }
 // Resolve as edições do usuário (por code) em um overlay por par-ordenado {w,ga,gb,pen}.
 function sdBracketResolve(edits) {
