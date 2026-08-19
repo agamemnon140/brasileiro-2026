@@ -28,7 +28,7 @@ This applies to `CLAUDE.md` itself: if this file contradicts the code, verify ag
 **`index.html` is the source.** There is no build step and no `.jsx` any more.
 
 - `index.html` / `brasileirao-2026.html` — kept byte-identical; `index.html` is what Pages
-  serves. This transpiled HTML is the source of truth: it is at **v4.64** and every change
+  serves. This transpiled HTML is the source of truth: it is at **v4.70** and every change
   since v4.48 was made by hand, directly in `React.createElement` form.
 - `results.json` — automation output, **written by the Action, not by hand** (see *Automatic
   result updates*). Never hand-edit the `results`/`ko_d`/`cb` arrays and never commit an
@@ -58,7 +58,11 @@ anchors: `tab === 'config'` (2), `grupoTop1: 0` (2), `extraStats.__uf = {` (2).
 
 There is no test suite or linter. Two mechanisms:
 
-- **Headless harnesses** (`scripts/*.cjs`). `engine.cjs` slices `index.html` from the changelog
+- **Headless harnesses** (`scripts/*.cjs`) — each prints `RESULT: PASS`/`FAIL` and exits
+  non-zero on failure. `validate_ufdist` (joint per-state distribution), `geral_d` (Série D
+  general classification), `rnc_check` (Ranking Nacional constants), `rnc_proj` (RNC 2027
+  projection), `traces` (the Série C/D coupling traces), `alloc2027` (2027 slot allocation),
+  `draw2027` (projected group draw). Run them all after touching the engine. `engine.cjs` slices `index.html` from the changelog
   down to the `ReactDOM.createRoot` bootstrap and evaluates it, exposing every engine symbol.
   The cut must reach the bootstrap, not stop at the first UI symbol: `SD_C_CODES` /
   `SD_D_CODES` / `SD_BRK_PAIRS` are declared after the components but used by
@@ -79,6 +83,23 @@ Never diagnose the automation from a locally-opened file; check the Pages URL or
 Top-level component `SimuladorUnificado` holds a `tab` state switching between: `serieA`/`serieB`/`serieC` (→ `LeagueSim`), `serieD` (→ `SerieDSim`), `copaBR` (→ `CopaBrasilSim`), `h2h` (→ `ConfrontoMerged`), `config` (→ `SettingsTab`). A "Simular Tudo" dashboard is the **single Monte Carlo channel** — individual tabs only keep a "1 Sim rápido" button.
 
 **Simulation engine** (pure functions, no React): `poissonProb` → `calcProbs`/`calcL` (Poisson goal expectations from Elo + atk/def), `updR` (Elo + atk/def update after a game), `applyDrift`/`boxMuller` (per-sim structural-uncertainty noise on Elo and atk/def), `initLeague`/`computeCurrentAD`/`backtestSeries` (derive current team strength from real results played so far), `simMC` (N-run Monte Carlo, 1k or 10k) and `simUnica` (single deterministic-ish run). Each series has special post-season logic: Série B access playoff (3º–6º), Série C final quadrangular (G8 → 2 groups → final ida/volta), Série D's large multi-phase knockout handled via `prepareSerieDState` + `pairKey` (matches results to fixtures by sorted-pair+leg, not exact home/away/round).
+
+**Ranking Nacional de Clubes** (v4.66–v4.70). `RNC_2026` holds the CBF's published 2026 table
+(235 clubs) plus `s5` = Σ(P2021..P2025), which the CBF does *not* publish — it is reconstructed
+from the league and Copa do Brasil classifications of those years by `scripts/rnc_data/` (see
+its README). The check that matters: `5·P25+4·P24+3·P23+2·P22+1·P21` reproduces the published
+value for all 235 clubs with no divergence, which validates the points scale, the parsing and
+the name reconciliation at once. `buildRNC` projects 2027 (`RNC2026 + 5·P26 − s5`) with P26 from
+the Monte Carlo. The **`rnc` tab** renders it.
+
+**Série D 2027** (v4.68–v4.70). `EST_FILA_2027` is the per-state succession queue. Two rules for
+a vacated state slot, with *opposite* destinations — swapping them yields a plausible, wrong
+table: a club that **is promoted to Série C** frees its slot to the next in the *same state*;
+a club with a **double slot** (state + Critério 3) sends the surplus to the *Ranking Nacional*
+and the state gains nothing. `build2027Alloc` applies the four criteria of Art. 2º of the REC
+per draw, coupling the C and D simulations through the traces. `sorteio2027` projects the 16
+groups as a min-cost flow where the max-3-per-state cap is the **arc capacity**, so an invalid
+group is unrepresentable rather than repaired. All of it lives in the Série D `cl27` sub-tab.
 
 **Per-series data** is hardcoded as `S{A,B,C}_TAB` (fixtures), `_RES` (real results played), `_RANKING`, `_DATES`, `_NM`, plus `_META` objects (e.g. `nReb` relegation count, zone cutoffs — these encode 2026 CBF format changes like Série C having only 2 relegated). Copa do Brasil uses `CB_RES_IDA`/`CB_RES_VOLTA`. Results are merged with user-fetched results from `localStorage`.
 
