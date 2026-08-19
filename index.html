@@ -31,7 +31,14 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.70
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.71
+// v4.71 (19/08/2026): ESCUDOS REMOVIDOS. O Badge carregava a imagem de
+//        api.sofascore.app/api/v1/team/<id>/image — um terceiro, sem contrato nenhum com
+//        o app. Quem tem proteção contra rastreamento ou bloqueador no navegador via os
+//        escudos sumirem, e o app ficava com aparência inconsistente entre visitantes.
+//        O círculo com iniciais e a cor do clube já existia por baixo como fallback (o
+//        onError escondia a imagem quando ela falhava), então o plano B virou o único
+//        plano — nada de novo foi criado. TEAM_IDS saiu junto, por ter ficado sem uso.
 // v4.70 (19/08/2026): SORTEIO projetado dos 16 grupos da 1ª fase de 2027, por FLUXO DE
 //        CUSTO MÍNIMO. A geografia dos estados é um grafo, não uma linha: a Bahia faz
 //        divisa com ES, MG, GO, TO, PI, PE e SE ao mesmo tempo, e ordenar de norte a sul
@@ -482,68 +489,11 @@ const TEAM_COLORS = {
   'Ypiranga': '#006B3F',
   'Botafogo-PB': '#000'
 };
-const TEAM_IDS = {
-  'Flamengo': 1961,
-  'Palmeiras': 1963,
-  'Cruzeiro': 1954,
-  'Botafogo': 1958,
-  'Fluminense': 1962,
-  'Bahia': 1955,
-  'São Paulo': 1981,
-  'Internacional': 1966,
-  'Grêmio': 5926,
-  'Santos': 1968,
-  'Corinthians': 1957,
-  'Vasco': 1974,
-  'Atlético-MG': 1977,
-  'Vitória': 2017,
-  'Coritiba': 7768,
-  'Athletico-PR': 1960,
-  'Chapecoense': 7315,
-  'Remo': 7705,
-  'Mirassol': 7773,
-  'Red Bull Bragantino': 7710,
-  'Fortaleza': 1965,
-  'Ceará': 2025,
-  'Sport': 1999,
-  'Juventude': 7316,
-  'Criciúma': 7702,
-  'Goiás': 1959,
-  'CRB': 7696,
-  'Avaí': 7698,
-  'Cuiabá': 7770,
-  'Vila Nova': 7697,
-  'América-MG': 7699,
-  'Náutico': 7700,
-  'Ponte Preta': 7703,
-  'Londrina': 7766,
-  'Novorizontino': 80370,
-  'Botafogo-SP': 7771,
-  'Operário-PR': 7767,
-  'Atlético-GO': 7706,
-  'Paysandu': 7704,
-  'Guarani': 7774,
-  'Figueirense': 7695,
-  'Brusque': 211251,
-  'Ituano': 7907,
-  'Volta Redonda': 7769,
-  'Santa Cruz': 7701,
-  'Amazonas': 394078,
-  'Ferroviária': 7909,
-  'Caxias': 7708,
-  'Botafogo-PB': 7772,
-  'Confiança': 7775,
-  'Athletic': 363380,
-  'São Bernardo': 211252,
-  'Maringá': 211254,
-  'Ypiranga': 7776
-};
 const Badge = ({
   name,
   size
 }) => {
   const s = size || 18;
-  const tid = TEAM_IDS[name];
   const ab = (name || '').replace(/-[A-Z]{2}$/, '').split(/[\s-]/).map(function (w) {
     return w[0] || '';
   }).join('').slice(0, 3).toUpperCase();
@@ -571,19 +521,7 @@ const Badge = ({
       fontSize: s * 0.34,
       lineHeight: 1
     }
-  }, ab), tid && /*#__PURE__*/React.createElement("img", {
-    src: 'https://api.sofascore.app/api/v1/team/' + tid + '/image',
-    width: s,
-    height: s,
-    className: "absolute inset-0 rounded-full object-contain bg-white",
-    style: {
-      border: '1.5px solid #555'
-    },
-    onError: function (e) {
-      e.target.style.display = 'none';
-    },
-    loading: "lazy"
-  }));
+  }, ab));
 };
 // Mapa time→UF (A/B/C/Copa). A Série D é preenchida a partir de SD_INFO mais abaixo.
 const UF_MAP = {
