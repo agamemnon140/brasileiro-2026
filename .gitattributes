@@ -1,0 +1,18 @@
+# Fim de linha: tudo texto em LF, explicitamente.
+#
+# Sem isto o git classificava index.html como BINARIO (heuristica: linhas de 24 KB no
+# codigo transpilado), entao o autocrlf nao normalizava e qualquer ferramenta que gravasse
+# CRLF no Windows fazia o arquivo INTEIRO aparecer como reescrito no diff — 20 mil linhas
+# de ruido em cima de um patch de 80. Os blobs do historico sempre foram LF.
+* text=auto eol=lf
+*.html text eol=lf
+*.js text eol=lf
+*.cjs text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.py text eol=lf
+*.pem text eol=lf
+*.png binary
+*.pdf binary
