@@ -2,9 +2,15 @@ name: Update from CBF tables
 
 on:
   schedule:
-    # 09:00 UTC sexta (~06:00 BRT) — a CBF atualiza as Tabelas Detalhadas ao longo da semana.
-    - cron: '0 9 * * 5'
-  workflow_dispatch: {}
+    # 09:00 UTC segunda e sexta (~06:00 BRT) — a CBF atualiza as Tabelas Detalhadas
+    # ao longo da semana; segunda pega a rodada do fim de semana, sexta a de meio de semana.
+    - cron: '0 9 * * 1,5'
+  workflow_dispatch:
+    inputs:
+      force_refresh:
+        description: 'Reextrair tudo mesmo com o PDF inalterado (gasta creditos da API)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -29,14 +35,15 @@ jobs:
           # cms.cbf.com.br serve a cadeia TLS incompleta; o intermediário Sectigo OV R36
           # está embarcado no repo (scripts/cbf-ca.pem, válido até 2036).
           NODE_EXTRA_CA_CERTS: ${{ github.workspace }}/scripts/cbf-ca.pem
+          FORCE_REFRESH: ${{ inputs.force_refresh && '1' || '' }}
         run: node scripts/fetch_tables.mjs
 
       - name: Commit if changed
         run: |
-          if [ -n "$(git status --porcelain results.json)" ]; then
+          if [ -n "$(git status --porcelain results.json scripts/pdf-cache.json)" ]; then
             git config user.name  "results-bot"
             git config user.email "actions@users.noreply.github.com"
-            git add results.json
+            git add results.json scripts/pdf-cache.json
             git commit -m "chore: update results.json from CBF tables [skip ci]"
             git push
           else

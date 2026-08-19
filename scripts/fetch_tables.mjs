@@ -3,6 +3,10 @@
 // e mescla em ../results.json (lido pelo app no load). Rodado semanalmente pela
 // GitHub Action update-tables.yml. Node 20+ (fetch global).
 //
+// Cache: scripts/pdf-cache.json guarda a URL do PDF de cada serie/competicao na
+// ultima extracao COMPLETA. URL igual = PDF igual, entao as chamadas a API (o que
+// custa dinheiro) sao puladas. FORCE_REFRESH=1 ignora o cache.
+//
 // Descoberta do PDF: o link muda toda semana (data + hash no fim, ex.:
 // .../cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_09_07_0bfcf98409.pdf), então o
 // script raspa as páginas de competição da CBF atrás do link atual.
@@ -24,11 +28,15 @@ import { dirname, join } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const RESULTS_PATH = join(__dirname, '..', 'results.json');
 const APP_HTML_PATH = join(__dirname, '..', 'index.html');
+const PDF_CACHE_PATH = join(__dirname, 'pdf-cache.json');
 
 const API_KEY = process.env.ANTHROPIC_API_KEY;
 const MODEL = 'claude-sonnet-4-6';
 const MAX_NEW_PER_RUN = 80;
 const PDF_HOST = 'stcbfsiteprdimgbrs.blob.core.windows.net';
+// FORCE_REFRESH=1 ignora o cache de URL e reextrai tudo (util depois de mexer nos
+// prompts ou na sanitizacao, quando o PDF e o mesmo mas o parsing mudou).
+const FORCE_REFRESH = /^(1|true|yes)$/i.test(process.env.FORCE_REFRESH || '');
 
 const TEAMS = {
   A: ["Flamengo","Palmeiras","Cruzeiro","Mirassol","Fluminense","Botafogo","Bahia","São Paulo","Internacional","Grêmio","Atlético-MG","Santos","Corinthians","Vasco","Red Bull Bragantino","Vitória","Coritiba","Athletico-PR","Chapecoense","Remo"],
@@ -153,7 +161,13 @@ function sanitizeDates(serie, rows) {
   return out;
 }
 
+// Sinaliza que a ultima extracao bateu no teto de max_tokens (logo pode estar
+// incompleta). Lido em main() para NAO gravar a URL no cache -- assim a serie e
+// reextraida na proxima execucao em vez de ficar congelada pela metade.
+let lastExtractTruncated = false;
+
 async function extractFromPdf(serie, pdfB64, customPrompt) {
+  lastExtractTruncated = false;
   const body = {
     model: MODEL,
     max_tokens: 30000,
@@ -173,7 +187,10 @@ async function extractFromPdf(serie, pdfB64, customPrompt) {
   });
   if (!resp.ok) throw new Error(`API ${resp.status}: ${(await resp.text()).slice(0, 300)}`);
   const data = await resp.json();
-  if (data.stop_reason === 'max_tokens') console.error(`::warning::Série ${serie}: resposta truncada em max_tokens — extração possivelmente incompleta.`);
+  if (data.stop_reason === 'max_tokens') {
+    lastExtractTruncated = true;
+    console.error(`::warning::Série ${serie}: resposta truncada em max_tokens — extração possivelmente incompleta.`);
+  }
   let txt = '';
   for (const b of data.content || []) if (b.type === 'text') txt += b.text;
   let t = txt.replace(/```json\s*/g, '').replace(/```/g, '').trim();
@@ -363,6 +380,22 @@ function sanitizeKoD(rows, source, names) {
   return out;
 }
 
+// Cache de URL do PDF. O link da CBF carrega data + hash no fim e so muda quando a
+// tabela e republicada, entao URL igual = PDF igual e a extracao daria o mesmo
+// resultado. Como cada extracao manda o PDF inteiro para a API (o custo dominante
+// de uma execucao), pular a chamada quando nada mudou derruba o gasto de quase toda
+// execucao para zero. Gravado no repo pela Action junto com o results.json.
+async function loadPdfCache() {
+  try {
+    const raw = JSON.parse(await readFile(PDF_CACHE_PATH, 'utf8'));
+    return raw && raw.urls && typeof raw.urls === 'object' ? { ...raw.urls } : {};
+  } catch { return {}; }
+}
+
+async function savePdfCache(urls) {
+  await writeFile(PDF_CACHE_PATH, JSON.stringify({ updated_at: new Date().toISOString(), urls }, null, 2) + '\n', 'utf8');
+}
+
 async function main() {
   if (!API_KEY) { console.error('ANTHROPIC_API_KEY ausente.'); process.exit(1); }
 
@@ -381,21 +414,36 @@ async function main() {
 
   const builtIn = await loadBuiltIn();
   const builtInDates = await loadBuiltInDates();
+  const pdfCache = await loadPdfCache();
+  if (FORCE_REFRESH) console.log('FORCE_REFRESH ativo — reextraindo todas as séries.');
+  let extracted = 0, skippedCache = 0;
   const conflicts = [];
   let added = 0, skippedBuiltIn = 0, unchanged = 0;
   // datas por jogo (serie|rodada|casa|fora -> {data}); o PDF é a fonte, então aqui
   // a versão nova SEMPRE vence — jogo remarcado é justamente o caso de uso.
   const datesByKey = new Map();
+  // Séries cujo passe de datas rodou NESTA execução. As demais (puladas por cache,
+  // download falhou, extração falhou) precisam ter as datas já gravadas reinjetadas
+  // depois do laço — senão a substituição em bloco lá embaixo apagaria as delas.
+  const datesFresh = new Set();
 
   for (const serie of ['A', 'B', 'C']) {
     const url = await findPdfUrl(serie);
     if (!url) { console.error(`::warning::Série ${serie}: PDF da Tabela Detalhada não encontrado nas páginas da CBF.`); continue; }
+    if (!FORCE_REFRESH && pdfCache[serie] === url) {
+      console.log(`Série ${serie}: PDF inalterado desde a última extração — pulando as chamadas à API.`);
+      skippedCache++;
+      continue;
+    }
     console.log(`Série ${serie}: ${url}`);
     let candidates = [];
     let pdfB64 = null;
+    let serieOk = true;
     try {
       pdfB64 = await downloadPdfB64(url);
       candidates = sanitize(serie, await extractFromPdf(serie, pdfB64), url);
+      extracted++;
+      if (lastExtractTruncated) serieOk = false;
     } catch (e) {
       console.error(`::warning::Série ${serie} falhou: ${e.message}`);
       continue;
@@ -413,9 +461,16 @@ async function main() {
         diver++;
       }
       console.log(`Série ${serie}: ${ds.length} data(s) no PDF, ${diver} divergente(s) da data da rodada.`);
+      datesFresh.add(serie);
+      extracted++;
+      if (lastExtractTruncated) serieOk = false;
     } catch (e) {
+      serieOk = false;
       console.error(`::warning::Série ${serie}: extração de datas falhou: ${e.message}`);
     }
+    // Só cacheia quando OS DOIS passes (placares e datas) foram completos: cachear
+    // depois de uma falha parcial congelaria a metade que faltou até a CBF republicar.
+    if (serieOk) pdfCache[serie] = url;
     for (const c of candidates) {
       const k = dedupKey(c);
       if (builtIn[serie] && builtIn[serie].has(k)) { skippedBuiltIn++; continue; }
@@ -430,17 +485,26 @@ async function main() {
     }
   }
 
+  for (const d of existingDates) {
+    if (!datesFresh.has(d.serie)) datesByKey.set(`${d.serie}|${d.rodada}|${d.casa}|${d.fora}`, d);
+  }
+
   // ---- Série D: mata-mata → ko_d ----
   let koAdded = 0, koSkipped = 0, koUnchanged = 0;
   {
     const url = await findPdfUrl('D');
     if (!url) console.error('::warning::Série D: PDF da Tabela Detalhada não encontrado.');
-    else {
+    else if (!FORCE_REFRESH && pdfCache.D === url) {
+      console.log('Série D: PDF inalterado desde a última extração — pulando a chamada à API.');
+      skippedCache++;
+    } else {
       console.log(`Série D: ${url}`);
       try {
         const sd = await loadSdContext();
         if (!sd.names.size) throw new Error('lista de times da D não encontrada no app');
         const raw = await extractFromPdf('D', await downloadPdfB64(url), buildPromptD(sd.names));
+        extracted++;
+        if (!lastExtractTruncated) pdfCache.D = url;
         const candidates = sanitizeKoD(raw, url, sd.names);
         console.log(`Série D: ${raw.length} linha(s) brutas, ${candidates.length} perna(s) válidas após sanitização.`);
         if (raw.length && !candidates.length) console.error(`::warning::Série D: TODAS as linhas caíram na sanitização — amostra: ${JSON.stringify(raw.slice(0, 3))}`);
@@ -488,11 +552,16 @@ async function main() {
     else {
       const url = await findPdfUrl('CB');
       if (!url) console.error('::warning::Copa do Brasil: PDF da Tabela Detalhada não encontrado.');
-      else {
+      else if (!FORCE_REFRESH && pdfCache.CB === url) {
+        console.log('Copa do Brasil: PDF inalterado desde a última extração — pulando a chamada à API.');
+        skippedCache++;
+      } else {
         console.log(`Copa do Brasil: ${url}`);
         try {
           const nameSet = new Set(names);
           const rows = sanitizeCb(await extractFromPdf('CB', await downloadPdfB64(url), buildCbPrompt(names)), nameSet, url);
+          extracted++;
+          if (!lastExtractTruncated) pdfCache.CB = url;
           // só aceita jogo entre times que formam um confronto REAL das oitavas
           const pairKeys = new Set(pairs.map(([a, b]) => [a, b].sort().join('|')));
           const valid = rows.filter((r) => pairKeys.has([r.casa, r.fora].sort().join('|')));
@@ -513,6 +582,11 @@ async function main() {
       }
     }
   }
+  // Depois da trava de MAX_NEW_PER_RUN e de todos os blocos: se a execução abortasse,
+  // gravar o cache faria as séries pularem a reextração na próxima vez.
+  await savePdfCache(pdfCache);
+  console.log(`Extrações via API: ${extracted}; séries puladas por cache: ${skippedCache}.`);
+
   const mergedCb = [...cbByKey.values()].sort((a, b) => `${a.fase}|${a.casa}`.localeCompare(`${b.fase}|${b.casa}`));
   const canonCb = (arr) => JSON.stringify(arr.map((r) => ({ fase: r.fase, casa: r.casa, fora: r.fora, gc: r.gc, gf: r.gf })));
   const cbChanged = canonCb(mergedCb) !== canonCb(existingCb);
