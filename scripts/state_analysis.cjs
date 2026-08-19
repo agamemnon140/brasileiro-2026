@@ -1,31 +1,15 @@
 // Análise: distribuição conjunta de quantos times de cada ESTADO (UF) avançam
-// a cada fase da Série D. Reusa a engine pura do simulador_unificado.jsx
-// (linhas 1..1101, antes de qualquer código React) e adiciona um acumulador
-// por-simulação que conta, por UF, quantos times chegaram a cada fase.
+// a cada fase da Série D. Reusa a engine pura extraída do index.html (ver
+// engine.cjs) e adiciona um acumulador por-simulação que conta, por UF,
+// quantos times chegaram a cada fase.
 //
 // Defaults canônicos do app (dashboard "Simular Tudo"): ak='conservador',
 // eo=false, drift=15. Fases (semântica v4.24, "CHEGOU a essa fase"):
 //   f2  top-4 do grupo (64)   f3  2ª fase (32)   oit oitavas (16)
 //   qf  quartas (8)   sf  semi (4)   fin final (2)   ac  acesso (6)   ch campeão (1)
-const fs = require('fs');
-const path = require('path');
+const { runWithEngine } = require('./engine.cjs');
 
 const NS = parseInt(process.env.NS || '30000', 10);
-
-const jsxPath = path.join(__dirname, '..', 'simulador_unificado.jsx');
-const lines = fs.readFileSync(jsxPath, 'utf8').split(/\r?\n/);
-// Engine + dados: linhas 1..1101 (índice 0..1100). Remove import/export e os
-// dois únicos componentes JSX embutidos nesse trecho (Badge: linhas 118-131,
-// TN: linha 135) que não são usados pela engine de simulação.
-const engine = lines.slice(0, 1101)
-  .map((l, i) => {
-    const n = i + 1; // nº de linha 1-based
-    if (n >= 118 && n <= 131) return ''; // componente Badge (JSX)
-    if (n === 135) return '';            // componente TN (JSX)
-    return l;
-  })
-  .filter(l => !/^\s*import\s/.test(l) && !/export\s+default/.test(l))
-  .join('\n');
 
 const PHASES = ['f2', 'f3', 'oit', 'qf', 'sf', 'fin', 'ac', 'ch'];
 
@@ -111,4 +95,4 @@ const harness = `
 })();
 `;
 
-eval(engine + '\n' + harness);
+runWithEngine(harness);
