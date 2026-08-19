@@ -31,7 +31,15 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.72
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.73
+// v4.73 (19/08/2026): CORREÇÃO — a Série 27 era indexada por NOME, então o Santa Cruz/PE
+//        emprestava a projeção dele ao Santa Cruz/RN e ao Santa Cruz/RS, que não jogam
+//        divisão nenhuma. O mesmo valia para os três Rio Branco, os dois Nacional, os dois
+//        São José e o Atlético/AC. É o mesmo falso positivo silencioso que rncOf já evitava
+//        casando por (nome, UF) — e que eu reintroduzi no fallback da interface. A chave
+//        agora é s27Key(nome, UF) nos dois lados.
+//        O comparativo 2026 vs 2027 passou a ter cabeçalhos ordenáveis (useSortable), que
+//        exigiu subir o hook para fora do ramo da visão.
 // v4.72 (19/08/2026): SÉRIE DE 2027 na aba Ranking CBF, com probabilidade, mais filtros por
 //        série de 2026 e de 2027. build2027Series encadeia acesso e rebaixamento de todas
 //        as divisões a partir do mesmo Monte Carlo: A cai 4; B sobe 4 (bAccess) e cai 4;
@@ -13750,10 +13758,16 @@ function sorteio2027(alloc) {
 //   D → sobem 6 para a C (4 semifinalistas + 2 do playoff); quem fica depende dos quatro
 //       critérios do Art. 2º, que build2027Alloc já resolve — daí clubProb.
 // A Série C 2027 fica com 24 clubes: 20 − 2 rebaixados − 4 promovidos + 4 da B + 6 da D.
+//
+// A chave é (nome normalizado, UF), NUNCA só o nome. Indexar por nome faria o Santa Cruz/PE
+// emprestar a projeção dele ao Santa Cruz/RN e ao Santa Cruz/RS, que não jogam divisão
+// nenhuma — e o mesmo valeria para os três Rio Branco, os dois Nacional e os cinco Atlético.
+const s27Key = (nome, uf) => rncKey(nome) + '|' + uf;
+
 function build2027Series(dash, alloc) {
   if (!dash) return null;
   const out = {};
-  const põe = (t, o) => { out[t] = o; };
+  const põe = (t, o) => { out[s27Key(t, ufOfTeam(t))] = o; };
   if (dash.A) dash.A.probs.forEach(p => põe(p.time, { A: 100 - p.z4, B: p.z4, C: 0, D: 0 }));
   if (dash.B) dash.B.probs.forEach(p => {
     const sobe = p.bAccess != null ? p.bAccess : p.g4;
@@ -13766,18 +13780,18 @@ function build2027Series(dash, alloc) {
   if (dash.D) dash.D.probs.forEach(p => põe(p.time, { A: 0, B: 0, C: p.ac, D: 0 }));
   // P(seguir na Série D em 2027) vem da alocação de vagas, não da campanha: um clube pode
   // fazer boa campanha e mesmo assim não ter vaga, ou fazer campanha ruim e entrar pelo
-  // estadual ou pelo Ranking Nacional.
+  // estadual ou pelo Ranking Nacional. clubProb já carrega a UF de cada clube.
   if (alloc && alloc.clubProb) alloc.clubProb.forEach(c => {
-    if (!out[c.n]) out[c.n] = { A: 0, B: 0, C: 0, D: 0 };
-    out[c.n].D = c.p;
+    const k = s27Key(c.n, c.u);
+    if (!out[k]) out[k] = { A: 0, B: 0, C: 0, D: 0 };
+    out[k].D = c.p;
   });
-  // Normaliza para não passar de 100 por ruído de amostragem.
-  Object.keys(out).forEach(t => {
-    const o = out[t];
+  Object.keys(out).forEach(k => {
+    const o = out[k];
     const s = o.A + o.B + o.C + o.D;
-    if (s > 100) { const k = 100 / s; o.A *= k; o.B *= k; o.C *= k; o.D *= k; }
+    if (s > 100) { const f = 100 / s; o.A *= f; o.B *= f; o.C *= f; o.D *= f; }
     o.fora = Math.max(0, 100 - (o.A + o.B + o.C + o.D));
-    const pares = [['A', o.A], ['B', o.B], ['C', o.C], ['D', o.D], ['—', o.fora]];
+    const pares = [['A', o.A], ['B', o.B], ['C', o.C], ['D', o.D], ['fora', o.fora]];
     pares.sort((x, y) => y[1] - x[1]);
     o.mais = pares[0][0];
     o.maisP = pares[0][1];
@@ -14235,183 +14249,119 @@ const Sorteio2027View = ({
 const Classificados2027View = ({
   dash
 }) => {
+  const h = React.createElement;
   const [v, setV] = useState('estados');
   const al = useMemo(() => {
     if (!dash || !dash.D || !dash.D.trace) return null;
     const proj = buildRNC(dash);
     return proj ? build2027Alloc(dash.D, dash.C, proj, null) : null;
   }, [dash]);
-  if (!al) return /*#__PURE__*/React.createElement("p", {
-    className: "text-slate-400 text-center py-8"
-  }, "Rode \"⚡ Simular Tudo\" com as S\xE9ries C e D marcadas para projetar a composi\xE7\xE3o de 2027.");
+  // Hooks não podem viver dentro do ramo de uma visão, então a tabela do comparativo é
+  // preparada aqui em cima mesmo quando outra visão está aberta.
+  const comp = useMemo(() => !al ? [] : al.ufDist.map(r => ({
+    uf: r.uf,
+    q: EST_QUOTA_2027[r.uf] || 0,
+    n26: SD26_POR_UF[r.uf] || 0,
+    e27: r.total.E,
+    d: r.total.E - (SD26_POR_UF[r.uf] || 0)
+  })), [al]);
+  const stComp = useSortable(comp, 'd', 'desc');
+  if (!al) return h("p", { className: "text-slate-400 text-center py-8" },
+    "Rode \"⚡ Simular Tudo\" com as Séries C e D marcadas para projetar a composição de 2027.");
   const esg = Object.keys(al.filaEsgotada);
-  const n1 = al.cfg.nRebC,
-    n2 = al.cfg.nEstadual;
-  return /*#__PURE__*/React.createElement("div", null,
-  // --- painel da aritmética ---
-  /*#__PURE__*/React.createElement("div", {
-    className: "bg-slate-900/40 rounded-xl p-3 border border-slate-700/40 mb-3"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "text-xs text-emerald-300 font-semibold mb-1"
-  }, "Como as 96 vagas se formam"), /*#__PURE__*/React.createElement("p", {
-    className: "font-mono text-[11px] text-slate-300 mb-1"
-  }, "96 = ", /*#__PURE__*/React.createElement("span", {
-    className: "text-sky-300"
-  }, n1, " reb. S\xE9rie C"), " + ", /*#__PURE__*/React.createElement("span", {
-    className: "text-amber-300"
-  }, n2, " estaduais"), " + ", /*#__PURE__*/React.createElement("span", {
-    className: "text-emerald-300"
-  }, al.eD26.toFixed(1), " campanha na D"), " + ", /*#__PURE__*/React.createElement("span", {
-    className: "text-fuchsia-300"
-  }, al.eRnc.toFixed(1), " Ranking Nacional")), /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-slate-400 leading-relaxed"
-  }, "Chegam \xE0 3\xAA fase 32 clubes e sobem 6, ent\xE3o o Crit\xE9rio 3 comporta ", /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-300"
-  }, "26"), ". Mas quem j\xE1 tem vaga estadual sai da conta, e a\xED a sobra desce para o Ranking — foi assim que o Gama, campe\xE3o do Candang\xE3o, repassou ao ranking o lugar que ganhou na 3\xAA fase. Em m\xE9dia ", /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-300"
-  }, (26 - al.eD26).toFixed(1)), " vagas mudam de m\xE3o assim."), /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-amber-400/90 mt-1"
-  }, "N\xE3o existe regulamento da S\xE9rie D 2027 — sai por volta de fevereiro. Tudo aqui \xE9 premissa calcada no molde do Art. 2\xBA de 2026."), /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-slate-500 mt-1"
-  }, "Dessas 96, ", /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-300 font-mono"
-  }, al.eSemDono.toFixed(1)), " ainda n\xE3o t\xEAm dono conhecido: s\xE3o as copas estaduais em disputa e os estados cuja fila de sucess\xE3o eu n\xE3o levantei fundo o bastante."), esg.length > 0 && /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-amber-400 mt-1"
-  }, "⚠️ Fila estadual esgotada em ", esg.map(u => `${u} (${(al.filaEsgotada[u] / al.nDraws * 100).toFixed(0)}%)`).join(', '), " — n\xE3o levantei nomes suficientes nesses estados. A vaga fica com o estado mesmo assim; ela ", /*#__PURE__*/React.createElement("span", {
-    className: "underline"
-  }, "n\xE3o"), " vai para o Ranking por omiss\xE3o.")),
-  // --- seletor ---
-  /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-1 mb-3 bg-slate-800/40 rounded-xl p-1 max-w-lg"
-  }, [{
-    id: 'estados',
-    l: 'Por estado'
-  }, {
-    id: 'comp',
-    l: '2026 vs 2027'
-  }, {
-    id: 'vagas',
-    l: 'Quem pega vaga'
-  }, {
-    id: 'sorteio',
-    l: 'Sorteio dos grupos'
-  }].map(t => /*#__PURE__*/React.createElement("button", {
-    key: t.id,
-    onClick: () => setV(t.id),
-    className: `flex-1 py-1 px-2.5 rounded-md text-xs font-medium ${v === t.id ? 'bg-emerald-600/80 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`
-  }, t.l))), v === 'estados' && /*#__PURE__*/React.createElement(SerieDStateView, {
-    ufDist: al.ufDist,
-    nSims: al.nDraws,
-    phases: SD27_SOURCES,
+  const forte = t => h("span", { className: "text-slate-300" }, t);
+
+  const painel = h("div", { className: "bg-slate-900/40 rounded-xl p-3 border border-slate-700/40 mb-3" },
+    h("p", { className: "text-xs text-emerald-300 font-semibold mb-1" }, "Como as 96 vagas se formam"),
+    h("p", { className: "font-mono text-[11px] text-slate-300 mb-1" }, "96 = ",
+      h("span", { className: "text-sky-300" }, al.cfg.nRebC, " reb. Série C"), " + ",
+      h("span", { className: "text-amber-300" }, al.cfg.nEstadual, " estaduais"), " + ",
+      h("span", { className: "text-emerald-300" }, al.eD26.toFixed(1), " campanha na D"), " + ",
+      h("span", { className: "text-fuchsia-300" }, al.eRnc.toFixed(1), " Ranking Nacional")),
+    h("p", { className: "text-[11px] text-slate-400 leading-relaxed" },
+      "Chegam à 3ª fase 32 clubes e sobem 6, então o Critério 3 comporta ", forte("26"),
+      ". Mas quem já tem vaga estadual sai da conta, e aí a sobra desce para o Ranking — foi assim que o Gama, campeão do Candangão, repassou ao ranking o lugar que ganhou na 3ª fase. Em média ",
+      forte((26 - al.eD26).toFixed(1)), " vagas mudam de mão assim."),
+    h("p", { className: "text-[10px] text-amber-400/90 mt-1" },
+      "Não existe regulamento da Série D 2027 — sai por volta de fevereiro. Tudo aqui é premissa calcada no molde do Art. 2º de 2026."),
+    h("p", { className: "text-[11px] text-slate-500 mt-1" }, "Dessas 96, ",
+      h("span", { className: "text-slate-300 font-mono" }, al.eSemDono.toFixed(1)),
+      " ainda não têm dono conhecido: são as copas estaduais em disputa e os estados cuja fila de sucessão eu não levantei fundo o bastante."),
+    esg.length > 0 && h("p", { className: "text-[10px] text-amber-400 mt-1" },
+      "⚠️ Fila estadual esgotada em ", esg.map(u => `${u} (${(al.filaEsgotada[u] / al.nDraws * 100).toFixed(0)}%)`).join(', '),
+      " — não levantei nomes suficientes nesses estados. A vaga fica com o estado mesmo assim; ela ",
+      h("span", { className: "underline" }, "não"), " vai para o Ranking por omissão."));
+
+  const seletor = h("div", { className: "flex gap-1 mb-3 bg-slate-800/40 rounded-xl p-1 max-w-2xl" },
+    [{ id: 'estados', l: 'Por estado' }, { id: 'comp', l: '2026 vs 2027' },
+     { id: 'vagas', l: 'Quem pega vaga' }, { id: 'sorteio', l: 'Sorteio dos grupos' }].map(t =>
+      h("button", {
+        key: t.id, onClick: () => setV(t.id),
+        className: `flex-1 py-1 px-2.5 rounded-md text-xs font-medium ${v === t.id ? 'bg-emerald-600/80 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`
+      }, t.l)));
+
+  const porEstado = h(SerieDStateView, {
+    ufDist: al.ufDist, nSims: al.nDraws, phases: SD27_SOURCES,
     note: 'As vagas estaduais são cota fixa do RNF, então aparecem determinísticas: o que varia é quem as ocupa.'
-  }), v === 'comp' && (() => {
-    const rows = al.ufDist.map(r => ({
-      uf: r.uf,
-      q: EST_QUOTA_2027[r.uf] || 0,
-      n26: SD26_POR_UF[r.uf] || 0,
-      e27: r.total.E,
-      d: r.total.E - (SD26_POR_UF[r.uf] || 0)
-    })).sort((a, b) => b.d - a.d);
-    const mx = Math.max(...rows.map(r => Math.abs(r.d)));
-    return /*#__PURE__*/React.createElement("div", {
-      className: "overflow-x-auto"
-    }, /*#__PURE__*/React.createElement("table", {
-      className: "text-xs w-full max-w-2xl"
-    }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
-      className: "text-slate-400 border-b border-slate-700"
-    }, /*#__PURE__*/React.createElement("th", {
-      className: "text-left py-1"
-    }, "UF"), /*#__PURE__*/React.createElement("th", {
-      className: "text-center py-1"
-    }, "cota estadual"), /*#__PURE__*/React.createElement("th", {
-      className: "text-center py-1"
-    }, "2026"), /*#__PURE__*/React.createElement("th", {
-      className: "text-center py-1"
-    }, "E[2027]"), /*#__PURE__*/React.createElement("th", {
-      className: "text-center py-1"
-    }, "Δ"), /*#__PURE__*/React.createElement("th", {
-      className: "text-left py-1 pl-2"
-    }))), /*#__PURE__*/React.createElement("tbody", null, rows.map(r => /*#__PURE__*/React.createElement("tr", {
-      key: r.uf,
-      className: "border-b border-slate-800/50"
-    }, /*#__PURE__*/React.createElement("td", {
-      className: "py-1 font-medium"
-    }, r.uf), /*#__PURE__*/React.createElement("td", {
-      className: "text-center font-mono text-slate-500"
-    }, r.q), /*#__PURE__*/React.createElement("td", {
-      className: "text-center font-mono text-slate-400"
-    }, r.n26), /*#__PURE__*/React.createElement("td", {
-      className: "text-center font-mono text-white"
-    }, r.e27.toFixed(2)), /*#__PURE__*/React.createElement("td", {
-      className: `text-center font-mono ${r.d > 0.05 ? 'text-emerald-400' : r.d < -0.05 ? 'text-rose-400' : 'text-slate-600'}`
-    }, r.d > 0 ? '+' : '', r.d.toFixed(2)), /*#__PURE__*/React.createElement("td", {
-      className: "pl-2"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "h-2 rounded",
-      style: {
-        width: Math.max(2, Math.abs(r.d) / mx * 90) + 'px',
-        backgroundColor: r.d >= 0 ? 'rgba(52,211,153,.65)' : 'rgba(251,113,133,.65)'
-      }
-    }))))), /*#__PURE__*/React.createElement("tfoot", null, /*#__PURE__*/React.createElement("tr", {
-      className: "text-slate-400 font-semibold"
-    }, /*#__PURE__*/React.createElement("td", {
-      className: "py-1"
-    }, "total"), /*#__PURE__*/React.createElement("td", {
-      className: "text-center font-mono"
-    }, "64"), /*#__PURE__*/React.createElement("td", {
-      className: "text-center font-mono"
-    }, "96"), /*#__PURE__*/React.createElement("td", {
-      className: "text-center font-mono"
-    }, rows.reduce((s, r) => s + r.e27, 0).toFixed(2)), /*#__PURE__*/React.createElement("td", null), /*#__PURE__*/React.createElement("td", null)))), /*#__PURE__*/React.createElement("p", {
-      className: "text-[10px] text-slate-500 mt-2 leading-relaxed"
-    }, "A cota estadual \xE9 fixa (vem do Ranking Nacional de Federa\xE7\xF5es), ent\xE3o a varia\xE7\xE3o de um estado vem toda das outras tr\xEAs vias. Estado que perde clubes \xE9 estado cujos representantes ou subiram para a S\xE9rie C, ou n\xE3o v\xE3o longe o bastante na D, ou ca\xEDram no Ranking Nacional."));
-  })(), v === 'vagas' && /*#__PURE__*/React.createElement("div", {
-    className: "grid md:grid-cols-2 gap-4"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
-    className: "text-xs font-semibold text-fuchsia-300 mb-1"
-  }, "Favoritos \xE0 vaga pelo Ranking Nacional"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-slate-500 mb-2"
-  }, "Crit\xE9rio 4: preenche o que sobra, na ordem do RNC 2027 projetado, entre quem n\xE3o tem calend\xE1rio nacional."), /*#__PURE__*/React.createElement("table", {
-    className: "text-xs w-full"
-  }, /*#__PURE__*/React.createElement("tbody", null, al.rncPicks.slice(0, 18).map(x => /*#__PURE__*/React.createElement("tr", {
-    key: x.k,
-    className: "border-b border-slate-800/50"
-  }, /*#__PURE__*/React.createElement("td", {
-    className: "py-0.5"
-  }, x.n, /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-500 text-[10px] ml-1"
-  }, x.u)), /*#__PURE__*/React.createElement("td", {
-    className: "text-right font-mono w-24"
-  }, /*#__PURE__*/React.createElement("span", {
+  });
+
+  const mx = Math.max(1, ...comp.map(r => Math.abs(r.d)));
+  const thc = (k, label, align) => h(SortHeader, { k: k, label: label, sort: stComp.sort, onClick: stComp.onSort, align: align || 'center' });
+  const comparativo = h("div", { className: "overflow-x-auto" },
+    h("table", { className: "text-xs w-full max-w-2xl" },
+      h("thead", null, h("tr", { className: "text-slate-400 border-b border-slate-700" },
+        thc('uf', 'UF', 'left'), thc('q', 'cota estadual'), thc('n26', '2026'), thc('e27', 'E[2027]'), thc('d', 'Δ'),
+        h("th", { className: "text-left py-1 pl-2" }))),
+      h("tbody", null, stComp.sorted.map(r => h("tr", { key: r.uf, className: "border-b border-slate-800/50" },
+        h("td", { className: "py-1 font-medium" }, r.uf),
+        h("td", { className: "text-center font-mono text-slate-500" }, r.q),
+        h("td", { className: "text-center font-mono text-slate-400" }, r.n26),
+        h("td", { className: "text-center font-mono text-white" }, r.e27.toFixed(2)),
+        h("td", { className: `text-center font-mono ${r.d > 0.05 ? 'text-emerald-400' : r.d < -0.05 ? 'text-rose-400' : 'text-slate-600'}` },
+          r.d > 0 ? '+' : '', r.d.toFixed(2)),
+        h("td", { className: "pl-2" }, h("div", {
+          className: "h-2 rounded",
+          style: { width: Math.max(2, Math.abs(r.d) / mx * 90) + 'px', backgroundColor: r.d >= 0 ? 'rgba(52,211,153,.65)' : 'rgba(251,113,133,.65)' }
+        }))))),
+      h("tfoot", null, h("tr", { className: "text-slate-400 font-semibold" },
+        h("td", { className: "py-1" }, "total"),
+        h("td", { className: "text-center font-mono" }, comp.reduce((s, r) => s + r.q, 0)),
+        h("td", { className: "text-center font-mono" }, comp.reduce((s, r) => s + r.n26, 0)),
+        h("td", { className: "text-center font-mono" }, comp.reduce((s, r) => s + r.e27, 0).toFixed(2)),
+        h("td", null), h("td", null)))),
+    h("p", { className: "text-[10px] text-slate-500 mt-2 leading-relaxed" },
+      "A cota estadual é fixa (vem do Ranking Nacional de Federações), então a variação de um estado vem toda das outras três vias. Estado que perde clubes é estado cujos representantes ou subiram para a Série C, ou não vão longe o bastante na D, ou caíram no Ranking Nacional. Clique nos cabeçalhos para ordenar."));
+
+  const barra = (x, cor) => h("span", {
     className: "inline-block h-1.5 rounded mr-1 align-middle",
-    style: {
-      width: Math.max(2, x.p * 0.5) + 'px',
-      backgroundColor: 'rgba(232,121,249,.7)'
-    }
-  }), x.p < 0.5 ? '<1' : Math.round(x.p), "%")))))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
-    className: "text-xs font-semibold text-emerald-300 mb-1"
-  }, "Vaga dupla"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-slate-500 mb-2"
-  }, "Clubes que t\xEAm vaga estadual ", /*#__PURE__*/React.createElement("em", null, "e"), " se classificam pela campanha na D. Eles ficam com a estadual, e o lugar excedente desce para o Ranking Nacional — n\xE3o volta para o estado."), /*#__PURE__*/React.createElement("table", {
-    className: "text-xs w-full"
-  }, /*#__PURE__*/React.createElement("tbody", null, al.dupla.slice(0, 18).map(x => /*#__PURE__*/React.createElement("tr", {
-    key: x.t,
-    className: "border-b border-slate-800/50"
-  }, /*#__PURE__*/React.createElement("td", {
-    className: "py-0.5"
-  }, /*#__PURE__*/React.createElement(TN, {
-    name: x.t
-  })), /*#__PURE__*/React.createElement("td", {
-    className: "text-right font-mono w-24"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "inline-block h-1.5 rounded mr-1 align-middle",
-    style: {
-      width: Math.max(2, x.p * 0.5) + 'px',
-      backgroundColor: 'rgba(52,211,153,.7)'
-    }
-  }), x.p < 0.5 ? '<1' : Math.round(x.p), "%"))))))), v === 'sorteio' && /*#__PURE__*/React.createElement(Sorteio2027View, {
-    alloc: al
-  }));
+    style: { width: Math.max(2, x * 0.5) + 'px', backgroundColor: cor }
+  });
+  const listaVagas = h("div", { className: "grid md:grid-cols-2 gap-4" },
+    h("div", null,
+      h("p", { className: "text-xs font-semibold text-fuchsia-300 mb-1" }, "Favoritos à vaga pelo Ranking Nacional"),
+      h("p", { className: "text-[10px] text-slate-500 mb-2" },
+        "Critério 4: preenche o que sobra, na ordem do RNC 2027 projetado, entre quem não tem calendário nacional."),
+      h("table", { className: "text-xs w-full" }, h("tbody", null, al.rncPicks.slice(0, 18).map(x =>
+        h("tr", { key: x.k, className: "border-b border-slate-800/50" },
+          h("td", { className: "py-0.5" }, x.n, h("span", { className: "text-slate-500 text-[10px] ml-1" }, x.u)),
+          h("td", { className: "text-right font-mono w-24" }, barra(x.p, 'rgba(232,121,249,.7)'),
+            x.p < 0.5 ? '<1' : Math.round(x.p), "%")))))),
+    h("div", null,
+      h("p", { className: "text-xs font-semibold text-emerald-300 mb-1" }, "Vaga dupla"),
+      h("p", { className: "text-[10px] text-slate-500 mb-2" },
+        "Clubes que têm vaga estadual ", h("em", null, "e"),
+        " se classificam pela campanha na D. Eles ficam com a estadual, e o lugar excedente desce para o Ranking Nacional — não volta para o estado."),
+      h("table", { className: "text-xs w-full" }, h("tbody", null, al.dupla.slice(0, 18).map(x =>
+        h("tr", { key: x.t, className: "border-b border-slate-800/50" },
+          h("td", { className: "py-0.5" }, h(TN, { name: x.t })),
+          h("td", { className: "text-right font-mono w-24" }, barra(x.p, 'rgba(52,211,153,.7)'),
+            x.p < 0.5 ? '<1' : Math.round(x.p), "%")))))));
+
+  return h("div", null, painel, seletor,
+    v === 'estados' ? porEstado :
+    v === 'comp' ? comparativo :
+    v === 'vagas' ? listaVagas :
+    h(Sorteio2027View, { alloc: al }));
 };
 const SerieDStateView = ({
   ufDist,
@@ -19527,7 +19477,7 @@ function ConfrontoMerged({
   }));
 }
 // ====== ABA: RANKING NACIONAL DE CLUBES ======
-const RNC_CORES = { A: 'text-yellow-300', B: 'text-sky-300', C: 'text-orange-300', D: 'text-emerald-300', '—': 'text-slate-600' };
+const RNC_CORES = { A: 'text-yellow-300', B: 'text-sky-300', C: 'text-orange-300', D: 'text-emerald-300', fora: 'text-slate-600' };
 function RankingNacionalSim({
   dash
 }) {
@@ -19543,8 +19493,10 @@ function RankingNacionalSim({
   const linhas = useMemo(() => {
     if (!proj) return [];
     return proj.clubes.map(c => {
-      const e = (s27 && (s27[c.app] || s27[c.n])) || null;
-      return Object.assign({}, c, { s27: e ? e.mais : '—', s27p: e ? e.maisP : 0, s27det: e });
+      // Chave (nome, UF): sem a UF o Santa Cruz/PE emprestaria a projeção dele ao
+      // Santa Cruz/RN e ao Santa Cruz/RS, que não jogam divisão nenhuma.
+      const e = (s27 && s27[s27Key(c.app || c.n, c.u)]) || null;
+      return Object.assign({}, c, { s27: e ? e.mais : 'fora', s27p: e ? e.maisP : 0, s27det: e });
     });
   }, [proj, s27]);
   const base = useMemo(() => linhas.filter(c =>
@@ -19585,7 +19537,7 @@ function RankingNacionalSim({
       className: "bg-slate-700 text-white text-xs rounded-lg px-2 py-1 border border-slate-600"
     }, [['', 'todas'], ['A', 'Série A'], ['B', 'Série B'], ['C', 'Série C'], ['D', 'Série D'], ['-', 'sem série']]
       .filter(o => !(set === setF27 && o[0] === '-'))
-      .concat(set === setF27 ? [['—', 'fora do nacional']] : [])
+      .concat(set === setF27 ? [['fora', 'fora do nacional']] : [])
       .map(o => h("option", { key: o[0], value: o[0] }, o[1]))));
 
   const barra = h("div", { className: "flex items-center gap-2 flex-wrap mb-2" },
@@ -20471,7 +20423,7 @@ function SimuladorUnificado() {
     className: "text-[10px] text-blue-400 hover:text-blue-300 shrink-0"
   }, "fonte")))))), /*#__PURE__*/React.createElement("div", {
     className: "mt-4 text-center text-slate-500 text-xs"
-  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R16+) | C:", SC_RES.length, " (R13) | D:", SD_RES.length, " (grupos) + mata-mata | Copa BR: R16 (edit\xE1vel) | v4.67 \u2014 proje\xE7\xE3o do Ranking Nacional de Clubes"))));
+  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R16+) | C:", SC_RES.length, " (R13) | D:", SD_RES.length, " (grupos) + mata-mata | Copa BR: R16 (edit\xE1vel) | v4.73 \u2014 Ranking Nacional + composi\xE7\xE3o da S\xE9rie D 2027"))));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(SimuladorUnificado));
 </script>
