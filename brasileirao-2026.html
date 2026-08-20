@@ -31,7 +31,18 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.77
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.78
+// v4.78 (19/08/2026): LEMBRETES DE CALENDÁRIO. Cada slot pendente da fila estadual ganha
+//        a data esperada de decisão (Copa Rio 23/09 é confirmada; as demais, estimadas
+//        pelo calendário da edição anterior e marcadas assim). O painel de Class. 2027
+//        compara com hoje: slot vencido e ainda vazio vira aviso âmbar apontando o
+//        editor; antes disso, uma linha discreta diz a próxima definição. SD27_MARCOS
+//        cobre os marcos de documento (RNC 2027 oficial ~dez, REC da Série D ~fev).
+//        O caso que motivou: a Copa ES terminou em 01/07 e o app ficou SETE SEMANAS com
+//        o slot "em disputa", até uma rodada de pesquisa notar. APP_VERSION vira const
+//        colada neste cabeçalho — o rodapé já ficou preso duas vezes (v4.59, v4.73) por
+//        ser string solta.
+const APP_VERSION = 'v4.78';
 // v4.77 (19/08/2026): FILA DE SUCESSÃO nos 27 estados (antes 14 com fonte, 11 sem folga
 //        alguma sobre a cota) + coluna Copa do Brasil 2027 na aba Ranking CBF.
 //        A rodada de pesquisa corrigiu a ordem campeão/vice em SETE estados (AC, AP, MS,
@@ -13382,12 +13393,12 @@ const EST_FILA_2027 = {
   SP: [{ n: 'Portuguesa-SP', via: '5º do Paulistão', st: 'ok', src: 'C' },
        { n: 'Capivariano', via: '7º do Paulistão', st: 'ok', src: 'C' },
        { n: 'Primavera-SP', via: '12º do Paulistão', st: 'ok', src: 'C' },
-       { n: '', via: 'Copa Paulista — o campeão opta entre Copa do Brasil e Série D; a não escolhida fica com o vice', st: 'pend', src: 'C' },
+       { n: '', via: 'Copa Paulista — o campeão opta entre Copa do Brasil e Série D; a não escolhida fica com o vice (término estimado: out/2026)', st: 'pend', src: 'C', dt: '2026-10-31' },
        { n: 'Noroeste', via: '14º do Paulistão', st: 'ok', src: 'C' },
        { n: 'Velo Clube', via: '15º do Paulistão', st: 'ok', src: 'I' }],
   RJ: [{ n: 'Madureira', via: '4º do Carioca, semifinalista', st: 'ok', src: 'C' },
        { n: 'Bangu', via: '6º do Carioca, vice da Taça Rio', st: 'ok', src: 'C' },
-       { n: '', via: 'Copa Rio — mesma regra de opção da Copa Paulista', st: 'pend', src: 'C' },
+       { n: '', via: 'Copa Rio — mesma regra de opção da Copa Paulista (termina 23/09, confirmado)', st: 'pend', src: 'C', dt: '2026-09-23' },
        { n: 'Boavista', via: '8º do Carioca', st: 'ok', src: 'I' },
        { n: 'Sampaio Corrêa-RJ', via: '10º do Carioca', st: 'ok', src: 'I' },
        { n: 'Nova Iguaçu', via: '11º do Carioca', st: 'ok', src: 'I' },
@@ -13428,7 +13439,7 @@ const EST_FILA_2027 = {
        { n: 'Inhumas', via: '12º da 1ª fase', st: 'ok', src: 'I' }],
   SC: [{ n: 'Camboriú', via: 'Catarinense', st: 'ok', src: 'C' },
        { n: 'Santa Catarina', via: 'Catarinense', st: 'ok', src: 'C' },
-       { n: '', via: 'Copa Santa Catarina', st: 'pend', src: 'C' },
+       { n: '', via: 'Copa Santa Catarina — término estimado: nov/2026', st: 'pend', src: 'C', dt: '2026-11-30' },
        { n: 'Carlos Renaux', via: 'Catarinense — ordem do pool não confirmada', st: 'ok', src: 'I' },
        { n: 'Concórdia', via: 'Catarinense — ordem não confirmada', st: 'ok', src: 'I' },
        { n: 'Joinville', via: 'Catarinense — ordem não confirmada', st: 'ok', src: 'I' }],
@@ -13478,7 +13489,7 @@ const EST_FILA_2027 = {
   // SE: as duas vagas são o campeão do Sergipano 2026 e o campeão da Copa do Governador,
   // que ainda vai ser disputada. O 3º colocado entra apenas por sucessão.
   SE: [{ n: 'Sergipe', via: 'campeão do Sergipano 2026', st: 'ok', src: 'C' },
-       { n: '', via: 'campeão da Copa do Governador, ainda a ser disputada', st: 'pend', src: 'C' },
+       { n: '', via: 'Copa do Governador — turno único de 6 clubes iniciado em 29/07; término estimado: set/2026', st: 'pend', src: 'C', dt: '2026-09-30' },
        { n: 'Lagarto', via: '3º do Sergipano (sucessão)', st: 'ok', src: 'I' },
        { n: 'Guarany-SE', via: '5º do Sergipano', st: 'ok', src: 'I' },
        { n: 'América-SE', via: '6º do Sergipano', st: 'ok', src: 'I' }],
@@ -13599,6 +13610,12 @@ const CB27_CLASSIFICADOS = [
 // Edições do usuário na fila de sucessão (Class. 2027 › Fila estadual). Overlay POR UF:
 // a UF editada substitui a fila embutida inteira; as demais seguem o default. Corrompido
 // cai em {} — mesmo contrato dos outros overlays (simUni_sdMM, simUni_cbR16).
+// Marcos de calendário fora das copas: documentos da CBF que mudam os DADOS deste app.
+// Passada a data, o painel de Class. 2027 lembra o que fazer.
+const SD27_MARCOS = [
+  { dt: '2026-12-23', oq: 'O RNC 2027 oficial deve sair (em 2025 foi 23/12). Regenerar as constantes com scripts/rnc_data e conferir a projeção contra o publicado.' },
+  { dt: '2027-02-15', oq: 'O REC da Série D 2027 deve sair (~fev). Ele confirma ou corrige os critérios das 96 vagas que hoje são premissa.' }
+];
 const EST27_LS_KEY = 'simUni_est27';
 const loadEst27User = () => {
   try {
@@ -14419,6 +14436,20 @@ const Classificados2027View = ({
   const esg = Object.keys(al.filaEsgotada);
   const forte = t => h("span", { className: "text-slate-300" }, t);
 
+  // Lembretes de calendário. O caso que motivou: a Copa ES terminou em 01/07 e o slot
+  // ficou sete semanas marcado "em disputa" até alguém notar. Passou a data esperada e o
+  // slot segue vazio (contando as edições do usuário) → aviso âmbar.
+  const filaAtual = estFila27Merged(filaUser);
+  const hoje = new Date();
+  const fmtBR = d => d.slice(8, 10) + '/' + d.slice(5, 7);
+  const pendComData = [];
+  Object.keys(filaAtual).forEach(uf => (filaAtual[uf] || []).forEach(e => {
+    if (e.st === 'pend' && !e.n && e.dt) pendComData.push({ uf: uf, dt: e.dt, comp: e.via.split(' — ')[0], venceu: new Date(e.dt + 'T23:59:59') < hoje });
+  }));
+  const vencidas = pendComData.filter(p => p.venceu).sort((a, b) => a.dt < b.dt ? -1 : 1);
+  const proxima = pendComData.filter(p => !p.venceu).sort((a, b) => a.dt < b.dt ? -1 : 1)[0];
+  const marcosVencidos = SD27_MARCOS.filter(m => new Date(m.dt + 'T23:59:59') < hoje);
+
   const painel = h("div", { className: "bg-slate-900/40 rounded-xl p-3 border border-slate-700/40 mb-3" },
     h("p", { className: "text-xs text-emerald-300 font-semibold mb-1" }, "Como as 96 vagas se formam"),
     h("p", { className: "font-mono text-[11px] text-slate-300 mb-1" }, "96 = ",
@@ -14435,6 +14466,14 @@ const Classificados2027View = ({
     h("p", { className: "text-[11px] text-slate-500 mt-1" }, "Dessas 96, ",
       h("span", { className: "text-slate-300 font-mono" }, al.eSemDono.toFixed(1)),
       " ainda não têm dono conhecido: são as copas estaduais em disputa e os estados cuja fila de sucessão eu não levantei fundo o bastante."),
+    vencidas.length > 0 && h("p", { className: "text-[11px] text-amber-300 mt-1 font-medium" },
+      "⏰ Já devia ter terminado: ",
+      vencidas.map(p => p.comp + ' (' + p.uf + ', até ' + fmtBR(p.dt) + ')').join(' · '),
+      " — quando souber o campeão, preencha na visão ",
+      h("button", { onClick: () => setV('fila'), className: "underline text-amber-200 hover:text-white" }, "Fila estadual"), "."),
+    !vencidas.length && proxima && h("p", { className: "text-[10px] text-slate-500 mt-1" },
+      "Próxima definição esperada: ", proxima.comp, " (", proxima.uf, ") até ", fmtBR(proxima.dt), "."),
+    marcosVencidos.map((m, i) => h("p", { key: i, className: "text-[11px] text-amber-300 mt-1" }, "⏰ ", m.oq)),
     esg.length > 0 && h("p", { className: "text-[10px] text-amber-400 mt-1" },
       "⚠️ Fila estadual esgotada em ", esg.map(u => `${u} (${(al.filaEsgotada[u] / al.nDraws * 100).toFixed(0)}%)`).join(', '),
       " — não levantei nomes suficientes nesses estados. A vaga fica com o estado mesmo assim; ela ",
@@ -14543,7 +14582,7 @@ const Classificados2027View = ({
         h("span", { className: "w-4 text-right font-mono text-[10px] " + (i < cota ? 'text-emerald-400' : 'text-slate-600'), title: i < cota ? 'dentro da cota' : 'sucessão' }, i + 1),
         h("input", {
           value: e.n,
-          placeholder: e.st === 'pend' ? 'em disputa…' : 'nome do clube',
+          placeholder: e.st === 'pend' ? (e.dt ? 'em disputa — até ' + e.dt.slice(8, 10) + '/' + e.dt.slice(5, 7) : 'em disputa…') : 'nome do clube',
           title: e.via + (e.src === 'C' ? ' · confirmado' : e.src === 'U' ? ' · editado' : ' · inferido'),
           onChange: ev => editaFila(uf, i, ev.target.value),
           className: "flex-1 min-w-0 bg-slate-900/60 text-[11px] rounded px-1.5 py-0.5 border " + (e.src === 'U' ? 'border-emerald-700/70 text-emerald-200' : !e.n ? 'border-amber-700/60 text-amber-200' : e.src === 'I' ? 'border-slate-700 text-slate-300 border-dashed' : 'border-slate-700 text-slate-200')
@@ -20631,7 +20670,7 @@ function SimuladorUnificado() {
     className: "text-[10px] text-blue-400 hover:text-blue-300 shrink-0"
   }, "fonte")))))), /*#__PURE__*/React.createElement("div", {
     className: "mt-4 text-center text-slate-500 text-xs"
-  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R16+) | C:", SC_RES.length, " (R13) | D:", SD_RES.length, " (grupos) + mata-mata | Copa BR: R16 (edit\xE1vel) | v4.73 \u2014 Ranking Nacional + composi\xE7\xE3o da S\xE9rie D 2027"))));
+  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R16+) | C:", SC_RES.length, " (R13) | D:", SD_RES.length, " (grupos) + mata-mata | Copa BR: R16 (edit\xE1vel) | " + APP_VERSION + " \u2014 Ranking Nacional + composi\xE7\xE3o da S\xE9rie D 2027"))));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(SimuladorUnificado));
 </script>
