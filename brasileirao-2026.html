@@ -31,7 +31,32 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.78
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.79
+// v4.79 (23/08/2026): O CHAVEAMENTO REAL MANDA — EM TODO LUGAR, E COM O MANDO REAL.
+//        Três bugs da mesma raiz (presumir mando/emparelhamento em vez de ler o dado):
+//        (a) IGUATU "avançava" às quartas no bracket: os defaults vindos do ko_d assumiam
+//        mandante da ida = pior campanha (ordIda), mas a CBF pôs Nacional-AM (melhor) na ida
+//        do D04 e Goiatuba na do E02 — nos dois o agregado empatou e a orientação invertida
+//        entregava os PÊNALTIS ao lado errado (Iguatu em vez de Nacional, Goiatuba em vez de
+//        ASA). Pior: os defaults eram persistidos em simUni_sdMM como se fossem edição do
+//        usuário, com precedência máxima — abrir a aba Mata-mata contaminava o MC e a Geral.
+//        Agora o ko_d alimenta SD_KO_CODES (a = mandante REAL da ida), teamsOf orienta por
+//        ele, e os defaults NÃO viram mais edição (read-through + migração que limpa o
+//        localStorage das entradas idênticas ao default).
+//        (b) paresConhecidos era cego a fase (casava só por par de times): quando os
+//        resultados de F01-F04 entrassem no ko_d, a busca das quartas casaria Goiatuba com
+//        São José (par do F03) e Gama com ASA (par do F01), corrompendo tudo de novo.
+//        paresPorCodigo usa os CÓDIGOS CBF do ko_d (E01.. = quartas, F03/F04 = play-off),
+//        que carregam a fase; paresConhecidos ficou como fallback.
+//        (c) o "1 Sim", o bracket e a sdEliminatedSet nunca receberam a v4.74 e ainda
+//        montavam quartas por reseed presumido; e o play-off de acesso não existia na UI.
+//        Estrutura real 2026 (Tabela Detalhada CBF 19/08): F01=V.E01×V.E02, F02=V.E03×V.E04,
+//        F03=P.E01×P.E02, F04=P.E03×P.E04 (São José×Goiatuba e Nacional×CSA — o reseed
+//        presumido dava Nacional×São José / CSA×Goiatuba). Perdedor de quartas NÃO está
+//        eliminado (joga o play-off): a Geral agora reflete isso. F03/F04 entraram no
+//        bracket (fase própria) e SD_MM_DATES foi corrigido para as datas oficiais.
+//        Harness novo: mando_ko.cjs (pega exatamente o flip D04/E02, o par real do play-off
+//        via soma ac=100, e a migração do localStorage envenenado).
 // v4.78 (19/08/2026): LEMBRETES DE CALENDÁRIO. Cada slot pendente da fila estadual ganha
 //        a data esperada de decisão (Copa Rio 23/09 é confirmada; as demais, estimadas
 //        pelo calendário da edição anterior e marcadas assim). O painel de Class. 2027
@@ -42,7 +67,7 @@ const {
 //        o slot "em disputa", até uma rodada de pesquisa notar. APP_VERSION vira const
 //        colada neste cabeçalho — o rodapé já ficou preso duas vezes (v4.59, v4.73) por
 //        ser string solta.
-const APP_VERSION = 'v4.78';
+const APP_VERSION = 'v4.79';
 // v4.77 (19/08/2026): FILA DE SUCESSÃO nos 27 estados (antes 14 com fonte, 11 sem folga
 //        alguma sobre a cota) + coluna Copa do Brasil 2027 na aba Ranking CBF.
 //        A rodada de pesquisa corrigiu a ordem campeão/vice em SETE estados (AC, AP, MS,
@@ -317,7 +342,7 @@ const APP_VERSION = 'v4.78';
 //        sdBracketResolve lê simUni_sdMM e gera SD_KO_USER; s180 consulta antes do oficial). Sem
 //        edições cai no oficial. Edições de B/C ainda não entram no MC da liga.
 // Motor único | Config: total+pesoCasa | Copa do Brasil | Datas por rodada
-// Dados atualizados até 14/07/2026 (+ results.json dinâmico) | A:R18 | B:R16 | C:R13 | D: 3ª fase completa, oitavas definidas | CB:R16 (editável)
+// Dados embutidos até 14/07/2026 (+ results.json dinâmico) | A:R18 | B:R16 | C:R13 | D: 3ª fase embutida, oitavas/quartas via ko_d, semi e play-off definidos | CB:R16 (editável)
 // v4.49e: sub-aba "Chaves" de B e C agora EDITÁVEL (LeaguePhaseEdit, nos moldes do bracket da D):
 //        B = playoff de acesso (3º×6º, 4º×5º ida/volta) com vencedores subindo; C = quadrangular
 //        (2 grupos de 4 ida-volta, mini-tabela + top-2 acesso) + final do título. Times projetados
@@ -2185,11 +2210,12 @@ const simMC_D_single = (cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeam
   const winOit = Object.values(winD); // 8 → chegam às quartas
   winOit.forEach(t => ct[t].qf++);
   // Quartas. O rechaveamento por campanha (1×8, 4×5, 2×7, 3×6) é uma PREMISSA do modelo:
-  // a CBF chaveou diferente em 2026. Quando o overlay já traz os confrontos reais, eles
-  // mandam — descartar resultado conhecido é pior que errar a fórmula do chaveamento.
+  // a CBF chaveou diferente em 2026. Precedência (v4.79): códigos reais do ko_d (fase
+  // explícita, mando real) > paresConhecidos (legado, cego a fase) > presunção por campanha.
   const camp8 = (a, b) => st[b].P - st[a].P || st[b].GP - st[b].GC - (st[a].GP - st[a].GC) || st[b].GP - st[a].GP;
   const r8 = [...winOit].sort(camp8);
-  const paresQF = paresConhecidos(winOit) || [[0, 7], [3, 4], [1, 6], [2, 5]].map(ij => [r8[ij[0]], r8[ij[1]]]);
+  const qfCod = paresPorCodigo(['E01', 'E02', 'E03', 'E04'], winOit);
+  const paresQF = qfCod || paresConhecidos(winOit) || [[0, 7], [3, 4], [1, 6], [2, 5]].map(ij => [r8[ij[0]], r8[ij[1]]]);
   const qW = [],
     qL = [];
   for (const [a, b] of paresQF) {
@@ -2202,20 +2228,20 @@ const simMC_D_single = (cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeam
   qW.forEach(t => ct[t].sf++);
   // === Semi + Playoff + Final ===
   qW.forEach(t => ct[t].ac++); // 4 semifinalistas acessam
-  // Playoff de acesso: 4 perdedores das quartas, reseed por campanha (1×4, 2×3) — também
-  // uma premissa, também sobreposta pelo chaveamento real quando ele existe.
+  // Play-off de acesso. Estrutura real 2026: F03 = Perd.E01 × Perd.E02, F04 = Perd.E03 ×
+  // Perd.E04 (segue o bracket das quartas, NÃO reseed). Precedência: códigos F03/F04 do
+  // ko_d > estrutura do bracket (quando as quartas vieram por código) > legado/presunção.
   const pL = [...qL].sort(camp8);
-  const paresPO = paresConhecidos(pL) || [[pL[0], pL[3]], [pL[1], pL[2]]];
+  const paresPO = paresPorCodigo(['F03', 'F04'], qL) || (qfCod ? [[qL[0], qL[1]], [qL[2], qL[3]]] : (paresConhecidos(pL) || [[pL[0], pL[3]], [pL[1], pL[2]]]));
   for (const [a, b] of paresPO) { bumpMu(a, 'po', b); bumpMu(b, 'po', a); }
   const playoff = paresPO.map(ab => s180(ab[0], ab[1]));
   playoff.forEach(t => ct[t].ac++); // +2 vencedores playoff
-  // Semi
-  bumpMu(qW[0], 'sf', qW[1]);
-  bumpMu(qW[1], 'sf', qW[0]);
-  bumpMu(qW[2], 'sf', qW[3]);
-  bumpMu(qW[3], 'sf', qW[2]);
-  const sf1 = s180(qW[0], qW[1]),
-    sf2 = s180(qW[2], qW[3]);
+  // Semi. Estrutura real 2026: F01 = V.E01 × V.E02, F02 = V.E03 × V.E04 — quando as quartas
+  // vieram por código, qW já está nessa ordem; os códigos F01/F02 do ko_d refinam o mando.
+  const paresSF = paresPorCodigo(['F01', 'F02'], qW) || [[qW[0], qW[1]], [qW[2], qW[3]]];
+  for (const [a, b] of paresSF) { bumpMu(a, 'sf', b); bumpMu(b, 'sf', a); }
+  const sf1 = s180(paresSF[0][0], paresSF[0][1]),
+    sf2 = s180(paresSF[1][0], paresSF[1][1]);
   ct[sf1].fin++;
   ct[sf2].fin++;
   // Final
@@ -8065,13 +8091,13 @@ const SD_RES = [
 ];
 const SD_GRP_DATES = ['05/04', '12/04', '19/04', '26/04', '03/05', '10/05', '17/05', '24/05', '31/05', '14/06'];
 const SD_MM_DATES = {
-  f2: '21/06 e 28/06',
-  f3: '05/07 e 12/07',
-  oit: '19/07 e 26/07',
-  qrt: '02/08 e 09/08',
-  po: '16/08 e 23/08',
-  semi: '30/08 e 06/09',
-  final: '13/09'
+  f2: '20-21/06 e 27-29/06',
+  f3: '04-06/07 e 11-13/07',
+  oit: '18-19/07 e 25-26/07',
+  qrt: '08/08 e 15-16/08',
+  po: '26-27/08 e 02-03/09',
+  semi: '22-23/08 e 30/08',
+  final: '06/09 e 13/09'
 };
 // === Resultados REAIS do mata-mata da Série D 2026 ===
 // Sobrepõem a simulação (s180) quando o confronto JÁ FOI DECIDIDO na vida real.
@@ -8092,6 +8118,10 @@ let SD_KO_USER = {};
 // SD_KO_AUTO (v4.59): resultados de mata-mata vindos da AUTOMAÇÃO (campo ko_d do results.json).
 // Precedência: edições do usuário > dados embutidos no app > automação.
 let SD_KO_AUTO = {};
+// SD_KO_CODES (v4.79): emparelhamento REAL por código CBF (D01.., E01.., F01-F04, G01) vindo
+// do ko_d — a = mandante REAL da ida. É o que permite usar o chaveamento e o mando oficiais
+// em vez de presumi-los (reseed por campanha e ordIda são só fallback).
+let SD_KO_CODES = {};
 const sdKoReal = (a, b) => SD_KO_USER[sdKoKey(a, b)] || SD_KO_REAL[sdKoKey(a, b)] || SD_KO_AUTO[sdKoKey(a, b)] || null;
 // Confrontos PARCIAIS (só ida ou só volta conhecida): a perna conhecida fica FIXA e o MC
 // simula apenas a perna faltante (90 min, mando correto), em vez do agregado integrado de 180.
@@ -8105,6 +8135,7 @@ const sdKoPart = (a, b) => SD_KO_PART_USER[sdKoKey(a, b)] || SD_KO_PART_AUTO[sdK
 function applySdKoAuto(rows) {
   SD_KO_AUTO = {};
   SD_KO_PART_AUTO = {};
+  SD_KO_CODES = {};
   const byCode = {};
   for (const r of rows || []) {
     if (!r || !r.code || !r.leg || !r.mand || !r.vis) continue;
@@ -8115,6 +8146,7 @@ function applySdKoAuto(rows) {
     const a = ida ? ida.mand : volta.vis; // mandante da ida
     const b = ida ? ida.vis : volta.mand;
     if (!a || !b || a === b) continue;
+    SD_KO_CODES[code] = { a, b };
     const k = sdKoKey(a, b);
     if (ida && volta) {
       const aggA = ida.gm + volta.gv, aggB = ida.gv + volta.gm;
@@ -8143,6 +8175,21 @@ function paresConhecidos(times) {
   }
   return pares.length * 2 === times.length ? pares : null;
 }
+// v4.79: pares REAIS por código CBF para uma fase. Devolve os confrontos [a, b] (a = mandante
+// da ida) na ordem dos códigos, mas SÓ se todos os códigos existirem no ko_d e cobrirem
+// exatamente o conjunto esperado — senão null (fallback ao presumido). Ao contrário de
+// paresConhecidos, não é cego a fase: E01.. são as quartas, F03/F04 o play-off.
+function paresPorCodigo(codes, pool) {
+  if (!pool || codes.length * 2 !== pool.length) return null;
+  const set = new Set(pool), seen = new Set(), out = [];
+  for (const c of codes) {
+    const kc = SD_KO_CODES[c];
+    if (!kc || !set.has(kc.a) || !set.has(kc.b) || seen.has(kc.a) || seen.has(kc.b)) return null;
+    seen.add(kc.a); seen.add(kc.b);
+    out.push([kc.a, kc.b]);
+  }
+  return out;
+}
 // Resolve as edições do usuário (por code) em um overlay por par-ordenado {w,ga,gb,pen}.
 function sdBracketResolve(edits) {
   edits = edits || {};
@@ -8152,7 +8199,28 @@ function sdBracketResolve(edits) {
   const camp = t => st[t] ? st[t].P * 1e6 + (st[t].GP - st[t].GC) * 1e3 + st[t].GP : 0;
   const ordIda = (x, y) => (!x || !y) ? [x, y] : (camp(x) <= camp(y) ? [x, y] : [y, x]);
   function qSeeds() { const ws = SD_D_CODES.map(winOf); if (ws.some(w => !w)) return []; return ws.slice().sort((a, b) => camp(b) - camp(a)); }
-  function teamsOf(code) { if (f2[code]) return [f2[code].a, f2[code].b]; if (code[0] === 'E') { const s = qSeeds(); const [i, j] = SD_BRK_QSEED[code]; return ordIda(s[i] || null, s[j] || null); } const p = SD_BRK_PAIRS[code]; if (!p) return [null, null]; return ordIda(winOf(p[0]), winOf(p[1])); }
+  // v4.79: o mando/emparelhamento REAL (SD_KO_CODES) sobrepõe o presumido. Para C/D/F/G o
+  // override só orienta o par já resolvido; para E pode substituir o par inteiro (o reseed
+  // por campanha é premissa), desde que os dois clubes estejam entre os 8 classificados.
+  function realOrd(code, tm) {
+    const kc = SD_KO_CODES[code];
+    if (kc && tm[0] && tm[1] && ((kc.a === tm[0] && kc.b === tm[1]) || (kc.a === tm[1] && kc.b === tm[0]))) return [kc.a, kc.b];
+    return tm;
+  }
+  function loseOf(code) { const tm = teamsOf(code); const w = winOf(code); return w ? (w === tm[0] ? tm[1] : tm[0]) : null; }
+  function teamsOf(code) {
+    if (f2[code]) return [f2[code].a, f2[code].b];
+    if (code[0] === 'E') {
+      const s = qSeeds();
+      const kc = SD_KO_CODES[code];
+      if (s.length && kc && s.indexOf(kc.a) >= 0 && s.indexOf(kc.b) >= 0) return [kc.a, kc.b];
+      const [i, j] = SD_BRK_QSEED[code];
+      return ordIda(s[i] || null, s[j] || null);
+    }
+    if (SD_PO_PAIRS[code]) { const po = SD_PO_PAIRS[code]; return realOrd(code, ordIda(loseOf(po[0]), loseOf(po[1]))); }
+    const p = SD_BRK_PAIRS[code]; if (!p) return [null, null];
+    return realOrd(code, ordIda(winOf(p[0]), winOf(p[1])));
+  }
   // v4.56: sem edição COMPLETA do confronto, winOf cai no resultado OFICIAL já decidido
   // (SD_KO_REAL) — assim uma edição isolada em fase profunda (ex.: só a volta da 3ª fase)
   // resolve a cadeia de vencedores sem o usuário precisar abrir/persistir o bracket inteiro.
@@ -8169,7 +8237,7 @@ function sdBracketResolve(edits) {
   }
   const overlay = {};
   const partial = {};
-  const allCodes = [...SD_F2_REAL.map(t => t.code), ...SD_C_CODES, ...SD_D_CODES, 'E01', 'E02', 'E03', 'E04', 'F01', 'F02', 'G01'];
+  const allCodes = [...SD_F2_REAL.map(t => t.code), ...SD_C_CODES, ...SD_D_CODES, 'E01', 'E02', 'E03', 'E04', 'F01', 'F02', 'F03', 'F04', 'G01'];
   for (const code of allCodes) {
     const tm = teamsOf(code); if (!tm[0] || !tm[1]) continue;
     const r = edits[code] || {};
@@ -8198,11 +8266,12 @@ function sdEliminatedSet() {
   refreshSdKoUser();
   const elim = new Set();
   const winByCode = {};
-  const decide = (code, a, b) => {
-    winByCode[code] = null;
+  const loseByCode = {};
+  const decide = (code, a, b, naoElimina) => {
+    winByCode[code] = null; loseByCode[code] = null;
     if (!a || !b) return;
     const r = sdKoReal(a, b);
-    if (r && r.w) { winByCode[code] = r.w; elim.add(r.w === a ? b : a); }
+    if (r && r.w) { winByCode[code] = r.w; loseByCode[code] = r.w === a ? b : a; if (!naoElimina) elim.add(loseByCode[code]); }
   };
   for (const t of SD_F2_REAL) decide(t.code, t.a, t.b);
   for (const code of [...SD_C_CODES, ...SD_D_CODES]) { const p = SD_BRK_PAIRS[code]; decide(code, winByCode[p[0]], winByCode[p[1]]); }
@@ -8214,8 +8283,13 @@ function sdEliminatedSet() {
     SD_RES.forEach(r => { const c = r.c, f = r.f; if (!st[c] || !st[f]) return; st[c].GP += r.gc; st[c].GC += r.gf; st[f].GP += r.gf; st[f].GC += r.gc; if (r.gc > r.gf) st[c].P += 3; else if (r.gc === r.gf) { st[c].P++; st[f].P++; } else st[f].P += 3; });
     const camp = t => st[t] ? st[t].P * 1e6 + (st[t].GP - st[t].GC) * 1e3 + st[t].GP : 0;
     const seeds = ws.slice().sort((a, b) => camp(b) - camp(a));
-    for (const code of ['E01', 'E02', 'E03', 'E04']) { const ij = SD_BRK_QSEED[code]; decide(code, seeds[ij[0]], seeds[ij[1]]); }
-    for (const code of ['F01', 'F02', 'G01']) { const p = SD_BRK_PAIRS[code]; decide(code, winByCode[p[0]], winByCode[p[1]]); }
+    // v4.79: emparelhamento real por código quando o ko_d o traz; senão reseed presumido.
+    // Perdedor de quartas NÃO está eliminado — joga o play-off de acesso (F03/F04).
+    const paresQF = paresPorCodigo(['E01', 'E02', 'E03', 'E04'], ws) || ['E01', 'E02', 'E03', 'E04'].map(c => { const ij = SD_BRK_QSEED[c]; return [seeds[ij[0]], seeds[ij[1]]]; });
+    ['E01', 'E02', 'E03', 'E04'].forEach((c, i) => decide(c, paresQF[i][0], paresQF[i][1], true));
+    for (const code of ['F01', 'F02']) { const p = SD_BRK_PAIRS[code]; decide(code, winByCode[p[0]], winByCode[p[1]]); }
+    for (const code of ['F03', 'F04']) { const p = SD_PO_PAIRS[code]; decide(code, loseByCode[p[0]], loseByCode[p[1]]); }
+    decide('G01', winByCode['F01'], winByCode['F02']);
   }
   return elim;
 }
@@ -16823,7 +16897,11 @@ const SD_BRK_PAIRS = {
   F01: ['E01', 'E02'], F02: ['E03', 'E04'],
   G01: ['F01', 'F02']
 };
+// Play-off de acesso (novidade 2026, 6 sobem): PERDEDORES das quartas, seguindo o bracket —
+// F03 = Perd.E01 × Perd.E02, F04 = Perd.E03 × Perd.E04 (Tabela Detalhada CBF 19/08).
+const SD_PO_PAIRS = { F03: ['E01', 'E02'], F04: ['E03', 'E04'] };
 // quartas (E): reseed por campanha dos 8 vencedores das oitavas — 1º×8º, 4º×5º, 2º×7º, 3º×6º
+// (PREMISSA de fallback: em 2026 a CBF chaveou diferente; SD_KO_CODES sobrepõe quando existe)
 const SD_BRK_QSEED = { E01: [0, 7], E02: [3, 4], E03: [1, 6], E04: [2, 5] };
 // Listas de códigos por fase + índice por code (usados pela engine MC e pelo bracket).
 const SD_C_CODES = ['C01','C02','C03','C04','C05','C06','C07','C08','C09','C10','C11','C12','C13','C14','C15','C16'];
@@ -16832,8 +16910,9 @@ const SD_BRK_PHASES = [
   { key: 'f2', label: '2ª Fase', date: '21/06 e 27-28/06', codes: ['B01','B02','B03','B04','B05','B06','B07','B08','B09','B10','B11','B12','B13','B14','B15','B16','B17','B18','B19','B20','B21','B22','B23','B24','B25','B26','B27','B28','B29','B30','B31','B32'] },
   { key: 'f3', label: '3ª Fase', date: '04-06 e 11-13/07', codes: ['C01','C02','C03','C04','C05','C06','C07','C08','C09','C10','C11','C12','C13','C14','C15','C16'] },
   { key: 'f4', label: 'Oitavas (4ª Fase)', date: '18-19 e 25-26/07', codes: ['D01','D02','D03','D04','D05','D06','D07','D08'] },
-  { key: 'f5', label: 'Quartas (5ª Fase) · reseed por campanha', date: '08 e 15/08', codes: ['E01','E02','E03','E04'] },
-  { key: 'f6', label: 'Semifinal', date: '23 e 30/08', codes: ['F01','F02'] },
+  { key: 'f5', label: 'Quartas (5ª Fase)', date: '08 e 15-16/08', codes: ['E01','E02','E03','E04'] },
+  { key: 'f6', label: 'Semifinal', date: '22-23 e 30/08', codes: ['F01','F02'] },
+  { key: 'po', label: 'Play-off de acesso', date: '26-27/08 e 02-03/09', codes: ['F03','F04'] },
   { key: 'f7', label: 'Final', date: '06 e 13/09', codes: ['G01'] }
 ];
 
@@ -16856,7 +16935,10 @@ function SerieDBracket({ rMC, koAuto }) {
       d[t.code] = e;
     }
     // v4.59: pernas vindas da AUTOMAÇÃO (results.json ko_d) para fases ainda não embutidas.
-    // Assunção (conferida nas fases anteriores): mandante da ida oficial = tm[0] (ordIda por campanha).
+    // v4.79: os valores ficam na ordem do DADO (iA = gols do mandante real da ida); teamsOf
+    // devolve [mandante real, visitante] via SD_KO_CODES, então orientação e valores casam.
+    // (A assunção antiga — mandante da ida = pior campanha — invertia D04 e E02: era o bug
+    // que "classificava" o Iguatu.)
     if (koAuto && koAuto.length) {
       const byCode = {};
       koAuto.forEach(r => { if (r && r.code && r.leg) (byCode[r.code] = byCode[r.code] || {})[r.leg] = r; });
@@ -16871,15 +16953,22 @@ function SerieDBracket({ rMC, koAuto }) {
     }
     return d;
   }, [f2map, koAuto]);
+  // v4.79: res guarda SÓ as edições do usuário; os oficiais entram por read-through (effOf).
+  // Antes os defaults eram mesclados e persistidos em simUni_sdMM como se fossem edição —
+  // ganhavam precedência máxima para sempre e correções futuras da automação nunca chegavam.
+  // A migração remove do localStorage as entradas idênticas ao default (defaults antigos
+  // auto-persistidos, não escolhas do usuário).
   const [res, setRes] = useState(() => {
     let saved = {};
     try { saved = JSON.parse(localStorage.getItem('simUni_sdMM') || '{}'); } catch (e) {}
-    return { ...defaults, ...saved };
+    for (const c in saved) { if (defaults[c] && JSON.stringify(saved[c]) === JSON.stringify(defaults[c])) delete saved[c]; }
+    return saved;
   });
   useEffect(() => { try { localStorage.setItem('simUni_sdMM', JSON.stringify(res)); } catch (e) {} }, [res]);
+  const effOf = code => ({ ...(defaults[code] || {}), ...(res[code] || {}) });
   const setLeg = (code, field, val) => setRes(prev => ({ ...prev, [code]: { ...prev[code], [field]: val === '' ? undefined : Math.max(0, Math.min(30, parseInt(val) || 0)) } }));
   const setPen = (code, val) => setRes(prev => ({ ...prev, [code]: { ...prev[code], pen: val || undefined } }));
-  const reset = () => setRes({ ...defaults });
+  const reset = () => setRes({});
 
   const camp = useMemo(() => {
     const st = {};
@@ -16891,18 +16980,30 @@ function SerieDBracket({ rMC, koAuto }) {
   // Da 3ª fase em diante (C/D/E/F/G) o mando é por campanha (índice técnico): o de PIOR
   // campanha joga a IDA em casa. Convenção do bracket: esquerda = mandante da ida = pior campanha.
   const ordIda = (x, y) => (!x || !y) ? [x, y] : (camp(x) <= camp(y) ? [x, y] : [y, x]);
+  // v4.79: SD_KO_CODES (mando/emparelhamento REAL do ko_d) sobrepõe o presumido — mesma
+  // regra do sdBracketResolve, senão display e resolvedor interpretariam A/B diferente.
+  function realOrd(code, tm) {
+    const kc = SD_KO_CODES[code];
+    if (kc && tm[0] && tm[1] && ((kc.a === tm[0] && kc.b === tm[1]) || (kc.a === tm[1] && kc.b === tm[0]))) return [kc.a, kc.b];
+    return tm;
+  }
+  function loserOf(code) { const tm = teamsOf(code); const w = winnerOf(code); return w ? (w === tm[0] ? tm[1] : tm[0]) : null; }
   function teamsOf(code) {
     if (f2map[code]) return [f2map[code].a, f2map[code].b]; // 2ª fase: ida.c (mando oficial do PDF) já é t.a
     if (code[0] === 'E') {
-      const seeds = qSeeds(); const [i, j] = SD_BRK_QSEED[code];
+      const seeds = qSeeds();
+      const kc = SD_KO_CODES[code];
+      if (seeds.length && kc && seeds.indexOf(kc.a) >= 0 && seeds.indexOf(kc.b) >= 0) return [kc.a, kc.b];
+      const [i, j] = SD_BRK_QSEED[code];
       return ordIda(seeds[i] || null, seeds[j] || null);
     }
+    if (SD_PO_PAIRS[code]) { const po = SD_PO_PAIRS[code]; return realOrd(code, ordIda(loserOf(po[0]), loserOf(po[1]))); }
     const p = SD_BRK_PAIRS[code]; if (!p) return [null, null];
-    return ordIda(winnerOf(p[0]), winnerOf(p[1]));
+    return realOrd(code, ordIda(winnerOf(p[0]), winnerOf(p[1])));
   }
   function winnerOf(code) {
     const tm = teamsOf(code); if (!tm[0] || !tm[1]) return null;
-    const r = res[code] || {};
+    const r = effOf(code);
     if (r.iA == null || r.iB == null || r.vA == null || r.vB == null) return null;
     const aA = r.iA + r.vA, aB = r.iB + r.vB;
     if (aA > aB) return tm[0]; if (aB > aA) return tm[1];
@@ -16915,21 +17016,21 @@ function SerieDBracket({ rMC, koAuto }) {
   }
 
   const num = (code, field, enabled) => React.createElement('input', {
-    type: 'number', min: 0, value: (res[code] && res[code][field] != null) ? res[code][field] : '',
+    type: 'number', min: 0, value: effOf(code)[field] != null ? effOf(code)[field] : '',
     disabled: !enabled, onChange: e => setLeg(code, field, e.target.value),
     className: 'w-7 text-center bg-slate-900/70 border border-slate-600 rounded text-[11px] py-0.5 ' + (enabled ? 'text-white' : 'text-slate-600')
   });
 
   const renderTie = (code) => {
     const [a, b] = teamsOf(code);
-    const r = res[code] || {};
+    const r = effOf(code);
     const both = a && b;
     const aggA = (r.iA || 0) + (r.vA || 0), aggB = (r.iB || 0) + (r.vB || 0);
     const complete = both && r.iA != null && r.iB != null && r.vA != null && r.vB != null;
     const tied = complete && aggA === aggB;
     const w = winnerOf(code);
     const nm = (t, ph) => t ? React.createElement(TN, { name: t }) : React.createElement('span', { className: 'text-slate-600 italic' }, ph);
-    const srcPh = SD_BRK_PAIRS[code] ? ['Venc. ' + SD_BRK_PAIRS[code][0], 'Venc. ' + SD_BRK_PAIRS[code][1]] : (code[0] === 'E' ? ['classif. campanha', 'classif. campanha'] : ['', '']);
+    const srcPh = SD_PO_PAIRS[code] ? ['Perd. ' + SD_PO_PAIRS[code][0], 'Perd. ' + SD_PO_PAIRS[code][1]] : SD_BRK_PAIRS[code] ? ['Venc. ' + SD_BRK_PAIRS[code][0], 'Venc. ' + SD_BRK_PAIRS[code][1]] : (code[0] === 'E' ? ['classif. campanha', 'classif. campanha'] : ['', '']);
     // Layout em 2 linhas (responsivo p/ mobile): linha 1 = times + agregado; linha 2 = inputs ida/volta.
     return React.createElement('div', { key: code, className: 'py-1.5 border-b border-slate-700/30' },
       React.createElement('div', { className: 'flex items-center gap-1 text-xs' },
@@ -16954,17 +17055,17 @@ function SerieDBracket({ rMC, koAuto }) {
     if (!rMC || !rMC.probs || !t) return null;
     const p = rMC.probs.find(x => x.time === t);
     if (!p) return null;
-    const f = ({ B: 'f3', C: 'oit', D: 'qf', E: 'sf', F: 'fin', G: 'ch' })[code[0]];
+    const f = (code === 'F03' || code === 'F04') ? 'ac' : ({ B: 'f3', C: 'oit', D: 'qf', E: 'sf', F: 'fin', G: 'ch' })[code[0]];
     return f && p[f] != null ? p[f] : null;
   };
   const tieCard = (code) => {
     const [a, b] = teamsOf(code);
-    const r = res[code] || {};
+    const r = effOf(code);
     const complete = a && b && r.iA != null && r.iB != null && r.vA != null && r.vB != null;
     const aggA = (r.iA || 0) + (r.vA || 0), aggB = (r.iB || 0) + (r.vB || 0);
     const w = winnerOf(code);
     const tied = complete && aggA === aggB;
-    const srcPh = SD_BRK_PAIRS[code] ? ['Venc. ' + SD_BRK_PAIRS[code][0], 'Venc. ' + SD_BRK_PAIRS[code][1]] : code[0] === 'E' ? ['classif. campanha', 'classif. campanha'] : ['', ''];
+    const srcPh = SD_PO_PAIRS[code] ? ['Perd. ' + SD_PO_PAIRS[code][0], 'Perd. ' + SD_PO_PAIRS[code][1]] : SD_BRK_PAIRS[code] ? ['Venc. ' + SD_BRK_PAIRS[code][0], 'Venc. ' + SD_BRK_PAIRS[code][1]] : code[0] === 'E' ? ['classif. campanha', 'classif. campanha'] : ['', ''];
     const row = (t, agg, ph, isW) => {
       const pv = !w ? probOf(t, code) : null;
       return React.createElement('div', { className: 'flex items-center gap-1 px-1.5 py-1 min-w-0' + (isW ? ' bg-emerald-900/25' : '') },
@@ -16990,12 +17091,12 @@ function SerieDBracket({ rMC, koAuto }) {
     return right ? React.createElement('div', { key: code, className: 'flex items-center' }, tieCard(code), tick, rail, stack) : React.createElement('div', { key: code, className: 'flex items-center' }, stack, rail, tick, tieCard(code));
   };
   const centerCol = React.createElement('div', { className: 'flex flex-col justify-center gap-3 shrink-0 px-2' },
-    [{ lb: 'Quartas · reseed', cs: ['E01', 'E02', 'E03', 'E04'] }, { lb: 'Semifinal', cs: ['F01', 'F02'] }, { lb: '🏆 Final', cs: ['G01'] }].map(g =>
+    [{ lb: 'Quartas', cs: ['E01', 'E02', 'E03', 'E04'] }, { lb: 'Semifinal', cs: ['F01', 'F02'] }, { lb: 'Play-off de acesso', cs: ['F03', 'F04'] }, { lb: '🏆 Final', cs: ['G01'] }].map(g =>
       React.createElement('div', { key: g.lb, className: 'flex flex-col items-center gap-1.5' },
         React.createElement('div', { className: 'text-[9px] uppercase tracking-wider text-emerald-400/80 font-bold' }, g.lb),
         g.cs.map(c => tieCard(c)))));
   const tree = React.createElement('div', null,
-    React.createElement('p', { className: 'text-[10px] text-slate-500 mb-2 italic' }, '2ª fase → 3ª fase → Oitavas convergem ao centro; Quartas em diante são reseed por campanha (sem conector fixo). Para editar placares use a visão Lista.'),
+    React.createElement('p', { className: 'text-[10px] text-slate-500 mb-2 italic' }, '2ª fase → 3ª fase → Oitavas convergem ao centro; Quartas em diante seguem o chaveamento REAL da CBF quando conhecido (senão reseed por campanha, sem conector fixo). Perdedores das quartas disputam o Play-off de acesso. Para editar placares use a visão Lista.'),
     React.createElement('div', { className: 'overflow-x-auto max-w-full pb-2' },
       React.createElement('div', { className: 'flex items-center min-w-[1150px] gap-1' },
         React.createElement('div', { className: 'flex flex-col justify-around gap-2' }, ['D01', 'D02', 'D03', 'D04'].map(c => treeNode(c, false))),
@@ -17232,26 +17333,35 @@ function SerieDSim({
       n: 'Oitavas (' + SD_MM_DATES.oit + ')',
       j: oit
     });
-    // Quartas: reseed por campanha (1×8, 4×5, 2×7, 3×6)
+    // Quartas (v4.79, igual à engine MC): códigos reais do ko_d > paresConhecidos > reseed
+    // por campanha (1×8, 4×5, 2×7, 3×6). Antes esta via só tinha o reseed presumido — o
+    // "1 Sim" montava 3 quartas que nunca existiram e descartava os resultados reais.
     const camp8 = (a, b) => st[b].P - st[a].P || st[b].GP - st[b].GC - (st[a].GP - st[a].GC) || st[b].GP - st[a].GP;
-    const r8 = [...oit.map(x => x.w)].sort(camp8);
-    const qrt = [[0, 7], [3, 4], [1, 6], [2, 5]].map(([i, j]) => s180(r8[i], r8[j]));
+    const winOitU = oit.map(x => x.w);
+    const r8 = [...winOitU].sort(camp8);
+    const qfCodU = paresPorCodigo(['E01', 'E02', 'E03', 'E04'], winOitU);
+    const paresQFU = qfCodU || paresConhecidos(winOitU) || [[0, 7], [3, 4], [1, 6], [2, 5]].map(([i, j]) => [r8[i], r8[j]]);
+    const qrt = paresQFU.map(([a, b]) => s180(a, b));
     fases.push({
       n: 'Quartas (' + SD_MM_DATES.qrt + ')',
       j: qrt
     });
     const qW = qrt.map(x => x.w),
       qL = qrt.map(x => x.w === x.a ? x.b : x.a);
-    let semi = [s180(qW[0], qW[1]), s180(qW[2], qW[3])];
+    // Semi: F01 = V.E01 × V.E02, F02 = V.E03 × V.E04 (códigos do ko_d refinam o mando)
+    const paresSFU = paresPorCodigo(['F01', 'F02'], qW) || [[qW[0], qW[1]], [qW[2], qW[3]]];
+    let semi = paresSFU.map(([a, b]) => s180(a, b));
     fases.push({
       n: 'Semi (' + SD_MM_DATES.semi + ')',
       j: semi
     });
-    // Playoff de acesso: perdedores das quartas reseed por campanha (1×4, 2×3)
+    // Play-off de acesso: F03 = Perd.E01 × Perd.E02, F04 = Perd.E03 × Perd.E04 (estrutura
+    // real 2026); reseed por campanha (1×4, 2×3) só como último fallback.
     const pL = [...qL].sort(camp8);
-    let po = [s180(pL[0], pL[3]), s180(pL[1], pL[2])];
+    const paresPOU = paresPorCodigo(['F03', 'F04'], qL) || (qfCodU ? [[qL[0], qL[1]], [qL[2], qL[3]]] : (paresConhecidos(pL) || [[pL[0], pL[3]], [pL[1], pL[2]]]));
+    let po = paresPOU.map(([a, b]) => s180(a, b));
     fases.push({
-      n: 'Playoff (' + SD_MM_DATES.po + ')',
+      n: 'Play-off de acesso (' + SD_MM_DATES.po + ')',
       j: po
     });
     let fin = [s180(semi[0].w, semi[1].w)];
