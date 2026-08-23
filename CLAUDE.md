@@ -60,9 +60,11 @@ There is no test suite or linter. Two mechanisms:
 
 - **Headless harnesses** (`scripts/*.cjs`) — each prints `RESULT: PASS`/`FAIL` and exits
   non-zero on failure. `validate_ufdist` (joint per-state distribution), `geral_d` (Série D
-  general classification), `rnc_check` (Ranking Nacional constants), `rnc_proj` (RNC 2027
-  projection), `traces` (the Série C/D coupling traces), `alloc2027` (2027 slot allocation),
-  `draw2027` (projected group draw). Run them all after touching the engine. `engine.cjs` slices `index.html` from the changelog
+  general classification), `mando_ko` (Série D knockout against the REAL pairings/mando in
+  `ko_d` — catches orientation flips like the D04/E02 penalty bug), `rnc_check` (Ranking
+  Nacional constants), `rnc_proj` (RNC 2027 projection), `traces` (the Série C/D coupling
+  traces), `alloc2027` (2027 slot allocation), `draw2027` (projected group draw). Run them
+  all after touching the engine. `engine.cjs` slices `index.html` from the changelog
   down to the `ReactDOM.createRoot` bootstrap and evaluates it, exposing every engine symbol.
   The cut must reach the bootstrap, not stop at the first UI symbol: `SD_C_CODES` /
   `SD_D_CODES` / `SD_BRK_PAIRS` are declared after the components but used by
@@ -82,7 +84,7 @@ Never diagnose the automation from a locally-opened file; check the Pages URL or
 
 Top-level component `SimuladorUnificado` holds a `tab` state switching between: `serieA`/`serieB`/`serieC` (→ `LeagueSim`), `serieD` (→ `SerieDSim`), `copaBR` (→ `CopaBrasilSim`), `h2h` (→ `ConfrontoMerged`), `config` (→ `SettingsTab`). A "Simular Tudo" dashboard is the **single Monte Carlo channel** — individual tabs only keep a "1 Sim rápido" button.
 
-**Simulation engine** (pure functions, no React): `poissonProb` → `calcProbs`/`calcL` (Poisson goal expectations from Elo + atk/def), `updR` (Elo + atk/def update after a game), `applyDrift`/`boxMuller` (per-sim structural-uncertainty noise on Elo and atk/def), `initLeague`/`computeCurrentAD`/`backtestSeries` (derive current team strength from real results played so far), `simMC` (N-run Monte Carlo, 1k or 10k) and `simUnica` (single deterministic-ish run). Each series has special post-season logic: Série B access playoff (3º–6º), Série C final quadrangular (G8 → 2 groups → final ida/volta), Série D's large multi-phase knockout handled via `prepareSerieDState` + `pairKey` (matches results to fixtures by sorted-pair+leg, not exact home/away/round).
+**Simulation engine** (pure functions, no React): `poissonProb` → `calcProbs`/`calcL` (Poisson goal expectations from Elo + atk/def), `updR` (Elo + atk/def update after a game), `applyDrift`/`boxMuller` (per-sim structural-uncertainty noise on Elo and atk/def), `initLeague`/`computeCurrentAD`/`backtestSeries` (derive current team strength from real results played so far), `simMC` (N-run Monte Carlo, 1k or 10k) and `simUnica` (single deterministic-ish run). Each series has special post-season logic: Série B access playoff (3º–6º), Série C final quadrangular (G8 → 2 groups → final ida/volta), Série D's large multi-phase knockout handled via `prepareSerieDState` + `pairKey` (matches results to fixtures by sorted-pair+leg, not exact home/away/round). Série D 2026 promotes **6**: the 4 semifinalists plus the 2 winners of the **play-off de acesso** (`SD_PO_PAIRS`: F03 = loser E01 × loser E02, F04 = loser E03 × loser E04 — bracket-structured, NOT reseeded). Since v4.79 the knockout pairing/mando precedence everywhere (MC, 1 Sim, bracket, Geral) is: real CBF codes from `ko_d` (`SD_KO_CODES`, `a` = actual ida host) > `paresConhecidos` (legacy, phase-blind) > presumption (campaign reseed / `ordIda`). Never assume the ida host is the worse-campaign side — the CBF broke that rule in D04 and E02 and both flips flipped penalty winners (the "Iguatu advances" bug).
 
 **Ranking Nacional de Clubes** (v4.66–v4.70). `RNC_2026` holds the CBF's published 2026 table
 (235 clubs) plus `s5` = Σ(P2021..P2025), which the CBF does *not* publish — it is reconstructed

@@ -15,6 +15,7 @@ const NS = process.env.NS || '400';
 const HARNESSES = [
   'validate_ufdist',  // distribuicao conjunta por UF fecha as vagas de cada fase
   'geral_d',          // classificacao geral 1-96 reproduz as fases por acumulado
+  'mando_ko',         // mata-mata D: chaveamento/mando REAIS do ko_d (flip D04/E02, play-off)
   'rnc_check',        // constantes do RNC integras, join (nome, UF) sem ambiguidade
   'rnc_proj',         // projecao 2027: identidade da janela movel, banda, escala
   'traces',           // bitsets g3/prom e rebTrace batem com as probabilidades
