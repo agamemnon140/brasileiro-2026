@@ -31,7 +31,28 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.79
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.80
+// v4.80 (30/08/2026): EVOLUÇÃO POR RODADA/FASE + DASHBOARD COLAPSADO.
+//        Aba nova "📈 Evolução": escolhe série, time e métrica e o Monte Carlo é rodado de
+//        novo em cada ponto do eixo "como se" só os resultados até ali fossem conhecidos —
+//        rodada a rodada em A/B/C (res.filter(r <= N): simMC_single decide jogo real vs
+//        simulado só pelo array, e o drift recomeça de maxRR sozinho), fase a fase no
+//        mata-mata da D e na Copa do Brasil. Uma varredura guarda os escalares de TODOS os
+//        times (ptsSamples/posF descartados na hora): trocar time/métrica não recalcula.
+//        Motor: parâmetro opcional `opts` no fim de simMC/simMC_async ({ignoreUser}: zera
+//        BC_USER — edições de playoff/quadrangular só valem no último ponto), simMC_D/
+//        simMC_D_async ({koMask}: Set de letras de fase B..G cujos resultados reais valem;
+//        s180 ganhou a letra da fase em cada chamada) e simMC_CB ({cbMask}: Set de 'R32'/
+//        'R16'; gate também em allReal16 e no oráculo de pênaltis CB_R16_SET). Sem opts,
+//        tudo idêntico ao anterior (os 10 harnesses antigos provam). SD_KO_CODES NÃO é
+//        mascarado de propósito: é estrutura do chaveamento, não resultado — com a fase
+//        anterior simulada paresPorCodigo devolve null e cai no fallback. Vazamentos
+//        aceitos (uniformes em todo ponto): applyCBToLeague põe os jogos da Copa no Elo
+//        inicial; a Copa usa as forças evoluídas do dashboard atual. Cache e progresso da
+//        aba vivem em SimuladorUnificado (as abas desmontam ao trocar) e a varredura é
+//        mutuamente exclusiva com o "Simular Tudo" (BC_USER é global). O dashboard nasce
+//        colapsado ("▼ Ver dashboard"). Harness novo: evolucao.cjs (bracket fechado em toda
+//        máscara, máscara morde na fase certa, null = legado, cota inferior de pontos A/B/C).
 // v4.79 (23/08/2026): O CHAVEAMENTO REAL MANDA — EM TODO LUGAR, E COM O MANDO REAL.
 //        Três bugs da mesma raiz (presumir mando/emparelhamento em vez de ler o dado):
 //        (a) IGUATU "avançava" às quartas no bracket: os defaults vindos do ko_d assumiam
@@ -67,7 +88,7 @@ const {
 //        o slot "em disputa", até uma rodada de pesquisa notar. APP_VERSION vira const
 //        colada neste cabeçalho — o rodapé já ficou preso duas vezes (v4.59, v4.73) por
 //        ser string solta.
-const APP_VERSION = 'v4.79';
+const APP_VERSION = 'v4.80';
 // v4.77 (19/08/2026): FILA DE SUCESSÃO nos 27 estados (antes 14 com fonte, 11 sem folga
 //        alguma sobre a cota) + coluna Copa do Brasil 2027 na aba Ranking CBF.
 //        A rodada de pesquisa corrigiu a ordem campeão/vice em SETE estados (AC, AP, MS,
@@ -1295,8 +1316,9 @@ const cbR16Eff = (userMap, autoMap, idx) => {
   if (u && (u.g1a != null || u.g1b != null || u.g2a != null || u.g2b != null)) return u;
   return autoMap && autoMap[idx] || null;
 };
-const simMC = (times, ranking, tab, res, cfg, sk, nS, ak, eo) => {
+const simMC = (times, ranking, tab, res, cfg, sk, nS, ak, eo, opts) => {
   refreshBcUser();
+  if (opts && opts.ignoreUser) BC_USER = { B: {}, C: { games: {}, final: {} } }; // v4.80: sem edições de playoff/quadrangular
   const lg = initLeague(times, t => ranking[t].elo, cfg);
   const {
     mc,
@@ -1747,8 +1769,9 @@ const simMC_finalize = (times, ct, pts, posF, ptsAtPos, nS, elFinal, extraStats,
 // chronological order: CB ida (Apr 21-23) ocorre no meio da temporada, mas para
 // simplicidade aplicamos no estado inicial — o impacto na ordem é pequeno (Elo
 // dynamics são aproximadamente comutativas para shifts pequenos).
-const simMC_async = (times, ranking, tab, res, cfg, sk, nS, ak, eo, onProgress, onDone) => {
+const simMC_async = (times, ranking, tab, res, cfg, sk, nS, ak, eo, onProgress, onDone, opts) => {
   refreshBcUser();
+  if (opts && opts.ignoreUser) BC_USER = { B: {}, C: { games: {}, final: {} } }; // v4.80: sem edições de playoff/quadrangular
   const lg = initLeague(times, t => ranking[t].elo, cfg);
   const {
     mc,
@@ -2142,10 +2165,13 @@ const simMC_D_single = (cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeam
     if (!m[fase]) m[fase] = {};
     m[fase][adv] = (m[fase][adv] || 0) + 1;
   };
-  const s180 = (a, b) => {
-    const real = sdKoReal(a, b);
+  const s180 = (a, b, ph) => {
+    // v4.80: ph = letra da fase (B..G); com snap.koMask ativa, fases fora do Set são simuladas
+    // do zero (é o que permite reconstruir o modelo "como estava" antes daquela fase).
+    const allow = !snap.koMask || snap.koMask.has(ph);
+    const real = allow ? sdKoReal(a, b) : null;
     if (real) return real.w; // confronto real já decidido: usa o vencedor de verdade
-    const part = sdKoPart(a, b);
+    const part = allow ? sdKoPart(a, b) : null;
     if (part) {
       // Perna conhecida FIXA; simula só a faltante (90 min, mando da perna). Agregado decide; empate = pênaltis 50/50.
       const leg = (h, v) => {
@@ -2181,7 +2207,7 @@ const simMC_D_single = (cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeam
   for (const t of SD_F2_REAL) {
     bumpMu(t.a, 'f2', t.b);
     bumpMu(t.b, 'f2', t.a);
-    winB[t.code] = s180(t.a, t.b);
+    winB[t.code] = s180(t.a, t.b, 'B');
   }
   const winF2 = Object.values(winB); // 32 → chegam à 3ª fase
   winF2.forEach(t => ct[t].f3++);
@@ -2193,7 +2219,7 @@ const simMC_D_single = (cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeam
       b = winB[p[1]];
     bumpMu(a, 'f3', b);
     bumpMu(b, 'f3', a);
-    winC[code] = s180(a, b);
+    winC[code] = s180(a, b, 'C');
   }
   const winF3 = Object.values(winC); // 16 → chegam às oitavas
   winF3.forEach(t => ct[t].oit++);
@@ -2205,7 +2231,7 @@ const simMC_D_single = (cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeam
       b = winC[p[1]];
     bumpMu(a, 'oit', b);
     bumpMu(b, 'oit', a);
-    winD[code] = s180(a, b);
+    winD[code] = s180(a, b, 'D');
   }
   const winOit = Object.values(winD); // 8 → chegam às quartas
   winOit.forEach(t => ct[t].qf++);
@@ -2221,7 +2247,7 @@ const simMC_D_single = (cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeam
   for (const [a, b] of paresQF) {
     bumpMu(a, 'qf', b);
     bumpMu(b, 'qf', a);
-    const w = s180(a, b);
+    const w = s180(a, b, 'E');
     qW.push(w);
     qL.push(w === a ? b : a);
   }
@@ -2234,20 +2260,20 @@ const simMC_D_single = (cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeam
   const pL = [...qL].sort(camp8);
   const paresPO = paresPorCodigo(['F03', 'F04'], qL) || (qfCod ? [[qL[0], qL[1]], [qL[2], qL[3]]] : (paresConhecidos(pL) || [[pL[0], pL[3]], [pL[1], pL[2]]]));
   for (const [a, b] of paresPO) { bumpMu(a, 'po', b); bumpMu(b, 'po', a); }
-  const playoff = paresPO.map(ab => s180(ab[0], ab[1]));
+  const playoff = paresPO.map(ab => s180(ab[0], ab[1], 'F'));
   playoff.forEach(t => ct[t].ac++); // +2 vencedores playoff
   // Semi. Estrutura real 2026: F01 = V.E01 × V.E02, F02 = V.E03 × V.E04 — quando as quartas
   // vieram por código, qW já está nessa ordem; os códigos F01/F02 do ko_d refinam o mando.
   const paresSF = paresPorCodigo(['F01', 'F02'], qW) || [[qW[0], qW[1]], [qW[2], qW[3]]];
   for (const [a, b] of paresSF) { bumpMu(a, 'sf', b); bumpMu(b, 'sf', a); }
-  const sf1 = s180(paresSF[0][0], paresSF[0][1]),
-    sf2 = s180(paresSF[1][0], paresSF[1][1]);
+  const sf1 = s180(paresSF[0][0], paresSF[0][1], 'F'),
+    sf2 = s180(paresSF[1][0], paresSF[1][1], 'F');
   ct[sf1].fin++;
   ct[sf2].fin++;
   // Final
   bumpMu(sf1, 'fin', sf2);
   bumpMu(sf2, 'fin', sf1);
-  const champ = s180(sf1, sf2);
+  const champ = s180(sf1, sf2, 'G');
   ct[champ].ch++;
   // === Classificação geral 1º-96º (v4.65) ===
   // O bracket é fechado: todo eliminado sai por diferença entre quem entrou no confronto e
@@ -2425,10 +2451,11 @@ const buildUfDist = (ufAcc, ufTeams, nS, phases, sortKey) => {
     return o;
   }).sort((a, b) => b[sy].E - a[sy].E);
 };
-const simMC_D = (cfg, nS, ak, eo) => {
+const simMC_D = (cfg, nS, ak, eo, extra, opts) => {
   refreshSdKoUser();
   const tabD = SD_REAL_TAB;
-  const snap = prepareSerieDState(cfg, eo, ak);
+  const snap = prepareSerieDState(cfg, eo, ak, extra);
+  snap.koMask = opts && opts.koMask || null; // v4.80: Set de fases (B..G) cujos resultados reais valem; null = todas
   const {
     mc,
     mf
@@ -2467,10 +2494,11 @@ const simMC_D = (cfg, nS, ak, eo) => {
   for (let sim = 0; sim < nS; sim++) simMC_D_single(cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeams);
   return simMC_D_finalize(snap, ct, nS, gpts, ufAcc, ufTeams);
 };
-const simMC_D_async = (cfg, nS, ak, eo, extra, onProgress, onDone) => {
+const simMC_D_async = (cfg, nS, ak, eo, extra, onProgress, onDone, opts) => {
   refreshSdKoUser();
   const tabD = SD_REAL_TAB;
   const snap = prepareSerieDState(cfg, eo, ak, extra);
+  snap.koMask = opts && opts.koMask || null; // v4.80: Set de fases (B..G) cujos resultados reais valem; null = todas
   const {
     mc,
     mf
@@ -2517,8 +2545,12 @@ const simMC_D_async = (cfg, nS, ak, eo, extra, onProgress, onDone) => {
 // === MC COPA DO BRASIL ===
 // teamElos: Elos por time (evoluídos das sims A/B/C/D quando disponíveis).
 // teamAD: atk/def por time (evoluídos idem). Fallback: lg.initAD(elo) como antes.
-const simMC_CB = (cfg, nS, ak, eo, teamElos, teamAD) => {
+const simMC_CB = (cfg, nS, ak, eo, teamElos, teamAD, opts) => {
   refreshCbUser();
+  // v4.80: cbMask = Set de fases ('R32','R16') cujos resultados reais valem; null = todas.
+  const cbMask = opts && opts.cbMask || null;
+  const useR32 = !cbMask || cbMask.has('R32');
+  const useR16 = !cbMask || cbMask.has('R16');
   const teams = CB_TEAMS;
   const elos = {};
   teams.forEach(t => elos[t] = teamElos[t] || CB_ELOS[t] || 1200);
@@ -2605,7 +2637,7 @@ const simMC_CB = (cfg, nS, ak, eo, teamElos, teamAD) => {
       }
       const aa = g1a + g2a,
         ab2 = g1b + g2b;
-      return aa > ab2 ? a : ab2 > aa ? b : CB_R16_SET.has(a) ? a : CB_R16_SET.has(b) ? b : Math.random() < 0.5 ? a : b;
+      return aa > ab2 ? a : ab2 > aa ? b : useR32 && CB_R16_SET.has(a) ? a : useR32 && CB_R16_SET.has(b) ? b : Math.random() < 0.5 ? a : b;
     };
     const sFin = (a, b) => {
       const mn = cfg.mnMM;
@@ -2629,9 +2661,9 @@ const simMC_CB = (cfg, nS, ak, eo, teamElos, teamAD) => {
       bump(teams[ia], 'r32', teams[ib]);
       bump(teams[ib], 'r32', teams[ia]);
     });
-    const r32 = CB_R32.map(([ia, ib], idx) => s2L_R32(teams[ia], teams[ib], CB_RES_IDA[idx] || null, CB_RES_VOLTA[idx] || null));
+    const r32 = CB_R32.map(([ia, ib], idx) => s2L_R32(teams[ia], teams[ib], useR32 && CB_RES_IDA[idx] || null, useR32 && CB_RES_VOLTA[idx] || null));
     // R16: chaveamento real (sorteio já realizado) quando os 16 vencedores reais avançaram.
-    const allReal16 = r32.length === 16 && r32.every(w => CB_R16_SET.has(w));
+    const allReal16 = useR32 && r32.length === 16 && r32.every(w => CB_R16_SET.has(w));
     let r16p = [];
     if (allReal16) {
       CB_R16_PAIRS.forEach(([na, nb], idx) => {
@@ -2639,7 +2671,7 @@ const simMC_CB = (cfg, nS, ak, eo, teamElos, teamAD) => {
         bump(nb, 'r16', na);
         // Edições do usuário (simUni_cbR16): perna completa fica FIXA; perna faltante é simulada
         // (mando correto). Ida+volta completas = vencedor determinístico; empate = pênaltis 50/50.
-        const u = cbR16Eff(CB_USER.r16, CB_AUTO.r16, idx) || {};
+        const u = useR16 && cbR16Eff(CB_USER.r16, CB_AUTO.r16, idx) || {};
         const hasI = u.g1a != null && u.g1b != null,
           hasV = u.g2a != null && u.g2b != null;
         if (hasI || hasV) {
@@ -19981,6 +20013,287 @@ function RankingNacionalSim({
     cabecalho, abas,
     vis === 'proj' ? h("div", null, barra, tabela, notaTabela) : dados);
 }
+// === Aba Evolução (v4.80) ===
+// Recalcula o Monte Carlo "como se" só os resultados até cada rodada (A/B/C) ou fase do
+// mata-mata (D, Copa do Brasil) fossem conhecidos e traça a métrica escolhida ao longo do
+// eixo. Uma varredura por série guarda os escalares de TODOS os times: trocar time/métrica
+// depois é instantâneo. O cache (evo) vive em SimuladorUnificado porque as abas desmontam
+// ao trocar — uma varredura em curso terminaria num componente morto.
+// Vazamentos ACEITOS (uniformes em todos os pontos, documentados no rodapé do painel):
+// applyCBToLeague injeta os jogos da Copa do Brasil no Elo inicial de A/B/C/D em todo ponto,
+// e a Copa usa as forças evoluídas do dashboard atual em todo ponto.
+const EVO_SERIES = { A: 'Série A', B: 'Série B', C: 'Série C', D: 'Série D', CB: 'Copa do Brasil' };
+const EVO_METRICS = {
+  A: [{ k: 'titulo', l: 'Título' }, { k: 'g4', l: 'G4 (Libertadores)' }, { k: 'top6', l: 'G6' }, { k: 'top8', l: 'G8' }, { k: 'z4', l: 'Rebaixamento (Z4)' }, { k: 'mediaPts', l: 'Pontos esperados', abs: true }, { k: 'posEsp', l: 'Posição esperada', abs: true, inv: true }],
+  B: [{ k: 'bAccess', l: 'Acesso (direto + playoff)' }, { k: 'g4', l: 'Acesso direto (G2)' }, { k: 'bPlayoff', l: 'Playoff de acesso (3º–6º)' }, { k: 'titulo', l: 'Título' }, { k: 'z4', l: 'Rebaixamento (Z4)' }, { k: 'mediaPts', l: 'Pontos esperados', abs: true }, { k: 'posEsp', l: 'Posição esperada', abs: true, inv: true }],
+  C: [{ k: 'q4', l: 'Acesso' }, { k: 'g4', l: 'G8 (quadrangular)' }, { k: 'qChamp', l: 'Campeão' }, { k: 'titulo', l: '1º da 1ª fase' }, { k: 'z4', l: 'Rebaixamento (Z2)' }, { k: 'mediaPts', l: 'Pontos esperados (1ª fase)', abs: true }, { k: 'posEsp', l: 'Posição esperada (1ª fase)', abs: true, inv: true }],
+  D: [{ k: 'ac', l: 'Acesso' }, { k: 'ch', l: 'Campeão' }, { k: 'f3', l: 'Chegar à 3ª fase' }, { k: 'oit', l: 'Chegar às oitavas' }, { k: 'qf', l: 'Chegar às quartas' }, { k: 'sf', l: 'Chegar à semifinal' }, { k: 'fin', l: 'Chegar à final' }],
+  CB: [{ k: 'ch', l: 'Campeão' }, { k: 'fin', l: 'Chegar à final' }, { k: 'sf', l: 'Chegar à semifinal' }, { k: 'qf', l: 'Chegar às quartas' }, { k: 'r16', l: 'Chegar às oitavas' }]
+};
+// [letra do código CBF, nome, rótulo curto, nº de confrontos esperados na fase]
+const EVO_D_PHASES = [['B', '2ª fase', '2ª', 32], ['C', '3ª fase', '3ª', 16], ['D', 'oitavas', 'Oit.', 8], ['E', 'quartas', 'Qtas', 4], ['F', 'semis + play-off', 'Semis', 4], ['G', 'final', 'Final', 1]];
+// Reduz probs → {time: {métrica: valor}}. Descarta ptsSamples/posF/matchups: 25 pontos × 10k
+// sims de ptsSamples não cabem na memória; só os escalares interessam aqui.
+const evoReduce = (sk, probs) => {
+  const out = {};
+  for (const p of probs) {
+    const o = {};
+    for (const m of EVO_METRICS[sk]) if (p[m.k] != null) o[m.k] = p[m.k];
+    if (p.posF) {
+      let pe = 0, t6 = 0, t8 = 0;
+      p.posF.forEach((v, i) => { pe += (i + 1) * v / 100; if (i < 6) t6 += v; if (i < 8) t8 += v; });
+      o.posEsp = pe; o.top6 = t6; o.top8 = t8;
+    }
+    out[p.time] = o;
+  }
+  return out;
+};
+// Pontos do eixo da Série D: "após grupos" (mata-mata inteiro simulado) e depois uma fase por
+// vez, enquanto houver resultado real (2ª/3ª embutidas; oitavas+ via ko_d ou edição). Uma fase
+// com perna pendente entra como "(parcial)" e encerra o eixo.
+const evoDPoints = () => {
+  refreshSdKoUser();
+  const have = {};
+  if (SD_F2_REAL.length && SD_F2_REAL.every(t => t.w)) have.B = 'full';
+  if (SD_F3_REAL.length && SD_F3_REAL.every(t => t.vA != null && t.vB != null)) have.C = 'full';
+  for (const [L, , , nExp] of EVO_D_PHASES) {
+    if (L === 'B' || L === 'C') continue;
+    const codes = Object.keys(SD_KO_CODES).filter(c => c[0] === L);
+    if (!codes.length) continue;
+    const dec = codes.filter(c => { const p = SD_KO_CODES[c]; const k = sdKoKey(p.a, p.b); return !!(SD_KO_USER[k] || SD_KO_AUTO[k]); }).length;
+    have[L] = dec === nExp ? 'full' : 'part';
+  }
+  const pts = [{ label: 'Após grupos', short: 'Grupos', sub: 'mata-mata inteiro simulado', mask: new Set() }];
+  const letters = [];
+  for (const [L, nome, short] of EVO_D_PHASES) {
+    const st = have[L];
+    if (!st) break;
+    letters.push(L);
+    pts.push({ label: 'Após ' + nome + (st === 'part' ? ' (parcial)' : ''), short, sub: st === 'part' ? 'pernas conhecidas fixas, faltantes simuladas' : 'resultados reais até aqui; o resto simulado', mask: new Set(letters) });
+    if (st === 'part') break;
+  }
+  return pts;
+};
+// Pontos da Copa do Brasil: antes da R32 (oitavas sorteadas a cada sim), após R32 (sorteio
+// oficial das oitavas), após oitavas (quando há resultado, via results.json ou edição).
+const evoCbPoints = () => {
+  refreshCbUser();
+  let n16 = 0, full16 = 0;
+  CB_R16_PAIRS.forEach((_, idx) => {
+    const u = cbR16Eff(CB_USER.r16, CB_AUTO.r16, idx);
+    if (!u) return;
+    n16++;
+    if (u.g1a != null && u.g1b != null && u.g2a != null && u.g2b != null) full16++;
+  });
+  const pts = [{ label: 'Antes da R32', short: 'Pré-R32', sub: 'oitavas sorteadas a cada simulação', mask: new Set() },
+               { label: 'Após R32', short: 'R32', sub: 'R32 real; oitavas com o sorteio oficial', mask: new Set(['R32']) }];
+  if (n16) pts.push({ label: 'Após oitavas' + (full16 < CB_R16_PAIRS.length ? ' (parcial)' : ''), short: 'Oitavas', sub: 'R32 + oitavas reais; quartas em diante sorteadas e simuladas', mask: null });
+  return pts;
+};
+const evoOutcome = (g, team) => {
+  if (!g) return null;
+  const home = g.c === team;
+  const gf = home ? g.gc : g.gf, ga = home ? g.gf : g.gc;
+  return gf > ga ? 'V' : gf === ga ? 'E' : 'D';
+};
+const evoFmt = (v, m) => v == null ? '—' : m.abs ? (Math.round(v * 10) / 10).toFixed(1) : (v < 10 ? v.toFixed(1) : Math.round(v)) + '%';
+function EvoChart({ pts, m }) {
+  const h = React.createElement;
+  const vals = pts.map(p => p.v).filter(v => v != null);
+  if (!vals.length) return null;
+  const W = 640, x0 = 46, x1 = W - 14, yBase = 206, plotH = 172;
+  let lo = 0, hi = 100;
+  if (m.abs) {
+    const mn = minMax(vals);
+    const pad = Math.max(1, (mn.max - mn.min) * 0.15);
+    lo = Math.max(0, Math.floor(mn.min - pad));
+    hi = Math.ceil(mn.max + pad);
+    if (hi <= lo) hi = lo + 1;
+  }
+  const n = pts.length;
+  const px = i => n > 1 ? x0 + i / (n - 1) * (x1 - x0) : (x0 + x1) / 2;
+  const py = v => m.inv ? yBase - (hi - v) / (hi - lo) * plotH : yBase - (v - lo) / (hi - lo) * plotH;
+  const ticks = [0, 1, 2, 3, 4].map(k => lo + k * (hi - lo) / 4);
+  const every = Math.max(1, Math.ceil(n / 14));
+  const showVal = i => n <= 12 || i === n - 1 || i % every === 0;
+  const col = o => o === 'V' ? '#10b981' : o === 'E' ? '#94a3b8' : o === 'D' ? '#f87171' : '#64748b';
+  const line = pts.map((p, i) => p.v == null ? null : `${px(i)},${py(p.v)}`).filter(Boolean).join(' ');
+  return h("svg", { viewBox: `0 0 ${W} 250`, className: "w-full" },
+    ticks.map(t => h("g", { key: 't' + t },
+      h("line", { x1: x0, y1: py(t), x2: x1, y2: py(t), stroke: "#334155", strokeWidth: "1", strokeDasharray: "3 4" }),
+      h("text", { x: x0 - 6, y: py(t) + 3, fill: "#64748b", fontSize: "9", textAnchor: "end" }, m.abs ? String(Math.round(t * 10) / 10) : Math.round(t) + '%'))),
+    h("line", { x1: x0, y1: yBase, x2: x1, y2: yBase, stroke: "#475569", strokeWidth: "1" }),
+    h("line", { x1: x0, y1: yBase, x2: x0, y2: yBase - plotH, stroke: "#475569", strokeWidth: "1" }),
+    pts.map((p, i) => (i % every === 0 || i === n - 1) && h("text", { key: 'x' + i, x: px(i), y: yBase + 13, fill: "#64748b", fontSize: "9", textAnchor: "middle" }, p.short)),
+    h("polyline", { points: line, fill: "none", stroke: "#10b981", strokeWidth: "1.8", opacity: "0.7" }),
+    pts.map((p, i) => p.v != null && h("g", { key: 'p' + i },
+      h("circle", { cx: px(i), cy: py(p.v), r: 3.5, fill: col(p.o), stroke: "#0f172a", strokeWidth: "1" },
+        h("title", null, `${p.label}: ${evoFmt(p.v, m)}${p.jogo ? ' — ' + p.jogo : ''}`)),
+      showVal(i) && h("text", { x: px(i), y: py(p.v) - 7, fill: "#cbd5e1", fontSize: "8.5", textAnchor: "middle" }, evoFmt(p.v, m)))),
+    h("text", { x: 12, y: yBase - plotH / 2, fill: "#94a3b8", fontSize: "9", textAnchor: "middle", transform: `rotate(-90 12 ${yBase - plotH / 2})` }, m.l),
+    h("g", { transform: `translate(${x1 - 160}, ${yBase + 28})` },
+      [['V', 'vitória'], ['E', 'empate'], ['D', 'derrota'], [null, 'sem jogo']].map(([o, l], i) => h("g", { key: l, transform: `translate(${i * 42}, 0)` },
+        h("circle", { cx: 0, cy: 0, r: 3, fill: col(o) }),
+        h("text", { x: 6, y: 3, fill: "#64748b", fontSize: "8" }, l)))));
+}
+function EvolucaoSim({ cfg, mergedRes, fetchedRes, SAT, SBT, SCT, allElos, allTeams, dash, dashBusy, resReady, koAuto, cbAuto, evo, setEvo, evoBusy, setEvoBusy, evoRun, setEvoRun }) {
+  const h = React.createElement;
+  const [serie, setSerie] = useState('C');
+  const [team, setTeam] = useState('');
+  const [metric, setMetric] = useState(EVO_METRICS.C[0].k);
+  const [nS, setNS] = useState(1000);
+  const [ak, setAk] = useState(dash && dash.ak || cfg.defaultAlpha);
+  const [eo, setEo] = useState(dash ? !!dash.eo : false);
+  const [drift, setDrift] = useState(dash && dash.drift != null ? dash.drift : 15);
+  const runRef = useRef(0);
+  const teams = useMemo(() => (serie === 'CB' ? [...CB_TEAMS] : [...H2H_SERIES[serie].times]).sort((a, b) => a.localeCompare(b)), [serie]);
+  useEffect(() => { if (!teams.includes(team)) setTeam(teams[0]); }, [teams]);
+  useEffect(() => { if (!EVO_METRICS[serie].some(x => x.k === metric)) setMetric(EVO_METRICS[serie][0].k); }, [serie]);
+  const m = EVO_METRICS[serie].find(x => x.k === metric) || EVO_METRICS[serie][0];
+  // Quantos pontos a varredura terá (só para o aviso de custo). koAuto/cbAuto entram nas deps
+  // para reler SD_KO_CODES/CB_AUTO quando o results.json assentar (globais não disparam render).
+  const nPts = useMemo(() => {
+    try {
+      if (serie === 'D') return evoDPoints().length;
+      if (serie === 'CB') return evoCbPoints().length;
+      return mergedRes[serie].reduce((mx, r) => Math.max(mx, r.r || 0), 0) + 1;
+    } catch (e) { return 0; }
+  }, [serie, mergedRes, koAuto, cbAuto]);
+  const run = useCallback(() => {
+    const id = ++runRef.current;
+    const sk = serie;
+    const cfgEff = { ...cfg, drift };
+    let points;
+    if (sk === 'D') points = evoDPoints();
+    else if (sk === 'CB') points = evoCbPoints();
+    else {
+      const maxR = mergedRes[sk].reduce((mx, r) => Math.max(mx, r.r || 0), 0);
+      points = [];
+      for (let N = 0; N <= maxR; N++) points.push({ label: 'R' + N, short: 'R' + N, n: N, maxR, sub: N === 0 ? 'pré-temporada' : null });
+    }
+    const total = points.length;
+    if (!total) return;
+    setEvoBusy(true);
+    setEvoRun({ prog: 0, stage: points[0].short });
+    // Copa do Brasil: forças evoluídas do dashboard (igual ao runAll), iguais em todos os pontos.
+    const evolved = { elos: { ...allElos }, ad: {} };
+    for (const t in allTeams) evolved.ad[t] = { atk: allTeams[t].atk, def: allTeams[t].def };
+    if (dash) for (const k of ['A', 'B', 'C', 'D']) {
+      if (dash[k] && dash[k].probs) for (const p of dash[k].probs) {
+        if (p.eloFinal != null) evolved.elos[p.time] = p.eloFinal;
+        if (p.atkFinal != null && p.defFinal != null) evolved.ad[p.time] = { atk: p.atkFinal, def: p.defFinal };
+      }
+    }
+    const tabelas = { A: SAT, B: SBT, C: SCT };
+    const rankings = { A: SA_RANKING, B: SB_RANKING, C: SC_RANKING };
+    const out = [];
+    let i = 0;
+    const alive = () => id === runRef.current;
+    const finish = () => { if (!alive()) return; setEvo({ serie: sk, nS, ak, eo, drift, at: Date.now(), points: out }); setEvoRun({ prog: 1, stage: '' }); setEvoBusy(false); };
+    const fail = e => { console.error('Evolução:', e); if (alive()) { setEvoRun({ prog: 0, stage: 'erro' }); setEvoBusy(false); } };
+    const next = () => {
+      if (!alive()) return;
+      if (i >= total) return finish();
+      const p = points[i];
+      setEvoRun({ prog: i / total, stage: p.short });
+      const onFrame = (d, t) => { if (alive()) setEvoRun({ prog: (i + d / t) / total, stage: p.short }); };
+      const onDone = r => {
+        if (!alive()) return;
+        out.push({ label: p.label, short: p.short, sub: p.sub, n: p.n, byTeam: evoReduce(sk, r.probs) });
+        i++;
+        next();
+      };
+      try {
+        if (sk === 'D') simMC_D_async(cfgEff, nS, ak, eo, fetchedRes.D, onFrame, onDone, { koMask: p.mask });
+        else if (sk === 'CB') setTimeout(() => { try { onDone(simMC_CB(cfgEff, nS, ak, eo, evolved.elos, evolved.ad, { cbMask: p.mask })); } catch (e) { fail(e); } }, 10);
+        else {
+          const res = mergedRes[sk].filter(r => r.r === 0 || (r.r >= 1 && r.r <= p.n));
+          // Último ponto = exatamente o input do dashboard (edições de playoff/quadrangular
+          // valem); nos anteriores elas ainda "não existiam".
+          simMC_async(H2H_SERIES[sk].times, rankings[sk], tabelas[sk], res, cfgEff, sk, nS, ak, eo, onFrame, onDone, { ignoreUser: p.n < p.maxR });
+        }
+      } catch (e) { fail(e); }
+    };
+    setTimeout(next, 10);
+  }, [serie, nS, ak, eo, drift, cfg, mergedRes, fetchedRes, SAT, SBT, SCT, allElos, allTeams, dash, setEvo, setEvoBusy, setEvoRun]);
+  const cached = evo && evo.serie === serie ? evo : null;
+  const rows = useMemo(() => {
+    if (!cached) return [];
+    let prev = null;
+    return cached.points.map(p => {
+      const v = p.byTeam[team] ? p.byTeam[team][metric] : null;
+      let jogo = p.sub || '', o = null;
+      if (p.n != null && p.n > 0) {
+        const g = mergedRes[serie].find(r => r.r === p.n && (r.c === team || r.f === team));
+        if (g) { jogo = `${g.c} ${g.gc}×${g.gf} ${g.f}`; o = evoOutcome(g, team); } else jogo = 'sem jogo na rodada';
+      }
+      const d = v != null && prev != null ? v - prev : null;
+      if (v != null) prev = v;
+      return { label: p.label, short: p.short, v, d, jogo, o };
+    });
+  }, [cached, team, metric, mergedRes, serie]);
+  const resumo = useMemo(() => {
+    const vv = rows.filter(r => r.v != null);
+    if (vv.length < 2) return null;
+    let mx = vv[0], mn = vv[0];
+    for (const r of vv) { if (r.v > mx.v) mx = r; if (r.v < mn.v) mn = r; }
+    return { ini: vv[0], fim: vv[vv.length - 1], mx, mn };
+  }, [rows]);
+  const sel = "bg-slate-700 text-white text-xs sm:text-sm rounded-lg px-2 py-1.5 border border-slate-600 min-w-0";
+  const pill = on => `px-2 py-0.5 rounded text-xs transition-colors ${on ? 'bg-amber-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`;
+  const canRun = resReady && !evoBusy && !dashBusy && nPts > 0;
+  const custo = nPts ? `${nPts} ponto${nPts > 1 ? 's' : ''} × ${nS.toLocaleString()} sims` : 'sem dados';
+  const isKO = serie === 'D' || serie === 'CB';
+  return h("div", { className: "space-y-4" },
+    h("div", { className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50" },
+      h("h2", { className: "text-base font-semibold text-emerald-300 mb-1" }, "📈 Evolução — como a projeção mudou ao longo do campeonato"),
+      h("p", { className: "text-xs text-slate-500 mb-3" }, "Escolha a competição, o time e a métrica. Ao calcular, o modelo é rodado de novo em cada ponto do eixo usando só os resultados conhecidos até ali: rodada a rodada nas Séries A/B/C, fase a fase no mata-mata da Série D e na Copa do Brasil. Uma varredura cobre todos os times e métricas da competição — depois é só trocar o seletor."),
+      h("div", { className: "flex flex-wrap items-center gap-2 mb-2" },
+        Object.keys(EVO_SERIES).map(s => h("button", { key: s, onClick: () => setSerie(s), className: `px-3 py-1 rounded-lg text-xs font-medium ${serie === s ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-400 hover:text-white'}` }, EVO_SERIES[s]))),
+      h("div", { className: "flex flex-wrap items-center gap-2 mb-2" },
+        h("select", { value: team, onChange: e => setTeam(e.target.value), className: sel + " flex-1 sm:flex-none sm:w-52" }, teams.map(t => h("option", { key: t, value: t }, t))),
+        h("select", { value: metric, onChange: e => setMetric(e.target.value), className: sel + " flex-1 sm:flex-none sm:w-56" }, EVO_METRICS[serie].map(x => h("option", { key: x.k, value: x.k }, x.l)))),
+      h("div", { className: "flex flex-wrap items-center gap-2" },
+        h("div", { className: "flex gap-1" }, Object.keys(cfg.alphas).map(k => h("button", { key: k, onClick: () => setAk(k), className: pill(ak === k) }, cfg.alphas[k].label))),
+        h("button", { onClick: () => setEo(v => !v), className: pill(eo), title: "ELO puro ignora atk/def" }, eo ? 'ELO puro' : 'ATK/DEF'),
+        h("select", { value: drift, onChange: e => setDrift(Number(e.target.value)), className: sel, title: "Drift estocástico nas rodadas futuras" },
+          [[0, 'Drift: Off'], [5, 'Drift: Baixo'], [10, 'Drift: Médio'], [15, 'Drift: Alto'], [25, 'Drift: Muito alto']].map(([v, l]) => h("option", { key: v, value: v }, l))),
+        h("select", { value: nS, onChange: e => setNS(Number(e.target.value)), className: sel, title: "Simulações por ponto do eixo" },
+          [500, 1000, 2000, 5000].map(n => h("option", { key: n, value: n }, n >= 1000 ? `${n / 1000}k sims/ponto` : `${n} sims/ponto`))),
+        h("button", { onClick: run, disabled: !canRun, title: custo,
+          className: "px-4 py-1.5 bg-gradient-to-r from-amber-600 to-amber-500 rounded-lg font-semibold text-xs disabled:opacity-50 shadow-lg shadow-amber-600/20 hover:shadow-xl hover:shadow-amber-600/40 hover:from-amber-500 hover:to-amber-400 transition-all duration-200 relative overflow-hidden min-w-[150px]" },
+          evoBusy && h("div", { className: "absolute inset-0 bg-amber-700/50", style: { clipPath: `inset(0 ${(1 - evoRun.prog) * 100}% 0 0)` } }),
+          h("span", { className: "relative" }, evoBusy ? `${evoRun.stage} · ${Math.round(evoRun.prog * 100)}%` : cached ? '📈 Recalcular' : '📈 Calcular')),
+        h("span", { className: "text-[11px] text-slate-500" }, !resReady ? 'aguardando results.json…' : dashBusy ? 'aguarde o "Simular Tudo" terminar' : custo)),
+      evoRun.stage === 'erro' && !evoBusy && h("p", { className: "text-xs text-red-400 mt-2" }, "A varredura falhou — veja o console do navegador.")),
+    cached && h("div", { className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50" },
+      h("div", { className: "flex flex-wrap items-baseline justify-between gap-2 mb-1" },
+        h("h3", { className: "text-sm font-bold text-emerald-300" }, team, " — ", m.l, " · ", EVO_SERIES[serie]),
+        h("span", { className: "text-[10px] text-slate-500 font-mono" }, `${cached.nS.toLocaleString()} sims/ponto · ${cfg.alphas[cached.ak] ? cfg.alphas[cached.ak].label : cached.ak} · ${cached.eo ? 'ELO puro' : 'ATK/DEF'} · drift ${cached.drift}`)),
+      resumo && h("p", { className: "text-xs text-slate-400 mb-2" },
+        h("span", { className: "text-slate-500" }, resumo.ini.short, ": "), evoFmt(resumo.ini.v, m), " → ",
+        h("span", { className: "text-slate-500" }, resumo.fim.short, ": "), h("span", { className: "text-white font-semibold" }, evoFmt(resumo.fim.v, m)),
+        " · máx. ", evoFmt(resumo.mx.v, m), " (", resumo.mx.short, ") · mín. ", evoFmt(resumo.mn.v, m), " (", resumo.mn.short, ")"),
+      h(EvoChart, { pts: rows, m }),
+      h("div", { className: "overflow-x-auto mt-2" },
+        h("table", { className: "w-full text-xs" },
+          h("thead", null, h("tr", { className: "text-slate-500 border-b border-slate-700/50" },
+            h("th", { className: "text-left py-1 pr-2 font-medium" }, isKO ? 'Ponto' : 'Rodada'),
+            h("th", { className: "text-left py-1 pr-2 font-medium" }, isKO ? 'O que entrou no modelo' : 'Jogo do time na rodada'),
+            h("th", { className: "text-right py-1 pr-2 font-medium" }, m.l),
+            h("th", { className: "text-right py-1 font-medium" }, "Δ"))),
+          h("tbody", null, rows.map((r, i) => h("tr", { key: i, className: "border-b border-slate-800/60 hover:bg-slate-700/20" },
+            h("td", { className: "py-1 pr-2 font-mono text-slate-300 whitespace-nowrap" }, r.label),
+            h("td", { className: "py-1 pr-2 text-slate-400" },
+              r.o && h("span", { className: `inline-block w-4 text-center rounded mr-1.5 text-[10px] font-bold ${r.o === 'V' ? 'bg-emerald-600/70 text-white' : r.o === 'E' ? 'bg-slate-600 text-white' : 'bg-red-700/70 text-white'}` }, r.o),
+              r.jogo),
+            h("td", { className: "py-1 pr-2 text-right font-mono text-white" }, evoFmt(r.v, m)),
+            h("td", { className: `py-1 text-right font-mono ${r.d == null || Math.abs(r.d) < 0.05 ? 'text-slate-500' : (r.d > 0) !== !!m.inv ? 'text-emerald-400' : 'text-red-400'}` }, r.d == null ? '—' : (r.d > 0 ? '+' : '') + r.d.toFixed(1) + (m.abs ? '' : ' pp'))))))),
+      h("div", { className: "flex flex-wrap items-center justify-between gap-2 mt-2" },
+        h("p", { className: "text-[10px] text-slate-500" }, serie === 'CB' ? "Forças dos times = as do dashboard atual em todos os pontos; só os resultados da Copa são mascarados por fase." : serie === 'D' ? "Grupos completos em todos os pontos; só os resultados do mata-mata entram fase a fase. Jogos da Copa do Brasil contam no Elo inicial em todo ponto." : "Cada ponto usa só os resultados até aquela rodada (drift recomeça dali). Jogos da Copa do Brasil contam no Elo inicial em todo ponto; edições de playoff/quadrangular só valem no último."),
+        h("button", { onClick: () => exportCSV(rows, [{ label: 'ponto', key: 'label' }, { label: 'jogo', key: 'jogo' }, { label: m.l, fn: r => r.v == null ? '' : r.v.toFixed(2) }, { label: 'delta', fn: r => r.d == null ? '' : r.d.toFixed(2) }], `evolucao_${serie}_${team}_${metric}.csv`), className: "text-[10px] text-slate-400 hover:text-white px-2 py-0.5 bg-slate-700 rounded" }, "📥 CSV"))),
+    !cached && evo && h("p", { className: "text-xs text-slate-500" }, `A varredura em cache é da ${EVO_SERIES[evo.serie]}; clique em Calcular para a ${EVO_SERIES[serie]}.`));
+}
 function SimuladorUnificado() {
   const [cfg, setCfg] = useState(DEFAULT_CFG);
   const [tab, setTab] = useState('serieA');
@@ -19998,6 +20311,11 @@ function SimuladorUnificado() {
   }));
   const [dash, setDash] = useState(null);
   const [dashBusy, setDashBusy] = useState(false);
+  const [dashOpen, setDashOpen] = useState(false); // v4.80: dashboard nasce colapsado
+  // v4.80: cache e progresso da aba Evolução vivem aqui (as abas desmontam ao trocar)
+  const [evo, setEvo] = useState(null);
+  const [evoBusy, setEvoBusy] = useState(false);
+  const [evoRun, setEvoRun] = useState({ prog: 0, stage: '' });
   const [dashN, setDashN] = useState(10000);
   const [dashAk, setDashAk] = useState(cfg.defaultAlpha);
   const [dashEo, setDashEo] = useState(false);
@@ -20409,6 +20727,10 @@ function SimuladorUnificado() {
     l: 'Confronto',
     e: '⚔️'
   }, {
+    id: 'evolucao',
+    l: 'Evolução',
+    e: '📈'
+  }, {
     id: 'config',
     l: 'Config',
     e: '⚙️'
@@ -20503,7 +20825,7 @@ function SimuladorUnificado() {
     className: `px-1.5 py-0.5 rounded text-[10px] font-semibold transition-colors ${dashSel[s.k] ? 'bg-emerald-600/80 text-white' : 'bg-slate-700 text-slate-500 hover:bg-slate-600'}`
   }, s.l))), /*#__PURE__*/React.createElement("button", {
     onClick: runAll,
-    disabled: dashBusy,
+    disabled: dashBusy || evoBusy,
     className: "px-4 py-1.5 bg-gradient-to-r from-amber-600 to-amber-500 rounded-lg font-semibold text-xs disabled:opacity-50 shadow-lg shadow-amber-600/20 hover:shadow-xl hover:shadow-amber-600/40 hover:from-amber-500 hover:to-amber-400 transition-all duration-200 relative overflow-hidden min-w-[140px]"
   }, dashBusy && /*#__PURE__*/React.createElement("div", {
     className: "absolute inset-0 bg-amber-700/50",
@@ -20532,9 +20854,14 @@ function SimuladorUnificado() {
     className: "text-xs text-red-400 hover:text-red-300"
   }, "Limpar"))), dash && /*#__PURE__*/React.createElement("div", {
     className: "mb-4 bg-gradient-to-br from-slate-800/50 to-slate-900/40 backdrop-blur-sm rounded-2xl p-4 border border-amber-600/30 shadow-xl shadow-amber-900/10"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: 'flex items-center justify-between gap-2' + (dashOpen ? ' mb-3' : '')
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-sm font-bold text-amber-300 mb-3 tracking-tight"
-  }, "Dashboard \u2014 ", dash.n.toLocaleString(), " sims \xB7 ", cfg.alphas[dash.ak || 'base'].label, " \xB7 ", dash.eo ? 'ELO puro' : 'ATK/DEF'), /*#__PURE__*/React.createElement("div", {
+    className: "text-sm font-bold text-amber-300 tracking-tight"
+  }, "Dashboard \u2014 ", dash.n.toLocaleString(), " sims \xB7 ", cfg.alphas[dash.ak || 'base'].label, " \xB7 ", dash.eo ? 'ELO puro' : 'ATK/DEF'), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setDashOpen(o => !o),
+    className: "text-[11px] text-slate-400 hover:text-emerald-300 px-2 py-1 rounded-lg border border-slate-700/60 hover:border-emerald-500/40 transition-colors whitespace-nowrap"
+  }, dashOpen ? '▲ Ocultar' : '▼ Ver dashboard')), dashOpen && /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3"
   }, [{
     k: 'A',
@@ -20710,6 +21037,26 @@ function SimuladorUnificado() {
     cbAuto: resMeta && resMeta.cbR16 || null
   }), tab === 'rnc' && /*#__PURE__*/React.createElement(RankingNacionalSim, {
     dash: dash
+  }), tab === 'evolucao' && /*#__PURE__*/React.createElement(EvolucaoSim, {
+    cfg: cfg,
+    mergedRes: mergedRes,
+    fetchedRes: fetchedRes,
+    SAT: SAT,
+    SBT: SBT,
+    SCT: SCT,
+    allElos: allElos,
+    allTeams: allTeams,
+    dash: dash,
+    dashBusy: dashBusy,
+    resReady: resReady,
+    koAuto: resMeta ? resMeta.koD : null,
+    cbAuto: resMeta && resMeta.cbR16 || null,
+    evo: evo,
+    setEvo: setEvo,
+    evoBusy: evoBusy,
+    setEvoBusy: setEvoBusy,
+    evoRun: evoRun,
+    setEvoRun: setEvoRun
   }), tab === 'h2h' && /*#__PURE__*/React.createElement(ConfrontoMerged, {
     cfg: cfg,
     allTeams: allTeams
