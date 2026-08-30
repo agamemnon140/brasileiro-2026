@@ -42,3 +42,9 @@ Sem test runner. Verificação = Edge headless + screenshots.
 - Copa BR: tab Copa BR → sub-aba Árvore; seed `simUni_cbR16` muda vencedor das oitavas na
   árvore E o título% da CB no dashboard.
 - Probe: localStorage corrompido (`'{{{'`) não pode derrubar o app (try/catch em todo seed).
+- (v4.80) Trabalho em `requestAnimationFrame` disparado DEPOIS do mount (ex.: a varredura da
+  aba Evolução) não avança sob `--virtual-time-budget` — o auto-run do dashboard completa, mas
+  um rAF encadeado iniciado por clique fica em 0%. Na CÓPIA de teste, polyfillar antes do
+  script principal: `window.requestAnimationFrame = cb => setTimeout(() => cb(performance.now()), 16)`.
+  Drivers que fazem polling: usar poucos sims (500/ponto) — há um teto real de ~18 s por captura.
+  Para mudar um `<select>` controlado pelo React: `s.value = v; s.dispatchEvent(new Event('change', {bubbles: true}))`.
