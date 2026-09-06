@@ -31,7 +31,25 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.80
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.81
+// v4.81 (06/09/2026): 2ª FASE DA SÉRIE C (QUADRANGULARES + FINAL) VINDA DA AUTOMAÇÃO.
+//        fetch_tables.mjs ganhou um 3º passe sobre o PDF da C que devolve a fixture INTEIRA da
+//        2ª fase (grupos B e C da CBF, rodadas 1ª-6ª, + final quando os times existem), com
+//        gc/gf null no jogo não disputado → campo quad_c do results.json. No app,
+//        applyQuadCAuto() vira isso em QUAD_C_AUTO: groups (composição REAL, letra da CBF em
+//        ordem: B→A, C→B do app), games ('casa>fora' → [gc, gf]) e final (pernas por
+//        'casa>fora', com pênaltis). simMC (sk='C') usa os grupos reais quando o top-8
+//        simulado é exatamente o real (quadCRealGroups) — na Evolução truncada por rodada o
+//        top-8 diverge e vale o presumido 1º,4º,5º,8º / 2º,3º,6º,7º —, o placar real manda
+//        sobre BC_USER.C.games e as pernas reais da final fixam mando e gols (a que falta é
+//        simulada; agregado empatado → pênaltis do PDF). refreshBcUser() e LeaguePhaseEdit
+//        usam os mesmos grupos reais (as chaves 'A-i-j' das edições continuam alinhadas), a
+//        UI mostra o placar oficial travado em verde e a final real sobrepõe a editada.
+//        Precedência (diferente do ko_d): REAL > edição — jogo disputado não se edita. Log da
+//        Config e selo contam os jogos do quad_c (last_run.quad_added entra em total_new).
+//        Harness novo scripts/quad_c.cjs; mando_ko/evolucao passaram a ler as semis da D do
+//        ko_d em vez de fixar nomes (quebravam desde 31/08, quando Gama e ABC caíram).
+//        Action: segunda passa a rodar às 14:00 UTC (11:00 BRT); checkout/setup-node v5.
 // v4.80 (30/08/2026): EVOLUÇÃO POR RODADA/FASE + DASHBOARD COLAPSADO.
 //        Aba nova "📈 Evolução": escolhe série, time e métrica e o Monte Carlo é rodado de
 //        novo em cada ponto do eixo "como se" só os resultados até ali fossem conhecidos —
@@ -88,7 +106,7 @@ const {
 //        o slot "em disputa", até uma rodada de pesquisa notar. APP_VERSION vira const
 //        colada neste cabeçalho — o rodapé já ficou preso duas vezes (v4.59, v4.73) por
 //        ser string solta.
-const APP_VERSION = 'v4.80';
+const APP_VERSION = 'v4.81';
 // v4.77 (19/08/2026): FILA DE SUCESSÃO nos 27 estados (antes 14 com fonte, 11 sem folga
 //        alguma sobre a cota) + coluna Copa do Brasil 2027 na aba Ranking CBF.
 //        A rodada de pesquisa corrigiu a ordem campeão/vice em SETE estados (AC, AP, MS,
@@ -1270,7 +1288,9 @@ function refreshBcUser() {
       const mk = (k, A, B) => { const r = edits[k]; if (!A || !B || !r || r.iA == null || r.iB == null || r.vA == null || r.vB == null) return; const aA = r.iA + r.vA, aB = r.iB + r.vB; const w = aA > aB ? A : aB > aA ? B : (r.pen === 'A' ? A : r.pen === 'B' ? B : null); if (w) BC_USER.B[[A, B].sort().join('|')] = w; };
       mk('po1', seed[2], seed[5]); mk('po2', seed[3], seed[4]);
     } else {
-      const groups = { A: [seed[0], seed[3], seed[4], seed[7]], B: [seed[1], seed[2], seed[5], seed[6]] };
+      // v4.81: composição REAL (quad_c) quando existe — as chaves 'A-i-j' das edições ficam
+      // alinhadas com o que LeaguePhaseEdit mostra.
+      const groups = QUAD_C_AUTO.groups ? { A: QUAD_C_AUTO.groups[0], B: QUAD_C_AUTO.groups[1] } : { A: [seed[0], seed[3], seed[4], seed[7]], B: [seed[1], seed[2], seed[5], seed[6]] };
       const gstand = (g, grp) => { const s = {}; g.forEach(t => t && (s[t] = { t, P: 0, V: 0, GP: 0, GC: 0 })); for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { if (i === j) continue; const r = edits[grp + '-' + i + '-' + j]; if (!r || r.h == null || r.a == null || !g[i] || !g[j]) continue; BC_USER.C.games[g[i] + '>' + g[j]] = [r.h, r.a]; s[g[i]].GP += r.h; s[g[i]].GC += r.a; s[g[j]].GP += r.a; s[g[j]].GC += r.h; if (r.h > r.a) { s[g[i]].V++; s[g[i]].P += 3; } else if (r.h === r.a) { s[g[i]].P++; s[g[j]].P++; } else { s[g[j]].V++; s[g[j]].P += 3; } } return g.filter(Boolean).map(t => ({ ...s[t], SG: s[t].GP - s[t].GC })).sort((a, b) => b.P - a.P || b.V - a.V || b.SG - a.SG || b.GP - a.GP); };
       const rA = gstand(groups.A, 'A'), rB = gstand(groups.B, 'B');
       const wA = rA[0] && rA[0].t, wB = rB[0] && rB[0].t, rf = edits['final'];
@@ -1316,6 +1336,51 @@ const cbR16Eff = (userMap, autoMap, idx) => {
   if (u && (u.g1a != null || u.g1b != null || u.g2a != null || u.g2b != null)) return u;
   return autoMap && autoMap[idx] || null;
 };
+// QUAD_C_AUTO (v4.81): 2ª fase da Série C (quadrangulares + final) vinda da AUTOMAÇÃO
+// (campo quad_c do results.json). A fixture inteira chega por NOME, com gc/gf null no jogo
+// ainda não disputado: groups = composição REAL dos dois grupos (ordem = letra da CBF; o
+// 1º vira o grupo A do app, o 2º o B), games = placares por 'casa>fora', final = pernas por
+// 'casa>fora'. Precedência: resultado REAL > edição do usuário (jogo disputado não se edita;
+// a UI trava o campo).
+let QUAD_C_AUTO = { groups: null, labels: null, games: {}, final: {}, n: 0 };
+function applyQuadCAuto(rows) {
+  QUAD_C_AUTO = { groups: null, labels: null, games: {}, final: {}, n: 0 };
+  if (!Array.isArray(rows) || !rows.length) return QUAD_C_AUTO;
+  const byG = {};
+  for (const r of rows) {
+    if (!r || !r.casa || !r.fora || r.casa === r.fora) continue;
+    const gc = r.gc == null ? null : Number(r.gc), gf = r.gf == null ? null : Number(r.gf);
+    const played = Number.isInteger(gc) && Number.isInteger(gf);
+    if (r.fase === 'FINAL') {
+      if (played) QUAD_C_AUTO.final[r.casa + '>' + r.fora] = { gc, gf, pen_c: r.pen_c == null ? null : Number(r.pen_c), pen_f: r.pen_f == null ? null : Number(r.pen_f), rodada: Number(r.rodada) || 0 };
+      continue;
+    }
+    const g = String(r.grupo || '').toUpperCase();
+    if (!g) continue;
+    (byG[g] = byG[g] || new Set()).add(r.casa); byG[g].add(r.fora);
+    if (played) { QUAD_C_AUTO.games[r.casa + '>' + r.fora] = [gc, gf]; QUAD_C_AUTO.n++; }
+  }
+  const letters = Object.keys(byG).filter(g => byG[g].size === 4).sort();
+  if (letters.length === 2) { QUAD_C_AUTO.groups = letters.map(g => [...byG[g]]); QUAD_C_AUTO.labels = letters; }
+  return QUAD_C_AUTO;
+}
+// Grupos reais só valem quando os 8 classificados da simulação são exatamente os 8 da CBF (na
+// Evolução, truncada por rodada, o top-8 simulado pode divergir — aí vale o presumido).
+const quadCRealGroups = (top8) => {
+  const g = QUAD_C_AUTO.groups; if (!g) return null;
+  const st = new Set(top8);
+  return g[0].every(t => st.has(t)) && g[1].every(t => st.has(t)) ? g : null;
+};
+// Pernas REAIS da final entre a e b: { ida, volta } com { casa, fora, gc, gf, pen_c, pen_f } ou null.
+const quadCFinalLegs = (a, b) => {
+  const F = QUAD_C_AUTO.final; const l1 = F[a + '>' + b], l2 = F[b + '>' + a];
+  if (!l1 && !l2) return null;
+  const mk = (casa, fora, l) => l ? { casa, fora, gc: l.gc, gf: l.gf, pen_c: l.pen_c, pen_f: l.pen_f, rodada: l.rodada } : null;
+  const L = [mk(a, b, l1), mk(b, a, l2)].filter(Boolean).sort((x, y) => x.rodada - y.rodada);
+  if (L.length === 2) return { ida: L[0], volta: L[1] };
+  return L[0].rodada === 2 ? { ida: null, volta: L[0] } : { ida: L[0], volta: null };
+};
+const quadCPlayed = (m) => m && Array.isArray(m.quadC) ? m.quadC.filter(r => r && r.gc != null).length : 0;
 const simMC = (times, ranking, tab, res, cfg, sk, nS, ak, eo, opts) => {
   refreshBcUser();
   if (opts && opts.ignoreUser) BC_USER = { B: {}, C: { games: {}, final: {} } }; // v4.80: sem edições de playoff/quadrangular
@@ -1582,8 +1647,9 @@ const simMC_single = (times, ranking, tab, res, cfg, sk, ak, eo, lg, mc, mf, ct,
   // grupo no quadrangular.
   if (sk === 'C' && extraStats) {
     const top8 = cl.slice(0, 8).map(c => c.time);
-    const gA = [top8[0], top8[3], top8[4], top8[7]];
-    const gB = [top8[1], top8[2], top8[5], top8[6]];
+    const realG = quadCRealGroups(top8); // v4.81: composição REAL dos grupos (results.json.quad_c)
+    const gA = realG ? realG[0] : [top8[0], top8[3], top8[4], top8[7]];
+    const gB = realG ? realG[1] : [top8[1], top8[2], top8[5], top8[6]];
     // Registra adversários da fase quadrangular (3 por time no grupo).
     const regQuad = grupo => {
       for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) if (i !== j && extraStats[grupo[i]].matchups) {
@@ -1615,7 +1681,7 @@ const simMC_single = (times, ranking, tab, res, cfg, sk, ak, eo, lg, mc, mf, ct,
           lC,
           lF
         } = calcL(at[c], df[c], at[f], df[f], el[c], el[f], mc, mf, cfg.homeAdv, eo, cfg.c0Log);
-        const ug = BC_USER.C.games[c + '>' + f];
+        const ug = (realG && QUAD_C_AUTO.games[c + '>' + f]) || BC_USER.C.games[c + '>' + f]; // v4.81: real > edição
         const gc = ug ? ug[0] : poissonRandom(lC),
           gf = ug ? ug[1] : poissonRandom(lF);
         qst[c].GP += gc;
@@ -1660,27 +1726,40 @@ const simMC_single = (times, ranking, tab, res, cfg, sk, ak, eo, lg, mc, mf, ct,
     // Define mandante da volta por P (pts no quadrangular); empate → fa (1ºA arbitrário)
     const paS = resA[0].P,
       pbS = resB[0].P;
-    const voltaMandante = paS >= pbS ? fa : fb;
-    const idaMandante = voltaMandante === fa ? fb : fa;
-    // Ida (idaMandante em casa)
-    const {
-      lC: il1,
-      lF: il2
-    } = calcL(at[idaMandante], df[idaMandante], at[voltaMandante], df[voltaMandante], el[idaMandante], el[voltaMandante], mc, mf, cfg.homeAdv, eo, cfg.c0Log);
-    const ig1 = poissonRandom(il1),
-      ig2 = poissonRandom(il2);
-    // Volta (voltaMandante em casa)
-    const {
-      lC: vl1,
-      lF: vl2
-    } = calcL(at[voltaMandante], df[voltaMandante], at[idaMandante], df[idaMandante], el[voltaMandante], el[idaMandante], mc, mf, cfg.homeAdv, eo, cfg.c0Log);
-    const vg1 = poissonRandom(vl1),
-      vg2 = poissonRandom(vl2);
+    // v4.81: pernas REAIS da final (results.json.quad_c) fixam mando e placar; a perna que
+    // falta é simulada. Sem dado real, mando presumido por P no quadrangular (empate → fa).
+    const rfL = realG ? quadCFinalLegs(fa, fb) : null;
+    let voltaMandante = paS >= pbS ? fa : fb;
+    let idaMandante = voltaMandante === fa ? fb : fa;
+    if (rfL && rfL.ida) { idaMandante = rfL.ida.casa; voltaMandante = rfL.ida.fora; }
+    else if (rfL && rfL.volta) { voltaMandante = rfL.volta.casa; idaMandante = rfL.volta.fora; }
+    // Ida (idaMandante em casa): ig1 = gols do idaMandante, ig2 = gols do voltaMandante
+    let ig1, ig2;
+    if (rfL && rfL.ida) { ig1 = rfL.ida.gc; ig2 = rfL.ida.gf; }
+    else {
+      const { lC: il1, lF: il2 } = calcL(at[idaMandante], df[idaMandante], at[voltaMandante], df[voltaMandante], el[idaMandante], el[voltaMandante], mc, mf, cfg.homeAdv, eo, cfg.c0Log);
+      ig1 = poissonRandom(il1); ig2 = poissonRandom(il2);
+    }
+    // Volta (voltaMandante em casa): vg1 = gols do voltaMandante, vg2 = gols do idaMandante
+    let vg1, vg2;
+    if (rfL && rfL.volta) { vg1 = rfL.volta.gc; vg2 = rfL.volta.gf; }
+    else {
+      const { lC: vl1, lF: vl2 } = calcL(at[voltaMandante], df[voltaMandante], at[idaMandante], df[idaMandante], el[voltaMandante], el[idaMandante], mc, mf, cfg.homeAdv, eo, cfg.c0Log);
+      vg1 = poissonRandom(vl1); vg2 = poissonRandom(vl2);
+    }
     // Agregado
     const aggVM = ig2 + vg1; // voltaMandante total
     const aggIM = ig1 + vg2; // idaMandante total
-    let camp = BC_USER.C.final[[fa, fb].sort().join('|')] || null;
-    if (!camp) { if (aggVM > aggIM) camp = voltaMandante;else if (aggIM > aggVM) camp = idaMandante;else camp = Math.random() < 0.5 ? voltaMandante : idaMandante; } // pênaltis (ou edição do usuário)
+    // Final REAL completa: a edição do usuário não vale; agregado empatado → pênaltis do PDF.
+    let camp = rfL && rfL.ida && rfL.volta ? null : (BC_USER.C.final[[fa, fb].sort().join('|')] || null);
+    if (!camp) {
+      if (aggVM > aggIM) camp = voltaMandante;
+      else if (aggIM > aggVM) camp = idaMandante;
+      else {
+        const pv = rfL && rfL.volta && rfL.volta.pen_c != null && rfL.volta.pen_f != null ? (rfL.volta.pen_c > rfL.volta.pen_f ? rfL.volta.casa : rfL.volta.fora) : null;
+        camp = pv || (Math.random() < 0.5 ? voltaMandante : idaMandante); // pênaltis (ou edição do usuário)
+      }
+    }
     extraStats[camp].qChamp++;
   }
 };
@@ -15930,16 +16009,19 @@ function LeaguePhaseEdit({ serie }) {
   // posição i (0-idx) só preenchida se MATEMATICAMENTE travada (conservador, ignora desempate)
   const seed = cl.map((c, i) => { const A = c.t; const best = 1 + cl.filter(x => x.t !== A && st[x.t].P > mx(A)).length; const worst = 1 + cl.filter(x => x.t !== A && mx(x.t) >= st[A].P).length; return (best === worst && best === i + 1) ? A : null; });
   const tm = t => t ? React.createElement(TN, { name: t }) : React.createElement('span', { className: 'text-slate-600 italic' }, 'a definir');
-  const num = (k, f, en) => React.createElement('input', { type: 'number', min: 0, value: (data[k] && data[k][f] != null) ? data[k][f] : '', disabled: !en, onChange: e => setV(k, f, e.target.value), className: 'w-7 text-center bg-slate-900/70 border border-slate-600 rounded text-[11px] py-0.5 ' + (en ? 'text-white' : 'text-slate-600') });
+  const num = (k, f, en) => React.createElement('input', { type: 'number', min: 0, value: (effTie(k)[f] != null) ? effTie(k)[f] : '', disabled: !en || (k === 'final' && !!finalRealAB && finalRealAB[f] != null), onChange: e => setV(k, f, e.target.value), className: 'w-7 text-center bg-slate-900/70 border border-slate-600 rounded text-[11px] py-0.5 ' + (en ? 'text-white' : 'text-slate-600') });
   // confronto ida/volta (A=mostrado à esquerda; placares sempre na ordem A×B). Retorna vencedor.
+  // v4.81: final REAL da Série C (results.json.quad_c) sobrepõe a edição; preenchida na seção da C.
+  let finalRealAB = null;
+  const effTie = k => (k === 'final' && finalRealAB) ? { ...(data[k] || {}), ...finalRealAB } : (data[k] || {});
   const tieWinner = (k, A, B) => {
-    const r = data[k] || {};
+    const r = effTie(k);
     if (!A || !B || r.iA == null || r.iB == null || r.vA == null || r.vB == null) return null;
     const aA = r.iA + r.vA, aB = r.iB + r.vB;
     return aA > aB ? A : aB > aA ? B : (r.pen === 'A' ? A : r.pen === 'B' ? B : null);
   };
   const renderTie = (k, A, B, labelA, labelB) => {
-    const r = data[k] || {};
+    const r = effTie(k);
     const en = !!(A && B);
     const aA = (r.iA || 0) + (r.vA || 0), aB = (r.iB || 0) + (r.vB || 0);
     const complete = en && r.iA != null && r.iB != null && r.vA != null && r.vB != null;
@@ -15957,7 +16039,7 @@ function LeaguePhaseEdit({ serie }) {
         React.createElement('span', null, 'ida'), num(k, 'iA', en), React.createElement('span', { className: 'text-slate-600' }, '×'), num(k, 'iB', en),
         React.createElement('span', { className: 'mx-1 text-slate-700' }, '·'),
         React.createElement('span', null, 'volta'), num(k, 'vA', en), React.createElement('span', { className: 'text-slate-600' }, '×'), num(k, 'vB', en),
-        tied ? React.createElement('select', { value: r.pen || '', onChange: e => setPenK(k, e.target.value), className: 'ml-2 bg-slate-900 border border-amber-600/50 rounded text-[10px] text-amber-300' },
+        tied ? React.createElement('select', { value: r.pen || '', disabled: k === 'final' && !!finalRealAB && finalRealAB.pen != null, onChange: e => setPenK(k, e.target.value), className: 'ml-2 bg-slate-900 border border-amber-600/50 rounded text-[10px] text-amber-300' },
           React.createElement('option', { value: '' }, 'pên?'), React.createElement('option', { value: 'A' }, (A || 'A').slice(0, 10)), React.createElement('option', { value: 'B' }, (B || 'B').slice(0, 10))) : null));
   };
   const head = (title) => React.createElement('div', { className: 'flex items-center justify-between mb-1' },
@@ -15982,12 +16064,16 @@ function LeaguePhaseEdit({ serie }) {
   }
   // === Série C: quadrangular (2 grupos de 4, ida-volta) + final ===
   const t8 = seed.slice(0, 8);
-  const groups = { A: [t8[0], t8[3], t8[4], t8[7]], B: [t8[1], t8[2], t8[5], t8[6]] };
+  // v4.81: composição e placares REAIS (results.json.quad_c) — jogo disputado fica travado.
+  const QA = QUAD_C_AUTO;
+  const groups = QA.groups ? { A: QA.groups[0], B: QA.groups[1] } : { A: [t8[0], t8[3], t8[4], t8[7]], B: [t8[1], t8[2], t8[5], t8[6]] };
+  const realGame = (g, i, j) => (g[i] && g[j] && QA.games[g[i] + '>' + g[j]]) || null; // [gc, gf]
+  const fixedN = v => React.createElement('span', { className: 'w-7 text-center font-mono text-emerald-300 font-bold', title: 'placar oficial (Tabelas CBF)' }, v);
   const groupStanding = (g, grp) => {
     const s = {}; g.forEach(t => t && (s[t] = { t, P: 0, V: 0, GP: 0, GC: 0, J: 0 }));
     for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
       if (i === j) continue;
-      const k = grp + '-' + i + '-' + j, r = data[k]; if (!r || r.h == null || r.a == null) continue;
+      const rg = realGame(g, i, j); const k = grp + '-' + i + '-' + j, r = rg ? { h: rg[0], a: rg[1] } : data[k]; if (!r || r.h == null || r.a == null) continue;
       const c = g[i], f = g[j]; if (!c || !f) continue;
       s[c].J++; s[f].J++; s[c].GP += r.h; s[c].GC += r.a; s[f].GP += r.a; s[f].GC += r.h;
       if (r.h > r.a) { s[c].V++; s[c].P += 3; } else if (r.h === r.a) { s[c].P++; s[f].P++; } else { s[f].V++; s[f].P += 3; }
@@ -16003,7 +16089,7 @@ function LeaguePhaseEdit({ serie }) {
     const games = [];
     for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) if (i !== j) games.push([i, j]);
     return React.createElement('div', { key: grp, className: 'bg-slate-900/30 rounded-lg p-2 mb-2' },
-      React.createElement('div', { className: 'text-[11px] font-semibold text-teal-300 mb-1' }, 'Grupo ' + grp + ' · ' + (grp === 'A' ? '1º,4º,5º,8º' : '2º,3º,6º,7º')),
+      React.createElement('div', { className: 'text-[11px] font-semibold text-teal-300 mb-1' }, 'Grupo ' + grp + ' · ' + (QA.labels ? 'Grupo ' + QA.labels[grp === 'A' ? 0 : 1] + ' da CBF (composição oficial)' : (grp === 'A' ? '1º,4º,5º,8º' : '2º,3º,6º,7º'))),
       // mini-classificação
       React.createElement('div', { className: 'mb-2' }, standing.map((row, idx) => React.createElement('div', { key: row.t, className: 'flex items-center gap-1 text-[11px] py-0.5 ' + (top2.has(row.t) ? 'text-emerald-300' : 'text-slate-400') },
         React.createElement('span', { className: 'w-4 text-slate-500' }, (idx + 1) + 'º'),
@@ -16013,15 +16099,29 @@ function LeaguePhaseEdit({ serie }) {
       // jogos (12)
       React.createElement('details', null,
         React.createElement('summary', { className: 'text-[10px] text-emerald-400 cursor-pointer mb-1' }, 'Jogos do grupo (ida/volta · mandante × visitante)'),
-        games.map(([i, j]) => { const k = grp + '-' + i + '-' + j; return React.createElement('div', { key: k, className: 'flex items-center gap-1 text-[11px] py-0.5' },
+        games.map(([i, j]) => { const k = grp + '-' + i + '-' + j; const rg = realGame(g, i, j); return React.createElement('div', { key: k, className: 'flex items-center gap-1 text-[11px] py-0.5' + (rg ? ' text-emerald-200' : '') },
           React.createElement('span', { className: 'flex-1 min-w-0 text-right truncate' }, tm(g[i])),
-          numHA(k, 'h'), React.createElement('span', { className: 'text-slate-600' }, '×'), numHA(k, 'a'),
+          rg ? fixedN(rg[0]) : numHA(k, 'h'), React.createElement('span', { className: 'text-slate-600' }, '×'), rg ? fixedN(rg[1]) : numHA(k, 'a'),
           React.createElement('span', { className: 'flex-1 min-w-0 truncate' }, tm(g[j]))); })));
   };
   const wA = groupStanding(groups.A, 'A')[0], wB = groupStanding(groups.B, 'B')[0];
+  // v4.81: pernas reais da final → campos iA/iB/vA/vB relativos a A = vencedor do grupo A.
+  if (wA && wB) {
+    const L = quadCFinalLegs(wA.t, wB.t);
+    if (L) {
+      const A = wA.t, f = {};
+      if (L.ida) { f.iA = L.ida.casa === A ? L.ida.gc : L.ida.gf; f.iB = L.ida.casa === A ? L.ida.gf : L.ida.gc; }
+      if (L.volta) {
+        f.vA = L.volta.casa === A ? L.volta.gc : L.volta.gf; f.vB = L.volta.casa === A ? L.volta.gf : L.volta.gc;
+        if (L.volta.pen_c != null && L.volta.pen_f != null) { const pw = L.volta.pen_c > L.volta.pen_f ? L.volta.casa : L.volta.fora; f.pen = pw === A ? 'A' : 'B'; }
+      }
+      finalRealAB = f;
+    }
+  }
   const champ = tieWinner('final', wA && wA.t, wB && wB.t);
   return React.createElement('div', { className: 'mb-4 pb-3 border-b border-slate-700/50' },
     head('Próxima fase — Quadrangular final (editável)'), note,
+    QA.groups ? React.createElement('p', { className: 'text-[10px] text-emerald-400/80 mb-2' }, 'Composição dos grupos e placares em verde vêm das Tabelas CBF (automação); jogo disputado fica travado.') : null,
     React.createElement('p', { className: 'text-[10px] text-slate-500 mb-2' }, 'Top-2 de cada grupo (verde) sobem à Série B. Vencedores de grupo decidem o título.'),
     groupBlock('A'), groupBlock('B'),
     React.createElement('div', { className: 'mt-2' },
@@ -20511,6 +20611,7 @@ function SimuladorUnificado() {
       if (cancelled || !d) return; // 404 no 1º deploy => no-op
       const arr = Array.isArray(d) ? d : d && d.results;
       const koD = !Array.isArray(d) && Array.isArray(d.ko_d) ? d.ko_d : [];
+      const quadC = !Array.isArray(d) && Array.isArray(d.quad_c) ? d.quad_c : []; // v4.81
       if (Array.isArray(arr)) {
         const cbR16 = applyCbAuto(!Array.isArray(d) && Array.isArray(d.cb) ? d.cb : []);
         setResMeta({
@@ -20519,10 +20620,12 @@ function SimuladorUnificado() {
           dates: !Array.isArray(d) && Array.isArray(d.dates) ? d.dates : [],
           cbR16,
           results: arr,
-          koD
+          koD,
+          quadC
         });
         if (arr.length) handleSearchResults(arr);
         applySdKoAuto(koD); // v4.59: mata-mata da D vindo da automação → overlays do chaveamento
+        applyQuadCAuto(quadC); // v4.81: 2ª fase da C (grupos reais + placares + final) → QUAD_C_AUTO
       }
     }).catch(() => {}).finally(() => {
       clearTimeout(failsafe);
@@ -20753,7 +20856,7 @@ function SimuladorUnificado() {
     className: "text-slate-400 text-xs mt-1"
   }, "Motor unificado | Poisson + ELO + ATK/DEF | Config: total+pesoCasa"), resMeta && resMeta.updatedAt && /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-emerald-400/70 mt-0.5",
-    title: "Última execução da automação que baixa as Tabelas Detalhadas da CBF (fase de liga A/B/C). Total acumulado via automação: " + (resMeta.results.length + (resMeta.koD ? resMeta.koD.length : 0)) + " resultado(s). Log completo na aba Config."
+    title: "Última execução da automação que baixa as Tabelas Detalhadas da CBF (fase de liga A/B/C). Total acumulado via automação: " + (resMeta.results.length + (resMeta.koD ? resMeta.koD.length : 0) + quadCPlayed(resMeta)) + " resultado(s). Log completo na aba Config."
   }, "📡 Tabelas CBF atualizadas em ", new Date(resMeta.updatedAt).toLocaleString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
@@ -20761,7 +20864,7 @@ function SimuladorUnificado() {
     minute: '2-digit'
   }), " \xB7 ", (() => {
     const lr = resMeta.lastRun;
-    if (!lr || typeof lr.total_new !== 'number') return (resMeta.results.length + (resMeta.koD ? resMeta.koD.length : 0)) + ' resultado(s) via automa\xE7\xE3o';
+    if (!lr || typeof lr.total_new !== 'number') return (resMeta.results.length + (resMeta.koD ? resMeta.koD.length : 0) + quadCPlayed(resMeta)) + ' resultado(s) via automa\xE7\xE3o';
     const partes = [];
     if (lr.total_new > 0) partes.push('+' + lr.total_new + ' resultado(s)');
     if (lr.dates_changed && lr.dates) partes.push(lr.dates + ' data(s)');
@@ -21085,11 +21188,20 @@ function SimuladorUnificado() {
     className: "text-xs text-slate-300 mb-2"
   }, "\xDAltima execu\xE7\xE3o: ", /*#__PURE__*/React.createElement("span", {
     className: "font-mono text-emerald-300"
-  }, resMeta.updatedAt ? new Date(resMeta.updatedAt).toLocaleString('pt-BR') : '\u2014'), " \xB7 ", resMeta.results.length + (resMeta.koD ? resMeta.koD.length : 0), " resultado(s) acumulados"), resMeta.results.length + (resMeta.koD ? resMeta.koD.length : 0) === 0 ? /*#__PURE__*/React.createElement("p", {
+  }, resMeta.updatedAt ? new Date(resMeta.updatedAt).toLocaleString('pt-BR') : '\u2014'), " \xB7 ", resMeta.results.length + (resMeta.koD ? resMeta.koD.length : 0) + quadCPlayed(resMeta), " resultado(s) acumulados"), resMeta.results.length + (resMeta.koD ? resMeta.koD.length : 0) + quadCPlayed(resMeta) === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500"
   }, "Nenhuma inser\xE7\xE3o ainda \u2014 tudo que os PDFs trazem j\xE1 est\xE1 embutido no app.") : /*#__PURE__*/React.createElement("div", {
     className: "space-y-0.5 max-h-[320px] overflow-y-auto"
-  }, [...resMeta.results, ...(resMeta.koD || []).map(r => ({
+  }, [...resMeta.results, ...(resMeta.quadC || []).filter(r => r && r.gc != null).map(r => ({
+    serie: 'C',
+    rodada: r.fase === 'FINAL' ? 'F\xB7' + (Number(r.rodada) === 2 ? 'v' : 'i') : 'Q' + (r.grupo || '') + r.rodada,
+    casa: r.casa,
+    gc: r.gc,
+    gf: r.gf,
+    fora: r.fora,
+    confirmed_at: r.confirmed_at,
+    source: r.source
+  })), ...(resMeta.koD || []).map(r => ({
     serie: 'D',
     rodada: r.code + (r.leg === 'ida' ? '\xB7i' : '\xB7v'),
     casa: r.mand,

@@ -2,9 +2,11 @@ name: Update from CBF tables
 
 on:
   schedule:
-    # 09:00 UTC segunda e sexta (~06:00 BRT) — a CBF atualiza as Tabelas Detalhadas
-    # ao longo da semana; segunda pega a rodada do fim de semana, sexta a de meio de semana.
-    - cron: '0 9 * * 1,5'
+    # Segunda 14:00 UTC (11:00 BRT) e sexta 09:00 UTC (06:00 BRT) — a CBF atualiza as
+    # Tabelas Detalhadas ao longo da semana; segunda pega a rodada do fim de semana (às 11h
+    # a republicação de segunda de manhã já entrou), sexta a de meio de semana.
+    - cron: '0 14 * * 1'
+    - cron: '0 9 * * 5'
   workflow_dispatch:
     inputs:
       force_refresh:

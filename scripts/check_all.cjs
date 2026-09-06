@@ -23,7 +23,8 @@ const HARNESSES = [
   'serie2027',        // serie de 2027 soma o tamanho de cada divisao; sem heranca de homonimo
   'draw2027',         // sorteio: 16x6, teto de 3 impossivel, compacidade <= CBF
   'cascata',          // as cascatas ja consumadas na vida real sao reproduzidas
-  'evolucao'          // mascara de fases (D/CB) e truncamento por rodada (A/B/C) da aba Evolucao
+  'evolucao',         // mascara de fases (D/CB) e truncamento por rodada (A/B/C) da aba Evolucao
+  'quad_c'            // 2a fase da C: grupos, placares e final REAIS do quad_c dentro do simMC
 ];
 
 let falhas = 0;
