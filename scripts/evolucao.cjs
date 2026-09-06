@@ -99,9 +99,13 @@ if (E.oitDecidedAll) {
   check(E.oitL.every(t => E.D.BCD[t].qf === 0), 'todo perdedor real das oitavas: qf = 0 com {B,C,D}');
 } else console.log('  skip oitavas do ko_d incompletas — sub-check pulado');
 
-// (3) null = legado
+// (3) null = legado. Semifinalistas (F01/F02) e finalistas (G01) já têm o acesso garantido:
+// quando perdem, entram no sdEliminatedSet com ac = 100, não 0 (a partir de 31/08: Gama e ABC).
 console.log('\n(3) Série D: koMask=null reproduz o comportamento antigo');
-check(E.elim.length > 0 && E.elim.every(t => E.D.all[t].ac === 0), `todo eliminado de sdEliminatedSet (${E.elim.length}) tem ac = 0 com null`);
+const JA_SUBIU = new Set(KO.filter(r => r && /^(F0[12]|G01)$/.test(r.code)).flatMap(r => [r.mand, r.vis]));
+const acEsperado = t => JA_SUBIU.has(t) ? 100 : 0;
+const elimRuim = E.elim.filter(t => Math.abs(E.D.all[t].ac - acEsperado(t)) > 1e-9);
+check(E.elim.length > 0 && elimRuim.length === 0, `todo eliminado de sdEliminatedSet (${E.elim.length}) tem ac = 0 com null, salvo semifinalista/finalista com ac = 100${elimRuim.length ? ' <<< ' + elimRuim.join(', ') : ''}`);
 
 // (4) Copa do Brasil
 console.log('\n(4) Copa do Brasil: cbMask');
