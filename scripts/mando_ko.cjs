@@ -57,9 +57,22 @@ for (const c in QF) {
 const ov = E.overlay[E.sdKoKey('Nacional-AM', 'Iguatu')];
 check(!ov || ov.w === 'Nacional-AM', `sdBracketResolve(legado D04) dá Nacional-AM (deu: ${ov && ov.w})`);
 
-// (4) Geral: Iguatu eliminado; perdedores das quartas VIVOS (jogam o play-off)
+// (4) Geral: Iguatu eliminado; perdedores das quartas jogam o play-off de acesso (F03/F04),
+// lido do ko_d: em aberto → os dois vivos; decidido → o perdedor eliminado (sem acesso) e o
+// vencedor vivo. Fixar os 4 como "vivos" quebrou em 06/09, quando o CSA perdeu o F04.
 check(E.elim.includes('Iguatu'), 'Geral: Iguatu eliminado (perdeu as oitavas)');
-for (const t of ['Nacional-AM', 'CSA', 'Goiatuba', 'São José-RS']) check(!E.elim.includes(t), `Geral: ${t} vivo (play-off de acesso pendente)`);
+for (const code of ['F03', 'F04']) {
+  const kc = E.SD_KO_CODES[code];
+  if (!kc) { console.log(`  skip ${code} ainda não está no ko_d`); continue; }
+  const auto = E.SD_KO_AUTO[E.sdKoKey(kc.a, kc.b)];
+  if (!auto) {
+    for (const t of [kc.a, kc.b]) check(!E.elim.includes(t), `Geral: ${t} vivo (${code} em aberto)`);
+  } else {
+    const loser = auto.w === kc.a ? kc.b : kc.a;
+    check(E.elim.includes(loser), `Geral: ${loser} eliminado (perdeu o play-off ${code})`);
+    check(!E.elim.includes(auto.w), `Geral: ${auto.w} vivo (venceu o play-off ${code})`);
+  }
+}
 
 // Semis (F01/F02) e final (G01) lidas do ko_d, não fixadas por nome: enquanto o confronto está
 // em aberto os dois lados seguem vivos; decidido, o perdedor entra no sdEliminatedSet (já com
