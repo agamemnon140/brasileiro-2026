@@ -17,7 +17,8 @@
 //  3. jogo que JÁ está embutido no app (SX_RES do index.html) não entra no results.json
 //  4. NUNCA sobrescreve placar já gravado — registra conflito e mantém o original
 //  5. teto de jogos novos por execução
-//  6. só fase de liga (grupos): mata-mata da D e da Copa BR ficam fora (vivem no código do app)
+//  6. fase de liga em A/B/C; mata-mata da D → ko_d; oitavas da Copa BR → cb; 2ª fase da C
+//     (quadrangulares + final) → quad_c (fixture inteira, placar null no jogo não disputado)
 //
 // Mantenha TEAMS/NORM_NAME em sincronia com o app e com scripts/fetch_results.mjs.
 
@@ -45,7 +46,7 @@ const TEAMS = {
 };
 
 const NORM_NAME = {
-  "Atletico-MG":"Atlético-MG","Atletico Mineiro":"Atlético-MG","Atlético GO":"Atlético-GO","Atletico-GO":"Atlético-GO","Atlético":"Atlético-GO","Athletico Paranaense":"Athletico-PR","RB Bragantino":"Red Bull Bragantino","Bragantino":"Red Bull Bragantino","Sao Paulo":"São Paulo","São Bernardo FC":"São Bernardo","Sao Bernardo":"São Bernardo","Gremio":"Grêmio","Avai":"Avaí","Cuiaba":"Cuiabá","Goias":"Goiás","América MG":"América-MG","America-MG":"América-MG","America Mineiro":"América-MG","Nautico":"Náutico","Criciuma":"Criciúma","Operário PR":"Operário-PR","Operario-PR":"Operário-PR","Operário":"Operário-PR","Athletic MG":"Athletic","Botafogo SP":"Botafogo-SP","Botafogo PB":"Botafogo-PB","Grêmio Novorizontino":"Novorizontino","Barra SC":"Barra","Ypiranga RS":"Ypiranga","Maringá PR":"Maringá","Ferroviária SP":"Ferroviária","Inter de Limeira SP":"Inter de Limeira",
+  "Atletico-MG":"Atlético-MG","Atletico Mineiro":"Atlético-MG","Atlético GO":"Atlético-GO","Atletico-GO":"Atlético-GO","Atlético":"Atlético-GO","Athletico Paranaense":"Athletico-PR","RB Bragantino":"Red Bull Bragantino","Bragantino":"Red Bull Bragantino","Sao Paulo":"São Paulo","São Bernardo FC":"São Bernardo","Sao Bernardo":"São Bernardo","Gremio":"Grêmio","Avai":"Avaí","Cuiaba":"Cuiabá","Goias":"Goiás","América MG":"América-MG","America-MG":"América-MG","America Mineiro":"América-MG","Nautico":"Náutico","Criciuma":"Criciúma","Operário PR":"Operário-PR","Operario-PR":"Operário-PR","Operário":"Operário-PR","Athletic MG":"Athletic","Botafogo SP":"Botafogo-SP","Botafogo PB":"Botafogo-PB","Grêmio Novorizontino":"Novorizontino","Barra SC":"Barra","Ypiranga RS":"Ypiranga","Maringá PR":"Maringá","Ferroviária SP":"Ferroviária","Inter de Limeira SP":"Inter de Limeira","Santa Cruz PE":"Santa Cruz","Floresta CE":"Floresta","Brusque SC":"Brusque","Paysandu PA":"Paysandu","Guarani SP":"Guarani","Caxias RS":"Caxias","Ituano SP":"Ituano","Amazonas AM":"Amazonas","Anápolis GO":"Anápolis","Confiança SE":"Confiança","Figueirense SC":"Figueirense","Itabaiana SE":"Itabaiana","Maranhão MA":"Maranhão","Volta Redonda RJ":"Volta Redonda",
 };
 
 const SETS = Object.fromEntries(Object.entries(TEAMS).map(([k, v]) => [k, new Set(v)]));
@@ -257,6 +258,64 @@ async function loadBuiltInDates() {
 }
 
 // ---------------------------------------------------------------------------
+// Série C — SEGUNDA FASE (dois quadrangulares, que a CBF chama de "Grupo B" e "Grupo C",
+// rodadas 1ª..6ª) e TERCEIRA FASE (final, ida e volta). Sai do MESMO PDF da Série C, em
+// um passe próprio, e vai para o campo quad_c do results.json como a fixture INTEIRA:
+// jogo ainda não disputado tem gc/gf null. Assim o app conhece a composição REAL dos
+// grupos antes da 1ª rodada (em vez de presumir 1º,4º,5º,8º / 2º,3º,6º,7º) e os placares
+// entram conforme saem. No app: placar real > edição do usuário (jogo disputado trava).
+// A final só entra quando os dois times estão definidos ("Venc. Gr. B ou C" cai na allowlist).
+// ---------------------------------------------------------------------------
+function buildPromptQuadC(names) {
+  return [
+    `Este PDF é a Tabela Detalhada oficial da CBF do Campeonato Brasileiro Série C 2026.`,
+    `Extraia APENAS os jogos da SEGUNDA FASE (os dois quadrangulares — a coluna GR traz a letra do grupo, B ou C — rodadas 1ª a 6ª) e da TERCEIRA FASE (FINAL, ida e volta), TENHAM PLACAR OU NÃO.`,
+    `IGNORE completamente a PRIMEIRA FASE (pontos corridos, rodadas 1 a 19).`,
+    `Use EXATAMENTE estes nomes de times: ${names.join(', ')}. Jogo cuja equipe ainda não está definida (ex.: "Venc. Gr. B ou C") fica de fora.`,
+    `Responda APENAS com UM ÚNICO array JSON (grupos e final juntos, sem dividir em blocos) no formato:`,
+    `[{"fase":"Q","grupo":"B","rodada":1,"data":"05/09","casa":"Inter de Limeira","gc":null,"gf":null,"fora":"Ferroviária","pen_c":null,"pen_f":null}]`,
+    `fase = "Q" nos jogos dos grupos e "FINAL" na final (aí grupo = null e rodada = 1 na ida, 2 na volta).`,
+    `gc/gf = gols de mandante/visitante quando o placar está preenchido; null quando o jogo ainda não tem placar (apenas "x" entre os times). pen_c/pen_f = pênaltis entre parênteses, quando houver.`,
+    `data = dia/mês da linha (dd/mm). ATENÇÃO: NUNCA invente 0x0 para jogo futuro — jogo sem placar tem gc e gf null.`,
+  ].join(' ');
+}
+
+function sanitizeQuadC(rows, source) {
+  const out = [];
+  let futureNulled = 0;
+  const nowBrt = new Date(Date.now() - 3 * 3600 * 1000);
+  for (const r of rows || []) {
+    const fase = String(r.fase || 'Q').toUpperCase().trim();
+    if (fase !== 'Q' && fase !== 'FINAL') continue;
+    const casa = norm(r.casa), fora = norm(r.fora);
+    if (!SETS.C.has(casa) || !SETS.C.has(fora) || casa === fora) continue;
+    const grupo = fase === 'Q' ? String(r.grupo || '').toUpperCase().trim() : null;
+    if (fase === 'Q' && !/^[A-D]$/.test(grupo)) continue;
+    const rodada = Number(r.rodada);
+    if (!Number.isInteger(rodada) || rodada < 1 || rodada > (fase === 'Q' ? 6 : 2)) continue;
+    const dm = /^(\d{1,2})\/(\d{1,2})$/.exec(String(r.data || '').trim());
+    const data = dm && Number(dm[1]) >= 1 && Number(dm[1]) <= 31 && Number(dm[2]) >= 1 && Number(dm[2]) <= 12
+      ? `${dm[1].padStart(2, '0')}/${dm[2].padStart(2, '0')}` : null;
+    let gc = r.gc == null ? null : Number(r.gc), gf = r.gf == null ? null : Number(r.gf);
+    if ((gc == null) !== (gf == null)) continue; // meio placar não existe
+    if (gc != null && (!Number.isInteger(gc) || !Number.isInteger(gf) || gc < 0 || gc > 14 || gf < 0 || gf > 14)) continue;
+    let pen_c = null, pen_f = null;
+    if (gc != null && fase === 'FINAL' && r.pen_c != null && r.pen_f != null) {
+      const pc = Number(r.pen_c), pf = Number(r.pen_f);
+      if (Number.isInteger(pc) && Number.isInteger(pf) && pc >= 0 && pc <= 30 && pf >= 0 && pf <= 30) { pen_c = pc; pen_f = pf; }
+    }
+    // Placar em jogo com DATA FUTURA (horário de Brasília) é alucinação: a fixture fica, o placar cai.
+    if (gc != null && data) {
+      const gameDate = new Date(Date.UTC(2026, Number(data.slice(3, 5)) - 1, Number(data.slice(0, 2))));
+      if (gameDate.getTime() > nowBrt.getTime()) { gc = null; gf = null; pen_c = null; pen_f = null; futureNulled++; }
+    }
+    out.push({ fase, grupo, rodada, data, casa, fora, gc, gf, pen_c, pen_f, source });
+  }
+  if (futureNulled) console.error(`::warning::Série C 2ª fase: ${futureNulled} placar(es) em jogo com DATA FUTURA descartado(s) (fixture mantida).`);
+  return out;
+}
+
+// ---------------------------------------------------------------------------
 // Copa do Brasil — OITAVAS (R16). A R32 já está 100% oficial e embutida
 // (CB_RES_IDA/VOLTA). O app indexa as oitavas por POSIÇÃO em CB_R16_PAIRS, com
 // {g1a,g1b} = ida (a manda) e {g2a,g2b} = volta (b manda; g2a são os gols de a).
@@ -399,21 +458,65 @@ async function savePdfCache(urls) {
 async function main() {
   if (!API_KEY) { console.error('ANTHROPIC_API_KEY ausente.'); process.exit(1); }
 
-  let existing = [], existingKo = [], existingDates = [], existingCb = [];
+  let existing = [], existingKo = [], existingDates = [], existingCb = [], existingQuad = [];
   try {
     const raw = JSON.parse(await readFile(RESULTS_PATH, 'utf8'));
     existing = Array.isArray(raw) ? raw : (raw && Array.isArray(raw.results) ? raw.results : []);
     existingKo = !Array.isArray(raw) && Array.isArray(raw.ko_d) ? raw.ko_d : [];
     existingDates = !Array.isArray(raw) && Array.isArray(raw.dates) ? raw.dates : [];
     existingCb = !Array.isArray(raw) && Array.isArray(raw.cb) ? raw.cb : [];
-  } catch { existing = []; existingKo = []; existingDates = []; existingCb = []; }
+    existingQuad = !Array.isArray(raw) && Array.isArray(raw.quad_c) ? raw.quad_c : [];
+  } catch { existing = []; existingKo = []; existingDates = []; existingCb = []; existingQuad = []; }
   const byKey = new Map();
   for (const r of existing) byKey.set(dedupKey(r), r);
   const koByKey = new Map();
   for (const r of existingKo) koByKey.set(`${r.code}|${r.leg}`, r);
+  // 2ª fase da C: chave fase|casa|fora (no quadrangular cada par joga ida E volta, então
+  // casa|fora é única; a final tem no máximo uma perna com cada mandante).
+  const quadKey = (r) => `${r.fase}|${r.casa}|${r.fora}`;
+  const quadByKey = new Map();
+  for (const r of existingQuad) quadByKey.set(quadKey(r), r);
+  let quadAdded = 0, quadUnchanged = 0;
+  // Extrai a 2ª fase da C do PDF já baixado e mescla em quadByKey. Fixture (grupo/rodada/
+  // data) segue sempre o PDF; placar gravado NUNCA é sobrescrito (conflito é logado).
+  const runQuadC = async (pdfB64, url) => {
+    const qs = sanitizeQuadC(await extractFromPdf('C', pdfB64, buildPromptQuadC(TEAMS.C)), url);
+    extracted++;
+    const now = new Date().toISOString();
+    for (const q of qs) {
+      const k = quadKey(q);
+      const prev = quadByKey.get(k);
+      if (!prev) {
+        quadByKey.set(k, { ...q, confirmed_at: q.gc != null ? now : null });
+        if (q.gc != null) quadAdded++;
+        continue;
+      }
+      const upd = { ...prev, grupo: q.grupo, rodada: q.rodada, data: q.data || prev.data || null, source: url };
+      if (prev.gc == null && q.gc != null) {
+        Object.assign(upd, { gc: q.gc, gf: q.gf, pen_c: q.pen_c, pen_f: q.pen_f, confirmed_at: now });
+        quadAdded++;
+      } else if (prev.gc != null && q.gc != null && (Number(prev.gc) !== q.gc || Number(prev.gf) !== q.gf)) {
+        conflicts.push('C2|' + k);
+        console.error(`::warning::Conflito C 2ª fase ${k}: gravado ${prev.gc}-${prev.gf} vs PDF ${q.gc}-${q.gf} (mantido o gravado)`);
+      } else if (prev.gc != null) quadUnchanged++;
+      quadByKey.set(k, upd);
+    }
+    console.log(`Série C: 2ª fase — ${qs.length} jogo(s) na fixture do PDF, ${qs.filter((q) => q.gc != null).length} com placar.`);
+    if (!qs.length) console.error('::warning::Série C: 2ª fase sem nenhuma linha válida — prompt/allowlist a revisar.');
+  };
 
   const builtIn = await loadBuiltIn();
   const builtInDates = await loadBuiltInDates();
+  // Série C: a 1ª fase é turno ÚNICO (cada par joga 1x). Um jogo da 2ª fase que o modelo
+  // deixe vazar no passe de liga (Santa Cruz x Botafogo-PB do quadrangular, p.ex.) teria a
+  // ordem casa|fora INVERSA à do jogo da 1ª fase — e entraria como um 20º jogo na tabela.
+  // Par (sem ordem) já disputado na liga ⇒ é 2ª fase ⇒ fica só no quad_c.
+  const pairC = new Set();
+  for (const k of [...builtIn.C, ...existing.filter((r) => r.serie === 'C').map(dedupKey)]) {
+    const [, a, b] = k.split('|');
+    pairC.add([a, b].sort().join('|'));
+  }
+  let quadLeak = 0;
   const pdfCache = await loadPdfCache();
   if (FORCE_REFRESH) console.log('FORCE_REFRESH ativo — reextraindo todas as séries.');
   let extracted = 0, skippedCache = 0;
@@ -433,6 +536,11 @@ async function main() {
     if (!FORCE_REFRESH && pdfCache[serie] === url) {
       console.log(`Série ${serie}: PDF inalterado desde a última extração — pulando as chamadas à API.`);
       skippedCache++;
+      // Primeira vez do passe da 2ª fase (quad_c ainda vazio) com o PDF em cache: roda só ele.
+      if (serie === 'C' && !quadByKey.size) {
+        try { await runQuadC(await downloadPdfB64(url), url); }
+        catch (e) { console.error(`::warning::Série C: 2ª fase falhou: ${e.message}`); }
+      }
       continue;
     }
     console.log(`Série ${serie}: ${url}`);
@@ -449,6 +557,7 @@ async function main() {
       continue;
     }
     console.log(`Série ${serie}: ${candidates.length} jogo(s) com placar no PDF.`);
+    if (serie === 'C' && quadLeak) console.error(`::warning::Série C: ${quadLeak} jogo(s) da 2ª fase vazaram no passe de liga e foram ignorados (par já disputado na 1ª fase).`);
 
     // Datas (passe separado, mesmo PDF já baixado). Falha aqui não derruba os placares.
     try {
@@ -468,13 +577,24 @@ async function main() {
       serieOk = false;
       console.error(`::warning::Série ${serie}: extração de datas falhou: ${e.message}`);
     }
-    // Só cacheia quando OS DOIS passes (placares e datas) foram completos: cachear
-    // depois de uma falha parcial congelaria a metade que faltou até a CBF republicar.
+    // Série C: 3º passe — quadrangulares + final (results.json.quad_c).
+    if (serie === 'C') {
+      try {
+        await runQuadC(pdfB64, url);
+        if (lastExtractTruncated) serieOk = false;
+      } catch (e) {
+        serieOk = false;
+        console.error(`::warning::Série C: 2ª fase falhou: ${e.message}`);
+      }
+    }
+    // Só cacheia quando TODOS os passes (placares, datas e, na C, 2ª fase) foram completos:
+    // cachear depois de uma falha parcial congelaria a parte que faltou até a CBF republicar.
     if (serieOk) pdfCache[serie] = url;
     for (const c of candidates) {
       const k = dedupKey(c);
       if (builtIn[serie] && builtIn[serie].has(k)) { skippedBuiltIn++; continue; }
       const prev = byKey.get(k);
+      if (serie === 'C' && !prev && pairC.has([norm(c.casa).toLowerCase(), norm(c.fora).toLowerCase()].sort().join('|'))) { quadLeak++; continue; }
       if (!prev) {
         byKey.set(k, { ...c, confirmed_at: new Date().toISOString() });
         added++;
@@ -526,8 +646,8 @@ async function main() {
     }
   }
 
-  if (added + koAdded > MAX_NEW_PER_RUN) {
-    console.error(`::error::Adicionaria ${added + koAdded} jogos (> ${MAX_NEW_PER_RUN}) — implausível para 1 semana. Abortando sem gravar.`);
+  if (added + koAdded + quadAdded > MAX_NEW_PER_RUN) {
+    console.error(`::error::Adicionaria ${added + koAdded + quadAdded} jogos (> ${MAX_NEW_PER_RUN}) — implausível para 1 semana. Abortando sem gravar.`);
     process.exit(1);
   }
 
@@ -591,6 +711,11 @@ async function main() {
   const canonCb = (arr) => JSON.stringify(arr.map((r) => ({ fase: r.fase, casa: r.casa, fora: r.fora, gc: r.gc, gf: r.gf })));
   const cbChanged = canonCb(mergedCb) !== canonCb(existingCb);
 
+  const quadOrd = (r) => `${r.fase === 'Q' ? '1' : '2'}|${r.grupo || ''}|${r.rodada}|${r.casa}`;
+  const mergedQuad = [...quadByKey.values()].sort((a, b) => quadOrd(a).localeCompare(quadOrd(b)));
+  const canonQuad = (arr) => JSON.stringify(arr.map((r) => ({ fase: r.fase, grupo: r.grupo, rodada: r.rodada, data: r.data, casa: r.casa, fora: r.fora, gc: r.gc, gf: r.gf, pen_c: r.pen_c, pen_f: r.pen_f })).sort((a, b) => quadOrd(a).localeCompare(quadOrd(b))));
+  const quadChanged = canonQuad(mergedQuad) !== canonQuad(existingQuad);
+
   // Datas: o PDF é sempre a versão corrente, então substitui em bloco (não faz merge
   // com o existente — data removida do PDF deve sumir do overlay também). Só entra se
   // ao menos uma série respondeu, para uma falha de extração não zerar o que havia.
@@ -600,17 +725,19 @@ async function main() {
   const canonD = (arr) => JSON.stringify(arr.map((d) => ({ serie: d.serie, rodada: d.rodada, casa: d.casa, fora: d.fora, data: d.data })));
   const datesChanged = canonD(mergedDates) !== canonD(existingDates);
 
-  console.log(`Resumo: +${added} liga + ${koAdded} mata-mata D novos, ${unchanged + koUnchanged} iguais, ${skippedBuiltIn + koSkipped} já embutidos no app, ${conflicts.length} conflito(s), ${mergedDates.length} data(s) remarcada(s)${datesChanged ? ' (MUDOU)' : ''}, +${cbAdded} Copa BR nova(s) (${mergedCb.length} no total).`);
-  if (canon(merged) === canon(existing) && canonKo(mergedKo) === canonKo(existingKo) && !datesChanged && !cbChanged) { console.log('Sem mudanças em results.json.'); return; }
+  console.log(`Resumo: +${added} liga + ${koAdded} mata-mata D + ${quadAdded} 2ª fase C novos, ${unchanged + koUnchanged + quadUnchanged} iguais, ${skippedBuiltIn + koSkipped} já embutidos no app, ${conflicts.length} conflito(s), ${mergedDates.length} data(s) remarcada(s)${datesChanged ? ' (MUDOU)' : ''}, +${cbAdded} Copa BR nova(s) (${mergedCb.length} no total), 2ª fase C: ${mergedQuad.filter((r) => r.gc != null).length}/${mergedQuad.length} disputado(s)${quadChanged ? ' (MUDOU)' : ''}.`);
+  if (canon(merged) === canon(existing) && canonKo(mergedKo) === canonKo(existingKo) && !datesChanged && !cbChanged && !quadChanged) { console.log('Sem mudanças em results.json.'); return; }
 
   // last_run: quantos jogos ESTA execução acrescentou, para o selo do app mostrar o
   // delta em vez do acumulado. Só é escrito quando houve mudança (o return acima corta
   // execuções sem novidade), então ele sempre descreve a última atualização efetiva.
   // cb_added fica FORA de total_new enquanto o app nao consumir results.json.cb:
   // o selo anunciaria "+16 resultado(s)" que nao aparecem em lugar nenhum na UI.
-  const lastRun = { at: new Date().toISOString(), added: added, ko_added: koAdded, total_new: added + koAdded, cb_added: cbAdded, dates: mergedDates.length, dates_changed: datesChanged };
-  await writeFile(RESULTS_PATH, JSON.stringify({ schema: 2, updated_at: new Date().toISOString(), last_run: lastRun, results: merged, ko_d: mergedKo, cb: mergedCb, dates: mergedDates }, null, 2) + '\n', 'utf8');
-  console.log(`results.json atualizado (${merged.length} resultado(s) de liga + ${mergedKo.length} perna(s) de mata-mata D + ${mergedDates.length} data(s) remarcada(s); last_run.total_new=${lastRun.total_new}).`);
+  // quad_added ENTRA em total_new: o app consome results.json.quad_c (v4.81) e o log da
+  // Config lista esses jogos, então o selo "+N resultado(s)" bate com o que a UI mostra.
+  const lastRun = { at: new Date().toISOString(), added: added, ko_added: koAdded, quad_added: quadAdded, total_new: added + koAdded + quadAdded, cb_added: cbAdded, dates: mergedDates.length, dates_changed: datesChanged };
+  await writeFile(RESULTS_PATH, JSON.stringify({ schema: 2, updated_at: new Date().toISOString(), last_run: lastRun, results: merged, ko_d: mergedKo, cb: mergedCb, quad_c: mergedQuad, dates: mergedDates }, null, 2) + '\n', 'utf8');
+  console.log(`results.json atualizado (${merged.length} resultado(s) de liga + ${mergedKo.length} perna(s) de mata-mata D + ${mergedQuad.length} jogo(s) da 2ª fase C + ${mergedDates.length} data(s) remarcada(s); last_run.total_new=${lastRun.total_new}).`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
