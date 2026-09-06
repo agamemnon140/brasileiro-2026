@@ -57,16 +57,42 @@ for (const c in QF) {
 const ov = E.overlay[E.sdKoKey('Nacional-AM', 'Iguatu')];
 check(!ov || ov.w === 'Nacional-AM', `sdBracketResolve(legado D04) dá Nacional-AM (deu: ${ov && ov.w})`);
 
-// (4) Geral: Iguatu eliminado; perdedores das quartas VIVOS (jogam o play-off); semifinalistas vivos
+// (4) Geral: Iguatu eliminado; perdedores das quartas VIVOS (jogam o play-off)
 check(E.elim.includes('Iguatu'), 'Geral: Iguatu eliminado (perdeu as oitavas)');
 for (const t of ['Nacional-AM', 'CSA', 'Goiatuba', 'São José-RS']) check(!E.elim.includes(t), `Geral: ${t} vivo (play-off de acesso pendente)`);
-for (const t of ['Gama', 'ASA', 'ABC', 'Uberlândia']) check(!E.elim.includes(t), `Geral: ${t} vivo (semifinalista)`);
 
-// (5) MC: semifinalistas com acesso e semi = 100%; perdedores das quartas sem semi
+// Semis (F01/F02) e final (G01) lidas do ko_d, não fixadas por nome: enquanto o confronto está
+// em aberto os dois lados seguem vivos; decidido, o perdedor entra no sdEliminatedSet (já com
+// o acesso garantido) e o vencedor não. A v4.79 fixava os 4 semifinalistas como "vivos", o que
+// quebrou assim que as voltas das semis entraram no ko_d (31/08: ASA e Uberlândia avançaram).
+const SEMIS = ['F01', 'F02'].flatMap(c => E.SD_KO_CODES[c] ? [E.SD_KO_CODES[c].a, E.SD_KO_CODES[c].b] : []);
+check(SEMIS.length === 4, `ko_d traz os 4 semifinalistas via F01/F02 (deu ${SEMIS.length}: ${SEMIS.join(', ')})`);
+const decided = {};
+for (const code of ['F01', 'F02', 'G01']) {
+  const kc = E.SD_KO_CODES[code];
+  if (!kc) { console.log(`  skip ${code} ainda não está no ko_d`); continue; }
+  const auto = E.SD_KO_AUTO[E.sdKoKey(kc.a, kc.b)];
+  if (!auto) {
+    for (const t of [kc.a, kc.b]) check(!E.elim.includes(t), `Geral: ${t} vivo (${code} em aberto)`);
+  } else {
+    const loser = auto.w === kc.a ? kc.b : kc.a;
+    decided[code] = { w: auto.w, l: loser };
+    check(E.elim.includes(loser), `Geral: ${loser} eliminado (perdeu o ${code})`);
+    check(!E.elim.includes(auto.w), `Geral: ${auto.w} vivo (venceu o ${code})`);
+  }
+}
+
+// (5) MC: semifinalistas com acesso e semi = 100%; semi decidida → fin = 100 para o vencedor
+// e 0 para o perdedor; perdedores das quartas sem semi
 const P = {}; E.probs.forEach(p => P[p.time] = p);
-for (const t of ['Gama', 'ASA', 'ABC', 'Uberlândia']) {
+for (const t of SEMIS) {
   check(Math.abs(P[t].ac - 100) < 1e-9, `MC: ac(${t}) = 100 (deu ${P[t].ac.toFixed(3)})`);
   check(Math.abs(P[t].sf - 100) < 1e-9, `MC: sf(${t}) = 100 (deu ${P[t].sf.toFixed(3)})`);
+}
+for (const code of ['F01', 'F02']) {
+  const d = decided[code]; if (!d) continue;
+  check(Math.abs(P[d.w].fin - 100) < 1e-9, `MC: fin(${d.w}) = 100 (venceu o ${code}; deu ${P[d.w].fin.toFixed(3)})`);
+  check(P[d.l].fin === 0, `MC: fin(${d.l}) = 0 (perdeu o ${code}; deu ${P[d.l].fin.toFixed(3)})`);
 }
 check(P['Iguatu'].qf === 0, `MC: qf(Iguatu) = 0 (deu ${P['Iguatu'].qf.toFixed(3)})`);
 check(P['Nacional-AM'].qf === 100, `MC: qf(Nacional-AM) = 100 (deu ${P['Nacional-AM'].qf.toFixed(3)})`);
