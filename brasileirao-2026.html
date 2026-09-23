@@ -31,7 +31,18 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.82
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.83
+// v4.83 (24/09/2026): COPA SC — REGRA DE OPÇÃO, NÃO VAGA DUPLA.
+//        A v4.82 escreveu na fila de SC que "se o Marcílio Dias levar a Copa SC é vaga dupla".
+//        Errado: a Copa SC 2026 tem a MESMA regra da Copa Paulista e da Copa Rio — o campeão
+//        opta entre Copa do Brasil 2027 e Série D 2027, o vice fica com a outra, e quem já tem
+//        calendário nacional é pulado em favor do melhor colocado seguinte (regulamento da FCF,
+//        congresso técnico de 2026; precedente de 2025: Figueirense campeão → CdB). Nem o
+//        Marcílio Dias nem o Nova Iguaçu estão na Copa do Brasil 2027 (SC: Barra, Chapecoense,
+//        Criciúma; RJ: semifinalistas do Carioca + campeão da Taça Rio), então o cenário
+//        provável é o campeão pegar a CdB e a vaga de Série D ir a quem não tem — sem mexer na
+//        linha do Ranking. O único empurrão realista continua sendo o Nova Iguaçu ficar com a
+//        Série D na Copa Rio (campeão que opta por ela, ou vice quando o Boavista leva a CdB).
 // v4.82 (23/09/2026): CLASS. 2027 — FILA DE SE FECHADA, COPAS ATUALIZADAS E A BOLHA DO RANKING.
 //        Copa do Governador (SE) já acabou em 30/08: Desportiva Aracaju campeã (2×0 no Falcon
 //        na final) entra na fila como dona da 2ª vaga de SE. Não está na D 2026 nem perto do
@@ -138,7 +149,7 @@ const {
 //        o slot "em disputa", até uma rodada de pesquisa notar. APP_VERSION vira const
 //        colada neste cabeçalho — o rodapé já ficou preso duas vezes (v4.59, v4.73) por
 //        ser string solta.
-const APP_VERSION = 'v4.82';
+const APP_VERSION = 'v4.83';
 // v4.77 (19/08/2026): FILA DE SUCESSÃO nos 27 estados (antes 14 com fonte, 11 sem folga
 //        alguma sobre a cota) + coluna Copa do Brasil 2027 na aba Ranking CBF.
 //        A rodada de pesquisa corrigiu a ordem campeão/vice em SETE estados (AC, AP, MS,
@@ -13662,7 +13673,7 @@ const EST_FILA_2027 = {
        { n: 'Inhumas', via: '12º da 1ª fase', st: 'ok', src: 'I' }],
   SC: [{ n: 'Camboriú', via: 'Catarinense', st: 'ok', src: 'C' },
        { n: 'Santa Catarina', via: 'Catarinense', st: 'ok', src: 'C' },
-       { n: '', via: 'Copa Santa Catarina — 1ª fase em turno único de 9 clubes (desde 29/08), 4 vão às semis; término estimado: nov/2026. Marcílio Dias lidera e já tem vaga pela 3ª fase da D: se levar, é vaga dupla', st: 'pend', src: 'C', dt: '2026-11-30' },
+       { n: '', via: 'Copa Santa Catarina — 9 clubes em turno único (desde 29/08), 4 vão às semis; término estimado: nov/2026. Mesma regra da Copa Paulista: campeão opta entre Copa do Brasil e Série D, vice fica com a outra, e quem já tem calendário nacional é pulado (FCF). Marcílio Dias lidera, já garantido na D pela 3ª fase; Figueirense (Série C) também disputa', st: 'pend', src: 'C', dt: '2026-11-30' },
        { n: 'Carlos Renaux', via: 'Catarinense — ordem do pool não confirmada', st: 'ok', src: 'I' },
        { n: 'Concórdia', via: 'Catarinense — ordem não confirmada', st: 'ok', src: 'I' },
        { n: 'Joinville', via: 'Catarinense — ordem não confirmada', st: 'ok', src: 'I' }],
