@@ -81,6 +81,11 @@ for (const code of ['F03', 'F04']) {
 const SEMIS = ['F01', 'F02'].flatMap(c => E.SD_KO_CODES[c] ? [E.SD_KO_CODES[c].a, E.SD_KO_CODES[c].b] : []);
 check(SEMIS.length === 4, `ko_d traz os 4 semifinalistas via F01/F02 (deu ${SEMIS.length}: ${SEMIS.join(', ')})`);
 const decided = {};
+// v4.82: com a FINAL decidida (13/09, Uberlândia 3×1 ASA no agregado), o vencedor de uma semi
+// pode estar no sdEliminatedSet por ter perdido o G01 — o "vivo" de F01/F02 só vale enquanto a
+// final está em aberto. Fixá-lo quebrou em 14/09 e deixou a Action vermelha por 3 execuções.
+const G01c = E.SD_KO_CODES.G01;
+const finalDecidida = !!(G01c && E.SD_KO_AUTO[E.sdKoKey(G01c.a, G01c.b)]);
 for (const code of ['F01', 'F02', 'G01']) {
   const kc = E.SD_KO_CODES[code];
   if (!kc) { console.log(`  skip ${code} ainda não está no ko_d`); continue; }
@@ -91,7 +96,8 @@ for (const code of ['F01', 'F02', 'G01']) {
     const loser = auto.w === kc.a ? kc.b : kc.a;
     decided[code] = { w: auto.w, l: loser };
     check(E.elim.includes(loser), `Geral: ${loser} eliminado (perdeu o ${code})`);
-    check(!E.elim.includes(auto.w), `Geral: ${auto.w} vivo (venceu o ${code})`);
+    if (code === 'G01' || !finalDecidida) check(!E.elim.includes(auto.w), `Geral: ${auto.w} vivo (venceu o ${code})`);
+    else console.log(`  skip Geral: ${auto.w} venceu o ${code}, mas a final já foi decidida — "vivo" não se aplica`);
   }
 }
 
