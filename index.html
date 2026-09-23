@@ -31,7 +31,39 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.81
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.82
+// v4.82 (23/09/2026): CLASS. 2027 — FILA DE SE FECHADA, COPAS ATUALIZADAS E A BOLHA DO RANKING.
+//        Copa do Governador (SE) já acabou em 30/08: Desportiva Aracaju campeã (2×0 no Falcon
+//        na final) entra na fila como dona da 2ª vaga de SE. Não está na D 2026 nem perto do
+//        corte do RNC, então não mexe no Critério 4. Copa Rio: final Boavista × Nova Iguaçu
+//        (ida 1×1 em 19/09, volta 26-27/09), prazo corrigido de 23/09 para 27/09; o Nova
+//        Iguaçu entra com ~100% pelo Ranking, então se for campeão e optar pela Série D a
+//        vaga dele no Critério 4 sobra e a linha do Ranking desce um lugar — o modelo já faz
+//        isso sozinho quando o nome for preenchido (dentro[] no Critério 4). Copa Paulista:
+//        semifinais (Noroeste, São José, Grêmio Prudente, Juventus/União São João), final em
+//        18/10; nenhum semifinalista tem Critério 3 ou vaga pelo RNC, então não altera o
+//        corte. Copa SC: 9 clubes em turno único, Marcílio Dias lidera e JÁ tem vaga pela 3ª
+//        fase da D — se levar, é vaga dupla e o excedente vai ao Ranking.
+//        build2027Alloc passa a emitir `bolha`: os próximos elegíveis na ordem do RNC 2027
+//        projetado depois do último clube que pegou vaga pelo Critério 4 em algum sorteio,
+//        pulando quem tem calendário nacional, quem subiu à C e quem já está garantido por outra
+//        via; quem tem chance parcial por outra via carrega a probabilidade dela (pOutra). A
+//        UI mostra isso em "Ficaram de fora por pouco", abaixo dos favoritos do Ranking — a
+//        tabela de favoritos corta em 18 e escondia quem ficou logo abaixo da linha.
+//        SÉRIE D — PLAY-OFF DE ACESSO EMPATADO: Goiatuba 0×0 / 1×1 São José-RS (F03) ficou
+//        "indefinido" no app: applySdKoAuto só decidia empate no agregado por pênaltis da volta e,
+//        sem pênaltis, mandava o par para SD_KO_PART_AUTO (MC 50/50). No play-off de 2026 não há
+//        pênaltis: avança a melhor campanha da 1ª fase, que manda a volta — o Goiatuba subiu com
+//        o 1×1. Agora F03/F04 empatados vão para SD_KO_AUTO com w = mandante da volta e a flag
+//        camp (o Geral mostra "camp." em vez de "pen"); s180 ganhou o 4º parâmetro porCampanha
+//        (empate → [a,b].sort(camp8)[0]), usado só na chamada do play-off, para a Evolução
+//        "como estava" simular a fase com a regra certa. Efeito colateral corrigido: o Goiatuba
+//        aparecia com ~65% de Série D 2027 (vaga estadual de GO) em vez de sair da D por acesso.
+//        SÉRIE C — FASE FINAL: a sub-aba "2ª Fase" já mostrava a classificação REAL dos
+//        quadrangulares (quad_c), mas sem previsão; LeaguePhaseEdit agora recebe probs do MC
+//        (rMC.probs) e imprime P(acesso) · P(título) ao lado de cada clube, com legenda e aviso
+//        para rodar o dashboard. A 3ª rodada (19/09) ainda não consta porque a CBF não
+//        republicou a tabela da C desde 14/09 (Action de 21/09: "PDF inalterado").
 // v4.81 (06/09/2026): 2ª FASE DA SÉRIE C (QUADRANGULARES + FINAL) VINDA DA AUTOMAÇÃO.
 //        fetch_tables.mjs ganhou um 3º passe sobre o PDF da C que devolve a fixture INTEIRA da
 //        2ª fase (grupos B e C da CBF, rodadas 1ª-6ª, + final quando os times existem), com
@@ -106,7 +138,7 @@ const {
 //        o slot "em disputa", até uma rodada de pesquisa notar. APP_VERSION vira const
 //        colada neste cabeçalho — o rodapé já ficou preso duas vezes (v4.59, v4.73) por
 //        ser string solta.
-const APP_VERSION = 'v4.81';
+const APP_VERSION = 'v4.82';
 // v4.77 (19/08/2026): FILA DE SUCESSÃO nos 27 estados (antes 14 com fonte, 11 sem folga
 //        alguma sobre a cota) + coluna Copa do Brasil 2027 na aba Ranking CBF.
 //        A rodada de pesquisa corrigiu a ordem campeão/vice em SETE estados (AC, AP, MS,
@@ -2244,7 +2276,7 @@ const simMC_D_single = (cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeam
     if (!m[fase]) m[fase] = {};
     m[fase][adv] = (m[fase][adv] || 0) + 1;
   };
-  const s180 = (a, b, ph) => {
+  const s180 = (a, b, ph, porCampanha) => {
     // v4.80: ph = letra da fase (B..G); com snap.koMask ativa, fases fora do Set são simuladas
     // do zero (é o que permite reconstruir o modelo "como estava" antes daquela fase).
     const allow = !snap.koMask || snap.koMask.has(ph);
@@ -2261,7 +2293,8 @@ const simMC_D_single = (cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeam
       if (iA == null) { const g = leg(part.a, part.b); iA = g[0]; iB = g[1]; }
       if (vA == null) { const g = leg(part.b, part.a); vB = g[0]; vA = g[1]; } // volta: mando de b
       const aggA = iA + vA, aggB = iB + vB;
-      return aggA > aggB ? part.a : aggB > aggA ? part.b : Math.random() < 0.5 ? part.a : part.b;
+      // v4.82: play-off de acesso empatado → melhor campanha (camp8); demais fases, pênaltis 50/50.
+      return aggA > aggB ? part.a : aggB > aggA ? part.b : porCampanha ? [part.a, part.b].sort(camp8)[0] : Math.random() < 0.5 ? part.a : part.b;
     }
     const r2 = eo ? (() => {
       const d = el[a] - el[b];
@@ -2276,7 +2309,7 @@ const simMC_D_single = (cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeam
     };
     const ga = poissonRandom(r2.lC),
       gb = poissonRandom(r2.lF);
-    return ga > gb ? a : gb > ga ? b : Math.random() < 0.5 ? a : b;
+    return ga > gb ? a : gb > ga ? b : porCampanha ? [a, b].sort(camp8)[0] : Math.random() < 0.5 ? a : b;
   };
   // === Mata-mata: chaveamento OFICIAL CBF — 2ª/3ª/oitavas FIXO; quartas+ reseed por campanha ===
   // Grupos completos → top-4 determinístico; confrontos vêm de SD_F2_REAL (2ª fase) e SD_BRK_PAIRS
@@ -2339,7 +2372,7 @@ const simMC_D_single = (cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeam
   const pL = [...qL].sort(camp8);
   const paresPO = paresPorCodigo(['F03', 'F04'], qL) || (qfCod ? [[qL[0], qL[1]], [qL[2], qL[3]]] : (paresConhecidos(pL) || [[pL[0], pL[3]], [pL[1], pL[2]]]));
   for (const [a, b] of paresPO) { bumpMu(a, 'po', b); bumpMu(b, 'po', a); }
-  const playoff = paresPO.map(ab => s180(ab[0], ab[1], 'F'));
+  const playoff = paresPO.map(ab => s180(ab[0], ab[1], 'F', true)); // v4.82: empate → melhor campanha
   playoff.forEach(t => ct[t].ac++); // +2 vencedores playoff
   // Semi. Estrutura real 2026: F01 = V.E01 × V.E02, F02 = V.E03 × V.E04 — quando as quartas
   // vieram por código, qW já está nessa ordem; os códigos F01/F02 do ko_d refinam o mando.
@@ -8263,9 +8296,14 @@ function applySdKoAuto(rows) {
       const aggA = ida.gm + volta.gv, aggB = ida.gv + volta.gm;
       let w = aggA > aggB ? a : aggB > aggA ? b : null;
       if (!w && volta.pen_m != null && volta.pen_v != null) w = volta.pen_m > volta.pen_v ? b : a;
+      // v4.82: no PLAY-OFF DE ACESSO (F03/F04) o agregado empatado NÃO vai a pênaltis — avança a
+      // melhor campanha da 1ª fase, que é quem manda a volta (Goiatuba 0×0 / 1×1 São José-RS,
+      // 02/09: acesso pelo empate). Nas demais fases a regra segue sendo pênaltis (E02: ASA 5×4).
+      let camp = false;
+      if (!w && (code === 'F03' || code === 'F04')) { w = volta.mand === a ? a : b; camp = true; }
       if (!w) { SD_KO_PART_AUTO[k] = { a, b, iA: ida.gm, iB: ida.gv, vA: volta.gv, vB: volta.gm }; continue; }
       const k0 = [a, b].sort()[0];
-      SD_KO_AUTO[k] = { w, ga: k0 === a ? aggA : aggB, gb: k0 === a ? aggB : aggA, pen: aggA === aggB };
+      SD_KO_AUTO[k] = { w, ga: k0 === a ? aggA : aggB, gb: k0 === a ? aggB : aggA, pen: aggA === aggB && !camp, camp };
     } else if (ida) SD_KO_PART_AUTO[k] = { a, b, iA: ida.gm, iB: ida.gv, vA: null, vB: null };
     else SD_KO_PART_AUTO[k] = { a, b, iA: null, iB: null, vA: volta.gv, vB: volta.gm };
   }
@@ -13578,12 +13616,12 @@ const EST_FILA_2027 = {
   SP: [{ n: 'Portuguesa-SP', via: '5º do Paulistão', st: 'ok', src: 'C' },
        { n: 'Capivariano', via: '7º do Paulistão', st: 'ok', src: 'C' },
        { n: 'Primavera-SP', via: '12º do Paulistão', st: 'ok', src: 'C' },
-       { n: '', via: 'Copa Paulista — o campeão opta entre Copa do Brasil e Série D; a não escolhida fica com o vice (término estimado: out/2026)', st: 'pend', src: 'C', dt: '2026-10-31' },
+       { n: '', via: 'Copa Paulista — semifinais entre Noroeste, São José, Grêmio Prudente e Juventus/União São João; final em 18/10. O campeão opta entre Copa do Brasil e Série D; a não escolhida fica com o vice', st: 'pend', src: 'C', dt: '2026-10-18' },
        { n: 'Noroeste', via: '14º do Paulistão', st: 'ok', src: 'C' },
        { n: 'Velo Clube', via: '15º do Paulistão', st: 'ok', src: 'I' }],
   RJ: [{ n: 'Madureira', via: '4º do Carioca, semifinalista', st: 'ok', src: 'C' },
        { n: 'Bangu', via: '6º do Carioca, vice da Taça Rio', st: 'ok', src: 'C' },
-       { n: '', via: 'Copa Rio — mesma regra de opção da Copa Paulista (termina 23/09, confirmado)', st: 'pend', src: 'C', dt: '2026-09-23' },
+       { n: '', via: 'Copa Rio — final Boavista × Nova Iguaçu (ida 1×1 em 19/09; volta prevista para 26-27/09). Campeão escolhe entre Copa do Brasil, Série D e Copa Sul-Sudeste; vice escolhe depois; 3º (Madureira × Sampaio Corrêa-RJ) fica com o resto', st: 'pend', src: 'C', dt: '2026-09-27' },
        { n: 'Boavista', via: '8º do Carioca', st: 'ok', src: 'I' },
        { n: 'Sampaio Corrêa-RJ', via: '10º do Carioca', st: 'ok', src: 'I' },
        { n: 'Nova Iguaçu', via: '11º do Carioca', st: 'ok', src: 'I' },
@@ -13624,7 +13662,7 @@ const EST_FILA_2027 = {
        { n: 'Inhumas', via: '12º da 1ª fase', st: 'ok', src: 'I' }],
   SC: [{ n: 'Camboriú', via: 'Catarinense', st: 'ok', src: 'C' },
        { n: 'Santa Catarina', via: 'Catarinense', st: 'ok', src: 'C' },
-       { n: '', via: 'Copa Santa Catarina — término estimado: nov/2026', st: 'pend', src: 'C', dt: '2026-11-30' },
+       { n: '', via: 'Copa Santa Catarina — 1ª fase em turno único de 9 clubes (desde 29/08), 4 vão às semis; término estimado: nov/2026. Marcílio Dias lidera e já tem vaga pela 3ª fase da D: se levar, é vaga dupla', st: 'pend', src: 'C', dt: '2026-11-30' },
        { n: 'Carlos Renaux', via: 'Catarinense — ordem do pool não confirmada', st: 'ok', src: 'I' },
        { n: 'Concórdia', via: 'Catarinense — ordem não confirmada', st: 'ok', src: 'I' },
        { n: 'Joinville', via: 'Catarinense — ordem não confirmada', st: 'ok', src: 'I' }],
@@ -13671,10 +13709,10 @@ const EST_FILA_2027 = {
        { n: 'Sobradinho', via: 'vice do Candangão', st: 'ok', src: 'C' },
        { n: 'Ceilândia', via: '3º — perdeu a semi para o Gama', st: 'ok', src: 'C' },
        { n: 'Samambaia', via: '4º — perdeu a semi para o Sobradinho', st: 'ok', src: 'C' }],
-  // SE: as duas vagas são o campeão do Sergipano 2026 e o campeão da Copa do Governador,
-  // que ainda vai ser disputada. O 3º colocado entra apenas por sucessão.
+  // SE: as duas vagas são o campeão do Sergipano 2026 e o campeão da Copa do Governador
+  // (Desportiva Aracaju, decidida em 30/08). O 3º colocado entra apenas por sucessão.
   SE: [{ n: 'Sergipe', via: 'campeão do Sergipano 2026', st: 'ok', src: 'C' },
-       { n: '', via: 'Copa do Governador — turno único de 6 clubes iniciado em 29/07; término estimado: set/2026', st: 'pend', src: 'C', dt: '2026-09-30' },
+       { n: 'Desportiva Aracaju', via: 'campeã da Copa do Governador 2026 (2×0 no Falcon na final, 30/08)', st: 'ok', src: 'C' },
        { n: 'Lagarto', via: '3º do Sergipano (sucessão)', st: 'ok', src: 'I' },
        { n: 'Guarany-SE', via: '5º do Sergipano', st: 'ok', src: 'I' },
        { n: 'América-SE', via: '6º do Sergipano', st: 'ok', src: 'I' }],
@@ -13868,6 +13906,7 @@ function build2027Alloc(dashD, dashC, rncProj, cfg) {
   const dupla = {};          // clubes que gastaram vaga dupla (estadual + Critério 3)
   // Quantas vezes cada clube entrou, para nomear os lugares no sorteio projetado.
   const clubCnt = {}, clubUF = {};
+  const promCnt = {};        // quantas vezes cada clube subiu à Série C (sai da D 2027 por cima)
   // Vagas que existem mas ainda nao tem dono: copa estadual em disputa ou fila esgotada.
   let semDono = 0;
   let somaRnc = 0, somaD26 = 0, erros = 0;
@@ -13877,6 +13916,7 @@ function build2027Alloc(dashD, dashC, rncProj, cfg) {
     const off = (d % nD) * 3;
     const g3 = sdBits(trD.g3, off);
     const prom = new Set(sdBits(trD.prom, off));
+    prom.forEach(t => promCnt[t] = (promCnt[t] || 0) + 1);
     const j = nC ? Math.floor(rnd() * nC) : -1;
     const reb = j >= 0 ? [rebT[2 * j], rebT[2 * j + 1]] : [];
 
@@ -13957,6 +13997,23 @@ function build2027Alloc(dashD, dashC, rncProj, cfg) {
     ufTeams[u] = new Array(mx).fill(0);
     SD27_SOURCES.forEach(s => acc[u][s.key] = acc[u][s.key].slice(0, mx + 1));
   });
+  // Quem ficou logo abaixo da linha do Ranking: na ordem do RNC 2027 projetado, a partir do
+  // último clube que pegou vaga pelo Critério 4 em algum sorteio. A linha não é uma posição
+  // fixa — depende de quantas vagas duplas e acessos houve —, então isto é "os próximos
+  // elegíveis", não "os reprovados". Quem já está garantido por outra via não ficou de fora
+  // de nada e sai da lista; quem tem chance parcial por outra via carrega a probabilidade.
+  const bolha = [];
+  let ultimoRnc = -1;
+  rncProj.clubes.forEach((c, i) => { if (rncPicks[c.n + '|' + c.u]) ultimoRnc = i; });
+  for (let i = ultimoRnc + 1; i < rncProj.clubes.length && bolha.length < 12; i++) {
+    const c = rncProj.clubes[i];
+    const nome = c.app || c.n;
+    if (nacional[nome]) continue;
+    if ((promCnt[nome] || 0) / nDraws >= 0.995) continue;   // subiu à Série C: não "ficou de fora"
+    const pOutra = (clubCnt[nome] || 0) / nDraws * 100;
+    if (pOutra >= 99.5) continue;
+    bolha.push({ n: nome, u: c.u, pos: c.pos27 || i + 1, pOutra: pOutra });
+  }
   return {
     ufDist: buildUfDist(acc, ufTeams, nDraws, SD27_SOURCES.map(s => s.key), 'total'),
     nDraws: nDraws,
@@ -13968,6 +14025,7 @@ function build2027Alloc(dashD, dashC, rncProj, cfg) {
     dupla: Object.keys(dupla).map(t => ({ t: t, p: dupla[t] / nDraws * 100 })).sort((a, b) => b.p - a.p),
     rncPicks: Object.keys(rncPicks).map(k => ({ k: k, n: k.split('|')[0], u: k.split('|')[1], p: rncPicks[k] / nDraws * 100 })).sort((a, b) => b.p - a.p),
     clubProb: Object.keys(clubCnt).map(t => ({ n: t, u: clubUF[t], p: clubCnt[t] / nDraws * 100 })).sort((a, b) => b.p - a.p),
+    bolha: bolha,
     cfg: C
   };
 }
@@ -14718,7 +14776,16 @@ const Classificados2027View = ({
         h("tr", { key: x.k, className: "border-b border-slate-800/50" },
           h("td", { className: "py-0.5" }, x.n, h("span", { className: "text-slate-500 text-[10px] ml-1" }, x.u)),
           h("td", { className: "text-right font-mono w-24" }, barra(x.p, 'rgba(232,121,249,.7)'),
-            x.p < 0.5 ? '<1' : Math.round(x.p), "%")))))),
+            x.p < 0.5 ? '<1' : Math.round(x.p), "%"))))),
+      (al.bolha || []).length > 0 && h("p", { className: "text-xs font-semibold text-slate-300 mt-3 mb-1" }, "Ficaram de fora por pouco"),
+      (al.bolha || []).length > 0 && h("p", { className: "text-[10px] text-slate-500 mb-2" },
+        "Os próximos na ordem do RNC 2027 projetado depois do último que pegou vaga em algum sorteio. A linha desce quando uma copa estadual dá vaga a quem já tinha (vaga dupla). Quem tem chance por outra via aparece com ela."),
+      (al.bolha || []).length > 0 && h("table", { className: "text-xs w-full" }, h("tbody", null, al.bolha.map(x =>
+        h("tr", { key: x.n + '|' + x.u, className: "border-b border-slate-800/50" },
+          h("td", { className: "py-0.5 font-mono text-slate-500 w-10" }, x.pos, "º"),
+          h("td", { className: "py-0.5" }, x.n, h("span", { className: "text-slate-500 text-[10px] ml-1" }, x.u)),
+          h("td", { className: "text-right font-mono w-24 text-slate-500 text-[10px]" },
+            x.pOutra > 0 ? (x.pOutra < 0.5 ? '<1' : Math.round(x.pOutra)) + "% outra via" : "—")))))),
     h("div", null,
       h("p", { className: "text-xs font-semibold text-emerald-300 mb-1" }, "Vaga dupla"),
       h("p", { className: "text-[10px] text-slate-500 mb-2" },
@@ -15987,7 +16054,7 @@ function CalibSim({
 // Próxima fase EDITÁVEL de B (playoff de acesso) e C (quadrangular final + título).
 // Times projetados pela classificação ATUAL; placares editáveis salvos por navegador.
 // Resultados keyados por SLOT (posição), então persistem mesmo se a projeção mudar.
-function LeaguePhaseEdit({ serie }) {
+function LeaguePhaseEdit({ serie, probs }) {
   if (serie !== 'B' && serie !== 'C') return null;
   const RES = serie === 'B' ? SB_RES : SC_RES;
   const NM = serie === 'B' ? SB_NM : SC_NM;
@@ -16069,6 +16136,10 @@ function LeaguePhaseEdit({ serie }) {
   const groups = QA.groups ? { A: QA.groups[0], B: QA.groups[1] } : { A: [t8[0], t8[3], t8[4], t8[7]], B: [t8[1], t8[2], t8[5], t8[6]] };
   const realGame = (g, i, j) => (g[i] && g[j] && QA.games[g[i] + '>' + g[j]]) || null; // [gc, gf]
   const fixedN = v => React.createElement('span', { className: 'w-7 text-center font-mono text-emerald-300 font-bold', title: 'placar oficial (Tabelas CBF)' }, v);
+  // v4.82: previsão do Monte Carlo do dashboard (q4 = acesso à Série B, qChamp = título) ao lado
+  // de cada clube — o MC já trava os placares reais do quad_c, então é a previsão "daqui pra frente".
+  const pOf = t => (probs || []).find(p => p.time === t) || {};
+  const fmtP = v => v == null ? '–' : (v < 0.5 ? '<1' : Math.round(v)) + '%';
   const groupStanding = (g, grp) => {
     const s = {}; g.forEach(t => t && (s[t] = { t, P: 0, V: 0, GP: 0, GC: 0, J: 0 }));
     for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
@@ -16095,7 +16166,8 @@ function LeaguePhaseEdit({ serie }) {
         React.createElement('span', { className: 'w-4 text-slate-500' }, (idx + 1) + 'º'),
         React.createElement('span', { className: 'flex-1 min-w-0 truncate' }, tm(row.t)),
         React.createElement('span', { className: 'w-8 text-right font-mono' }, row.P + 'pt'),
-        React.createElement('span', { className: 'w-10 text-right text-slate-500' }, 'SG ' + (row.SG > 0 ? '+' : '') + row.SG)))),
+        React.createElement('span', { className: 'w-10 text-right text-slate-500' }, 'SG ' + (row.SG > 0 ? '+' : '') + row.SG),
+        probs ? React.createElement('span', { className: 'w-24 text-right font-mono text-[10px] text-fuchsia-300/90', title: 'Monte Carlo do dashboard: P(acesso à Série B) · P(campeão da Série C)' }, fmtP(pOf(row.t).q4) + ' · ' + fmtP(pOf(row.t).qChamp)) : null))),
       // jogos (12)
       React.createElement('details', null,
         React.createElement('summary', { className: 'text-[10px] text-emerald-400 cursor-pointer mb-1' }, 'Jogos do grupo (ida/volta · mandante × visitante)'),
@@ -16120,9 +16192,12 @@ function LeaguePhaseEdit({ serie }) {
   }
   const champ = tieWinner('final', wA && wA.t, wB && wB.t);
   return React.createElement('div', { className: 'mb-4 pb-3 border-b border-slate-700/50' },
-    head('Próxima fase — Quadrangular final (editável)'), note,
+    head('Fase final — Quadrangular (classificação atual + previsão, editável)'), note,
     QA.groups ? React.createElement('p', { className: 'text-[10px] text-emerald-400/80 mb-2' }, 'Composição dos grupos e placares em verde vêm das Tabelas CBF (automação); jogo disputado fica travado.') : null,
     React.createElement('p', { className: 'text-[10px] text-slate-500 mb-2' }, 'Top-2 de cada grupo (verde) sobem à Série B. Vencedores de grupo decidem o título.'),
+    React.createElement('p', { className: 'text-[10px] ' + (probs ? 'text-fuchsia-300/80' : 'text-amber-400/80') + ' mb-2' }, probs
+      ? 'À direita de cada clube: previsão do Monte Carlo (acesso · título) com os jogos já disputados travados. Os placares em verde são os oficiais; a classificação abaixo é a atual.'
+      : 'Rode "Simular Tudo" no dashboard para ver a previsão (acesso · título) ao lado de cada clube.'),
     groupBlock('A'), groupBlock('B'),
     React.createElement('div', { className: 'mt-2' },
       React.createElement('div', { className: 'text-[11px] text-amber-300 font-semibold mb-1' }, 'Final do título (vencedores de grupo):'),
@@ -16947,7 +17022,7 @@ function LeagueSim({
       backgroundColor: heatColor(v / 100)
     },
     title: `${p.time} em ${pi + 1}º: ${v.toFixed(1)}%`
-  }, v < 0.5 ? '' : Math.round(v))))))))))), aba === 'fase2' && /*#__PURE__*/React.createElement(LeaguePhaseEdit, { serie: meta.key }), aba === 'chaves' && /*#__PURE__*/React.createElement("div", {
+  }, v < 0.5 ? '' : Math.round(v))))))))))), aba === 'fase2' && /*#__PURE__*/React.createElement(LeaguePhaseEdit, { serie: meta.key, probs: rMC && rMC.probs || null }), aba === 'chaves' && /*#__PURE__*/React.createElement("div", {
     className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"
   }, !rMC ? /*#__PURE__*/React.createElement("p", {
     className: "text-slate-400 text-center py-8"
@@ -18617,7 +18692,7 @@ function SerieDSim({
     name: j.a
   })), /*#__PURE__*/React.createElement("span", {
     className: "font-mono w-14 text-center"
-  }, j.ga, "x", j.gb, j.pen ? ' pen' : ''), /*#__PURE__*/React.createElement("span", {
+  }, j.ga, "x", j.gb, j.pen ? ' pen' : j.camp ? ' camp.' : ''), /*#__PURE__*/React.createElement("span", {
     className: `flex-1 pl-1 ${j.w === j.b ? 'text-emerald-300 font-bold' : 'text-slate-400'}`
   }, /*#__PURE__*/React.createElement(TN, {
     name: j.b
