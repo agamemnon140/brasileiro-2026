@@ -31,7 +31,48 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.83
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.84
+// v4.84 (24/09/2026): PRÓXIMA FASE DE B/C NO MC E NO 1 SIM; COPA DO BRASIL ATÉ A FINAL; RESUMO
+//        DAS SÉRIES DECIDIDAS NO DASHBOARD; SCRAPER SÓ ACEITA "TABELA DETALHADA".
+//        SÉRIES B/C — o playoff (B) e o quadrangular + final (C) só apareciam como colunas soltas
+//        (Playoff%/Acesso%/Título%) na tabela da liga do Monte Carlo, e o 1 Sim parava na 38ª/19ª
+//        rodada. As abas Monte Carlo e 1 Simulação ganharam a sub-visão "Fase de liga | Playoff de
+//        acesso" (B) / "Quadrangular + final" (C). No MC (LeagueNextPhaseMC): chaveamento do
+//        playoff com as posições travadas e P(acesso) de cada lado; tabela G2 direto / playoff /
+//        sobe via playoff / acesso total; cruzamentos prováveis. Na C: os grupos (composição
+//        oficial do quad_c, ou presumida 1-4-5-8 / 2-3-6-7) com P/J/SG reais e P(acesso)·P(final)·
+//        P(título) por clube, candidatos ao título e finais mais prováveis — extraStats ganhou
+//        qFin (chegou à final da C). No 1 Sim (LeagueNextPhaseSU): simUnica devolve fase2 via
+//        simFase2BC — playoff ida/volta com agregado e vencedores, ou os 12 jogos de cada grupo,
+//        classificação, final e campeão; placar oficial (●) e edição do usuário (✎) marcados, o
+//        resto simulado. Mesmas precedências do simMC_single.
+//        bcSeeds: refreshBcUser e LeaguePhaseEdit calculavam as posições travadas só sobre o
+//        SB_RES/SC_RES embutido (a B está embutida até a R16) — o playoff nunca "travava" e as
+//        edições po1/po2 nunca chegavam ao MC. Agora usam BC_RES_MERGED (embutido + results.json +
+//        manuais, preenchido pelo SimuladorUnificado). BC_USER.Bsc guarda os placares editados.
+//        COPA DO BRASIL — o modelo parava nas oitavas ("quartas em diante: sorteio a cada sim"),
+//        mas desde 26/08 as quartas têm chaveamento fixo até a final (Tabela Detalhada 22/09:
+//        GR 119 Inter×Grêmio, 120 Cruzeiro×Atlético-MG, 121 Vasco×Vitória, 122 Palmeiras×Santos;
+//        semis 123 Grêmio×Atlético-MG e 124 Palmeiras×Vasco; final 125 em 06/12). O scraper
+//        extraía SÓ as oitavas; agora traz da 6ª fase (oitavas) em diante, jogo a jogo (fase
+//        R16/QF/SF/F, GR, ida/volta, data, pênaltis; placar null no jogo futuro) e cb_added passa a
+//        contar em total_new. No app, applyCbAuto monta CB_AUTO.ko (QF/SF/F, a = mandante da ida) e
+//        CB_AUTO.sfLinks (de quais quartas vem cada semi); cbKoPlan entrega a estrutura ao
+//        simMC_CB e ao runBracket da aba: chaveamento real quando os 8 das quartas são os
+//        vencedores simulados das oitavas (senão sorteio, como antes), placares reais conforme a
+//        máscara — a Evolução ganhou "Após quartas"/"Após semis"/"Após a final"; o chaveamento,
+//        como o SD_KO_CODES, nunca é mascarado. s2L_fix generaliza a perna fixa das oitavas para
+//        quartas e semis (com pênaltis conhecidos). Aba Copa BR: seção "Quartas → Final" (só
+//        leitura) na aba R16, cards reais no centro da árvore; o log da Config lista os jogos da
+//        Copa (QF·i etc.).
+//        AUTOMAÇÃO — findPdfUrl só aceita título "Tabela Detalhada": em 09/2026 a CBF tirou a
+//        Detalhada da C e da D do CMS e deixou só a Tabela Básica (sem placar); o filtro /tabela/i
+//        pegava a Básica, a extração devolvia 0 jogos e a cache passou a apontar para um PDF sem
+//        resultado. Agora avisa e pula a série (cache intacta) até a Detalhada voltar. Efeito real:
+//        a 2ª fase da C está congelada em 8/24 jogos (PDF de 14/09) por falta de fonte oficial.
+//        DASHBOARD — série DECIDIDA (toda probabilidade em 0 ou 100) mostra o resumo em vez do
+//        ranking: campeão, vice, acesso, rebaixados (G4 na A); na D, o "Ver" abre quem garantiu a
+//        D 2027 pela 3ª fase (Critério 3) e os 64 eliminados, com UF.
 // v4.83 (24/09/2026): COPA SC — REGRA DE OPÇÃO, NÃO VAGA DUPLA.
 //        A v4.82 escreveu na fila de SC que "se o Marcílio Dias levar a Copa SC é vaga dupla".
 //        Errado: a Copa SC 2026 tem a MESMA regra da Copa Paulista e da Copa Rio — o campeão
@@ -149,7 +190,7 @@ const {
 //        o slot "em disputa", até uma rodada de pesquisa notar. APP_VERSION vira const
 //        colada neste cabeçalho — o rodapé já ficou preso duas vezes (v4.59, v4.73) por
 //        ser string solta.
-const APP_VERSION = 'v4.83';
+const APP_VERSION = 'v4.84';
 // v4.77 (19/08/2026): FILA DE SUCESSÃO nos 27 estados (antes 14 com fonte, 11 sem folga
 //        alguma sobre a cota) + coluna Copa do Brasil 2027 na aba Ranking CBF.
 //        A rodada de pesquisa corrigiu a ordem campeão/vice em SETE estados (AC, AP, MS,
@@ -1312,23 +1353,36 @@ const mergeRes = (base, ...extras) => {
 // === Overlay das edições do usuário nas fases finais de B (playoff) e C (quadrangular) ===
 // Resolve os slots editados -> times projetados (só posições travadas), por par de times.
 // O MC consulta quando aquele confronto/jogo ocorre numa simulação (igual ao SD_KO_USER da D).
-let BC_USER = { B: {}, C: { games: {}, final: {} } };
+// v4.84: classificação da 1ª fase de B/C e posições MATEMATICAMENTE travadas, sobre os
+// resultados MESCLADOS (embutidos + results.json + manuais). Antes refreshBcUser e
+// LeaguePhaseEdit olhavam só o SB_RES/SC_RES embutido — na B (embutido até a R16) nenhuma
+// posição travava nunca, então as edições do playoff (po1/po2) não chegavam ao MC.
+// BC_RES_MERGED é preenchido pelo SimuladorUnificado (mergedRes); vazio = só o embutido.
+let BC_RES_MERGED = { B: null, C: null };
+const bcSeeds = (serie) => {
+  const RES = BC_RES_MERGED[serie] || (serie === 'B' ? SB_RES : SC_RES);
+  const NM = serie === 'B' ? SB_NM : SC_NM;
+  const teams = [...new Set(Object.values(NM))];
+  const st = {};
+  teams.forEach(t => st[t] = { P: 0, V: 0, E: 0, D: 0, GP: 0, GC: 0, J: 0 });
+  RES.forEach(r => { const c = r.c, f = r.f; if (!st[c] || !st[f]) return; st[c].J++; st[f].J++; st[c].GP += r.gc; st[c].GC += r.gf; st[f].GP += r.gf; st[f].GC += r.gc; if (r.gc > r.gf) { st[c].V++; st[c].P += 3; st[f].D++; } else if (r.gc === r.gf) { st[c].E++; st[f].E++; st[c].P++; st[f].P++; } else { st[f].V++; st[f].P += 3; st[c].D++; } });
+  const cl = teams.map(t => ({ t, ...st[t], SG: st[t].GP - st[t].GC })).sort((a, b) => b.P - a.P || b.V - a.V || b.SG - a.SG || b.GP - a.GP);
+  const totalRounds = serie === 'B' ? 38 : 19;
+  const mx = t => st[t].P + 3 * Math.max(0, totalRounds - st[t].J);
+  const fase1Done = cl.every(c => st[c.t].J >= totalRounds);
+  // posição i (0-idx) só preenchida se MATEMATICAMENTE travada (conservador, ignora desempate)
+  const seed = cl.map((c, i) => { const A = c.t; const best = 1 + cl.filter(x => x.t !== A && st[x.t].P > mx(A)).length; const worst = 1 + cl.filter(x => x.t !== A && mx(x.t) >= st[A].P).length; return (best === worst && best === i + 1) ? A : null; });
+  return { teams, st, cl, seed, fase1Done, totalRounds };
+};
+let BC_USER = { B: {}, Bsc: {}, C: { games: {}, final: {} } };
 function refreshBcUser() {
-  BC_USER = { B: {}, C: { games: {}, final: {} } };
+  BC_USER = { B: {}, Bsc: {}, C: { games: {}, final: {} } };
   const build = (serie) => {
     let edits; try { edits = JSON.parse(localStorage.getItem(serie === 'B' ? 'simUni_bPO' : 'simUni_cQuad') || '{}'); } catch (e) { return; }
     if (!edits || !Object.keys(edits).length) return;
-    const RES = serie === 'B' ? SB_RES : SC_RES;
-    const NM = serie === 'B' ? SB_NM : SC_NM;
-    const teams = [...new Set(Object.values(NM))];
-    const st = {}; teams.forEach(t => st[t] = { P: 0, V: 0, GP: 0, GC: 0, J: 0 });
-    RES.forEach(r => { const c = r.c, f = r.f; if (!st[c] || !st[f]) return; st[c].J++; st[f].J++; st[c].GP += r.gc; st[c].GC += r.gf; st[f].GP += r.gf; st[f].GC += r.gc; if (r.gc > r.gf) { st[c].V++; st[c].P += 3; } else if (r.gc === r.gf) { st[c].P++; st[f].P++; } else { st[f].V++; st[f].P += 3; } });
-    const cl = teams.map(t => ({ t, ...st[t], SG: st[t].GP - st[t].GC })).sort((a, b) => b.P - a.P || b.V - a.V || b.SG - a.SG || b.GP - a.GP);
-    const totalRounds = serie === 'B' ? 38 : 19;
-    const mx = t => st[t].P + 3 * Math.max(0, totalRounds - st[t].J);
-    const seed = cl.map((c, i) => { const A = c.t; const best = 1 + cl.filter(x => x.t !== A && st[x.t].P > mx(A)).length; const worst = 1 + cl.filter(x => x.t !== A && mx(x.t) >= st[A].P).length; return (best === worst && best === i + 1) ? A : null; });
+    const { seed } = bcSeeds(serie); // v4.84: sobre os resultados mesclados
     if (serie === 'B') {
-      const mk = (k, A, B) => { const r = edits[k]; if (!A || !B || !r || r.iA == null || r.iB == null || r.vA == null || r.vB == null) return; const aA = r.iA + r.vA, aB = r.iB + r.vB; const w = aA > aB ? A : aB > aA ? B : (r.pen === 'A' ? A : r.pen === 'B' ? B : null); if (w) BC_USER.B[[A, B].sort().join('|')] = w; };
+      const mk = (k, A, B) => { const r = edits[k]; if (!A || !B || !r || r.iA == null || r.iB == null || r.vA == null || r.vB == null) return; const aA = r.iA + r.vA, aB = r.iB + r.vB; const w = aA > aB ? A : aB > aA ? B : (r.pen === 'A' ? A : r.pen === 'B' ? B : null); if (w) { const key = [A, B].sort().join('|'); BC_USER.B[key] = w; BC_USER.Bsc[key] = { A, B, iA: r.iA, iB: r.iB, vA: r.vA, vB: r.vB, pen: r.pen || null }; } };
       mk('po1', seed[2], seed[5]); mk('po2', seed[3], seed[4]);
     } else {
       // v4.81: composição REAL (quad_c) quando existe — as chaves 'A-i-j' das edições ficam
@@ -1356,9 +1410,9 @@ function refreshCbUser() {
 // O results.json traz as pernas por NOME; a posição em CB_R16_PAIRS e a orientação são
 // resolvidas aqui: ida = a manda (g1a/g1b); volta = b manda, logo g2b são os gols de b e
 // g2a os de a — mesma convenção que o agregado do simMC_CB usa (aa = g1a + g2a).
-let CB_AUTO = { r16: {} };
+let CB_AUTO = { r16: {}, ko: { QF: [], SF: [], F: [] }, sfLinks: null };
 function applyCbAuto(rows) {
-  CB_AUTO = { r16: {} };
+  CB_AUTO = { r16: {}, ko: { QF: [], SF: [], F: [] }, sfLinks: null };
   if (!Array.isArray(rows) || !rows.length) return CB_AUTO.r16;
   CB_R16_PAIRS.forEach(([a, b], idx) => {
     const sc = {};
@@ -1371,8 +1425,64 @@ function applyCbAuto(rows) {
     }
     if (Object.keys(sc).length) CB_AUTO.r16[idx] = sc;
   });
+  // v4.84: quartas em diante (fase QF/SF/F). O scraper manda cada perna por NOME com leg
+  // ida/volta e o GR da CBF; aqui vira um confronto {a, b, sc, pen} na MESMA convenção das
+  // oitavas: a = mandante da ida, g1a/g1b = ida, g2b/g2a = volta (b manda). pen = 'A'|'B' quando o
+  // PDF trouxe pênaltis. A final (F) é jogo único: só g1a/g1b. Jogo futuro (gc null) entra
+  // sem placar — é o que dá o CHAVEAMENTO antes de a fase ser jogada.
+  const ties = {};
+  for (const r of rows) {
+    if (!r || !r.casa || !r.fora || r.casa === r.fora) continue;
+    const ph = String(r.fase || '').toUpperCase();
+    if (ph !== 'QF' && ph !== 'SF' && ph !== 'F') continue;
+    const key = ph + '|' + (r.gr != null ? 'g' + r.gr : [r.casa, r.fora].sort().join('|'));
+    const t = ties[key] = ties[key] || { fase: ph, gr: r.gr == null ? null : Number(r.gr), a: null, b: null, sc: {}, pen: null, data: {} };
+    const gc = r.gc == null ? null : Number(r.gc), gf = r.gf == null ? null : Number(r.gf);
+    const played = Number.isInteger(gc) && Number.isInteger(gf);
+    const leg = r.leg === 'volta' ? 'volta' : 'ida';
+    if (leg === 'ida') { t.a = r.casa; t.b = r.fora; if (played) { t.sc.g1a = gc; t.sc.g1b = gf; } }
+    else { if (!t.a) { t.a = r.fora; t.b = r.casa; } if (played) { t.sc.g2b = gc; t.sc.g2a = gf; } }
+    if (r.data) t.data[leg] = r.data;
+    if (played && r.pen_c != null && r.pen_f != null) {
+      const pc = Number(r.pen_c), pf = Number(r.pen_f);
+      if (Number.isInteger(pc) && Number.isInteger(pf) && pc !== pf) t.pen = (pc > pf) === (r.casa === t.a) ? 'A' : 'B';
+    }
+  }
+  for (const k in ties) { const t = ties[k]; if (t.a && t.b) CB_AUTO.ko[t.fase].push(t); }
+  for (const ph in CB_AUTO.ko) CB_AUTO.ko[ph].sort((x, y) => (x.gr || 0) - (y.gr || 0));
+  // sfLinks: de quais confrontos das quartas vem cada semi (só quando os nomes das semis já
+  // estão no PDF e batem com os das quartas). É o que mantém o CHAVEAMENTO válido mesmo quando o
+  // vencedor simulado de uma quarta difere do real (Evolução com as quartas mascaradas).
+  const QF = CB_AUTO.ko.QF, SF = CB_AUTO.ko.SF;
+  if (QF.length === 4 && SF.length === 2) {
+    const qi = tm => QF.findIndex(q => q.a === tm || q.b === tm);
+    const links = SF.map(s => [qi(s.a), qi(s.b)]);
+    if (links.every(([i, j]) => i >= 0 && j >= 0 && i !== j) && new Set(links.flat()).size === 4) CB_AUTO.sfLinks = links;
+  }
   return CB_AUTO.r16;
 }
+// v4.84: estrutura REAL do mata-mata da Copa do Brasil a partir das quartas (CB_AUTO.ko), para
+// simMC_CB e para o runBracket da aba. Devolve { qf, sfLinks, sfOf, finOf }: qf = os 4 confrontos
+// reais (a = mandante da ida) quando os 8 times são exatamente os vencedores simulados das oitavas
+// (senão null → sorteio a cada sim, como antes); sfLinks = de quais quartas vem cada semi;
+// sfOf(x,y)/finOf(x,y) = confronto real entre x e y (na orientação real) ou null. Placares só
+// entram quando a fase está na máscara (cbMask); o chaveamento é estrutura e vale sempre — a
+// mesma regra do SD_KO_CODES na Série D.
+const cbKoPlan = (r16w, cbMask) => {
+  const use = ph => !cbMask || cbMask.has(ph);
+  const strip = t => ({ fase: t.fase, gr: t.gr, a: t.a, b: t.b, sc: {}, pen: null });
+  const pick = (t, ph) => use(ph) ? t : strip(t);
+  const KO = CB_AUTO.ko || { QF: [], SF: [], F: [] };
+  const ws = new Set(r16w);
+  const qfOk = KO.QF.length === 4 && KO.QF.every(t => ws.has(t.a) && ws.has(t.b)) && new Set(KO.QF.flatMap(t => [t.a, t.b])).size === 8;
+  const find = (arr, x, y) => arr.find(t => (t.a === x && t.b === y) || (t.a === y && t.b === x)) || null;
+  return {
+    qf: qfOk ? KO.QF.map(t => pick(t, 'QF')) : null,
+    sfLinks: qfOk ? CB_AUTO.sfLinks : null,
+    sfOf: (x, y) => { const t = find(KO.SF, x, y); return t ? pick(t, 'SF') : null; },
+    finOf: (x, y) => { const t = find(KO.F, x, y); return t ? pick(t, 'F') : null; }
+  };
+};
 // perna editada pelo usuário manda no confronto inteiro; senão, o que a automação trouxe
 const cbR16Eff = (userMap, autoMap, idx) => {
   const u = userMap && userMap[idx];
@@ -1426,7 +1536,7 @@ const quadCFinalLegs = (a, b) => {
 const quadCPlayed = (m) => m && Array.isArray(m.quadC) ? m.quadC.filter(r => r && r.gc != null).length : 0;
 const simMC = (times, ranking, tab, res, cfg, sk, nS, ak, eo, opts) => {
   refreshBcUser();
-  if (opts && opts.ignoreUser) BC_USER = { B: {}, C: { games: {}, final: {} } }; // v4.80: sem edições de playoff/quadrangular
+  if (opts && opts.ignoreUser) BC_USER = { B: {}, Bsc: {}, C: { games: {}, final: {} } }; // v4.80: sem edições de playoff/quadrangular
   const lg = initLeague(times, t => ranking[t].elo, cfg);
   const {
     mc,
@@ -1485,6 +1595,7 @@ const simMC = (times, ranking, tab, res, cfg, sk, nS, ak, eo, opts) => {
     if (extraStats) {
       if (sk === 'C') extraStats[t] = {
         q4: 0,
+        qFin: 0,
         qChamp: 0,
         matchups: {
           quad: {},
@@ -1762,6 +1873,7 @@ const simMC_single = (times, ranking, tab, res, cfg, sk, ak, eo, lg, mc, mf, ct,
     // de grupos do quadrangular; usamos P como tiebreaker).
     const fa = resA[0].time,
       fb = resB[0].time;
+    extraStats[fa].qFin++; extraStats[fb].qFin++; // v4.84: chegou à final
     if (extraStats[fa].matchups) {
       extraStats[fa].matchups.camp[fb] = (extraStats[fa].matchups.camp[fb] || 0) + 1;
       extraStats[fb].matchups.camp[fa] = (extraStats[fb].matchups.camp[fa] || 0) + 1;
@@ -1856,6 +1968,7 @@ const simMC_finalize = (times, ct, pts, posF, ptsAtPos, nS, elFinal, extraStats,
         if (extraStats[t].q4 !== undefined) {
           o.q4 = extraStats[t].q4 / nS * 100;
           o.qChamp = extraStats[t].qChamp / nS * 100;
+          o.qFin = (extraStats[t].qFin || 0) / nS * 100; // v4.84
         }
         if (extraStats[t].bAccess !== undefined) {
           o.bPlayoff = extraStats[t].bPlayoff / nS * 100;
@@ -1893,7 +2006,7 @@ const simMC_finalize = (times, ct, pts, posF, ptsAtPos, nS, elFinal, extraStats,
 // dynamics são aproximadamente comutativas para shifts pequenos).
 const simMC_async = (times, ranking, tab, res, cfg, sk, nS, ak, eo, onProgress, onDone, opts) => {
   refreshBcUser();
-  if (opts && opts.ignoreUser) BC_USER = { B: {}, C: { games: {}, final: {} } }; // v4.80: sem edições de playoff/quadrangular
+  if (opts && opts.ignoreUser) BC_USER = { B: {}, Bsc: {}, C: { games: {}, final: {} } }; // v4.80: sem edições de playoff/quadrangular
   const lg = initLeague(times, t => ranking[t].elo, cfg);
   const {
     mc,
@@ -1963,6 +2076,7 @@ const simMC_async = (times, ranking, tab, res, cfg, sk, nS, ak, eo, onProgress, 
     if (extraStats) {
       if (sk === 'C') extraStats[t] = {
         q4: 0,
+        qFin: 0,
         qChamp: 0,
         matchups: {
           quad: {},
@@ -1986,6 +2100,80 @@ const simMC_async = (times, ranking, tab, res, cfg, sk, nS, ak, eo, onProgress, 
     if (done < nS) requestAnimationFrame(run);else onDone(simMC_finalize(times, ct, pts, posF, ptsAtPos, nS, elFinal, extraStats, atFinal, dfFinal, ranking, initAD, sk === 'C' ? 2 : 4));
   };
   requestAnimationFrame(run);
+};
+// v4.84: próxima fase de B/C numa ÚNICA simulação, com o detalhe de cada jogo — é o que a
+// sub-aba "Próxima fase" do 1 Sim mostra. Mesmas regras e precedências do simMC_single:
+//   B: playoff 3º×6º e 4º×5º (ida na casa do pior colocado, volta na do melhor); edição
+//      completa do usuário (BC_USER.Bsc) fixa o confronto; senão ida/volta Poisson e, no
+//      empate do agregado, pênaltis 50/50.
+//   C: quadrangulares (composição REAL do quad_c quando o top-8 bate; senão 1-4-5-8 / 2-3-6-7),
+//      placar real > edição do usuário > simulado; final ida/volta com pernas reais fixas,
+//      mando da volta pela melhor campanha no grupo; empate → pênaltis do PDF, senão edição,
+//      senão 50/50.
+const simFase2BC = (sk, cl, at, df, el, cfg, mc, mf, eo) => {
+  const L = (c, f) => calcL(at[c], df[c], at[f], df[f], el[c], el[f], mc, mf, cfg.homeAdv, eo, cfg.c0Log);
+  const game = (c, f, fixed, srcK) => {
+    if (fixed) return { casa: c, fora: f, gc: fixed[0], gf: fixed[1], real: srcK === 'real', user: srcK === 'user' };
+    const { lC, lF } = L(c, f);
+    return { casa: c, fora: f, gc: poissonRandom(lC), gf: poissonRandom(lF), real: false, user: false };
+  };
+  if (sk === 'B') {
+    const top6 = cl.slice(0, 6).map(c => c.time);
+    const ties = [[top6[2], top6[5], '3º', '6º'], [top6[3], top6[4], '4º', '5º']].map(([a, b, la, lb]) => {
+      const key = [a, b].sort().join('|');
+      const ue = BC_USER.Bsc && BC_USER.Bsc[key];
+      let ida, volta;
+      if (ue) { // edição A×B; ida na casa de B (pior colocado)
+        const AisA = ue.A === a;
+        const iA = AisA ? ue.iA : ue.iB, iB = AisA ? ue.iB : ue.iA, vA = AisA ? ue.vA : ue.vB, vB = AisA ? ue.vB : ue.vA;
+        ida = game(b, a, [iB, iA], 'user'); volta = game(a, b, [vA, vB], 'user');
+      } else { ida = game(b, a, null); volta = game(a, b, null); }
+      const aggA = ida.gf + volta.gc, aggB = ida.gc + volta.gf;
+      let w = aggA > aggB ? a : aggB > aggA ? b : null, pen = false;
+      if (!w) { pen = true; w = (ue && BC_USER.B[key]) || (Math.random() < 0.5 ? a : b); }
+      return { a, b, la, lb, ida, volta, aggA, aggB, w, pen, user: !!ue };
+    });
+    return { top2: top6.slice(0, 2), ties, sobem: [top6[0], top6[1], ties[0].w, ties[1].w] };
+  }
+  // Série C
+  const top8 = cl.slice(0, 8).map(c => c.time);
+  const realG = quadCRealGroups(top8);
+  const gs = realG ? realG : [[top8[0], top8[3], top8[4], top8[7]], [top8[1], top8[2], top8[5], top8[6]]];
+  const groups = gs.map((g, gi) => {
+    const qst = {}; g.forEach(t => qst[t] = { P: 0, J: 0, V: 0, E: 0, D: 0, GP: 0, GC: 0 });
+    const games = [];
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
+      if (i === j) continue;
+      const c = g[i], f = g[j];
+      const rg = realG && QUAD_C_AUTO.games[c + '>' + f], ug = BC_USER.C.games[c + '>' + f];
+      const gm = rg ? game(c, f, rg, 'real') : ug ? game(c, f, ug, 'user') : game(c, f, null);
+      games.push(gm);
+      qst[c].J++; qst[f].J++; qst[c].GP += gm.gc; qst[c].GC += gm.gf; qst[f].GP += gm.gf; qst[f].GC += gm.gc;
+      if (gm.gc > gm.gf) { qst[c].V++; qst[c].P += 3; qst[f].D++; } else if (gm.gc === gm.gf) { qst[c].E++; qst[f].E++; qst[c].P++; qst[f].P++; } else { qst[f].V++; qst[f].P += 3; qst[c].D++; }
+    }
+    const standing = g.map(t => ({ time: t, ...qst[t], SG: qst[t].GP - qst[t].GC })).sort((a, b) => b.P - a.P || b.V - a.V || b.SG - a.SG || b.GP - a.GP).map((r, i) => ({ ...r, pos: i + 1 }));
+    return { name: gi === 0 ? 'A' : 'B', label: realG && QUAD_C_AUTO.labels ? 'Grupo ' + QUAD_C_AUTO.labels[gi] + ' da CBF' : (gi === 0 ? '1º, 4º, 5º, 8º' : '2º, 3º, 6º, 7º'), real: !!realG, teams: g, games, standing };
+  });
+  const fa = groups[0].standing[0].time, fb = groups[1].standing[0].time;
+  const paS = groups[0].standing[0].P, pbS = groups[1].standing[0].P;
+  const rfL = realG ? quadCFinalLegs(fa, fb) : null;
+  let voltaM = paS >= pbS ? fa : fb, idaM = voltaM === fa ? fb : fa;
+  if (rfL && rfL.ida) { idaM = rfL.ida.casa; voltaM = rfL.ida.fora; }
+  else if (rfL && rfL.volta) { voltaM = rfL.volta.casa; idaM = rfL.volta.fora; }
+  const ida = game(idaM, voltaM, rfL && rfL.ida ? [rfL.ida.gc, rfL.ida.gf] : null, 'real');
+  const volta = game(voltaM, idaM, rfL && rfL.volta ? [rfL.volta.gc, rfL.volta.gf] : null, 'real');
+  const aggVM = ida.gf + volta.gc, aggIM = ida.gc + volta.gf;
+  let camp = rfL && rfL.ida && rfL.volta ? null : (BC_USER.C.final[[fa, fb].sort().join('|')] || null);
+  let pen = false, penSrc = null;
+  if (!camp) {
+    if (aggVM > aggIM) camp = voltaM; else if (aggIM > aggVM) camp = idaM;
+    else {
+      pen = true;
+      const pv = rfL && rfL.volta && rfL.volta.pen_c != null && rfL.volta.pen_f != null ? (rfL.volta.pen_c > rfL.volta.pen_f ? rfL.volta.casa : rfL.volta.fora) : null;
+      camp = pv || (Math.random() < 0.5 ? voltaM : idaM); penSrc = pv ? 'real' : 'sim';
+    }
+  } else if (aggVM === aggIM) { pen = true; penSrc = 'user'; }
+  return { groups, final: { a: idaM, b: voltaM, ida, volta, aggA: aggIM, aggB: aggVM, w: camp, pen, penSrc }, campeao: camp, sobem: [groups[0].standing[0].time, groups[0].standing[1].time, groups[1].standing[0].time, groups[1].standing[1].time] };
 };
 const simUnica = (times, ranking, tab, res, cfg, sk, ak, eo) => {
   refreshBcUser();
@@ -2075,17 +2263,17 @@ const simUnica = (times, ranking, tab, res, cfg, sk, ak, eo) => {
     } = calcL(at[c], df[c], at[f], df[f], el[c], el[f], mc, mf, cfg.homeAdv, eo, cfg.c0Log);
     if (real) updR(el, at, df, c, f, gc, gf, lC, lF, cfg, ak, eo);
   }
-  return {
-    classificacao: times.map(t => ({
-      time: t,
-      ...st[t],
-      SG: st[t].GP - st[t].GC
-    })).sort((a, b) => b.P - a.P || b.V - a.V || b.SG - a.SG || b.GP - a.GP).map((c, i) => ({
-      ...c,
-      pos: i + 1
-    })),
-    jogos
-  };
+  const classificacao = times.map(t => ({
+    time: t,
+    ...st[t],
+    SG: st[t].GP - st[t].GC
+  })).sort((a, b) => b.P - a.P || b.V - a.V || b.SG - a.SG || b.GP - a.GP).map((c, i) => ({
+    ...c,
+    pos: i + 1
+  }));
+  // v4.84: próxima fase (B: playoff; C: quadrangular + final) com o detalhe dos jogos
+  const fase2 = sk === 'B' || sk === 'C' ? simFase2BC(sk, classificacao, at, df, el, cfg, mc, mf, eo) : null;
+  return { classificacao, jogos, fase2 };
 };
 
 // === MC SÉRIE D (para Simular Tudo) ===
@@ -2779,6 +2967,27 @@ const simMC_CB = (cfg, nS, ak, eo, teamElos, teamAD, opts) => {
         gb = poissonRandom(r2.lF);
       return ga > gb ? a : gb > ga ? b : Math.random() < 0.5 ? a : b;
     };
+    // v4.84: confronto ida/volta com pernas FIXAS opcionais (sc = {g1a,g1b,g2a,g2b}, a manda a
+    // ida) e pênaltis conhecidos (pen = 'A'|'B'); a perna que falta é simulada com o mando certo.
+    // Usado nas oitavas (edição do usuário / automação) e, agora, em quartas e semis (CB_AUTO.ko).
+    const s2L_fix = (a, b, sc, pen) => {
+      const u = sc || {};
+      const hasI = u.g1a != null && u.g1b != null,
+        hasV = u.g2a != null && u.g2b != null;
+      if (!hasI && !hasV) return s2L(a, b);
+      const { mc: m1, mf: m2 } = getML(cfg, 'CB');
+      let g1a = u.g1a, g1b = u.g1b, g2a = u.g2a, g2b = u.g2b;
+      if (!hasI) {
+        const l1 = calcL(at2[a], df2[a], at2[b], df2[b], el2[a], el2[b], m1, m2, cfg.homeAdv, eo, cfg.c0Log);
+        g1a = poissonRandom(l1.lC); g1b = poissonRandom(l1.lF);
+      }
+      if (!hasV) {
+        const l2 = calcL(at2[b], df2[b], at2[a], df2[a], el2[b], el2[a], m1, m2, cfg.homeAdv, eo, cfg.c0Log);
+        g2b = poissonRandom(l2.lC); g2a = poissonRandom(l2.lF);
+      }
+      const aa = g1a + g2a, ab2 = g1b + g2b;
+      return aa > ab2 ? a : ab2 > aa ? b : pen === 'A' ? a : pen === 'B' ? b : Math.random() < 0.5 ? a : b;
+    };
     // R32: adversários fixos (CB_R32). Aplica IDA/VOLTA reais quando existem (CB_RES_IDA/VOLTA).
     CB_R32.forEach(([ia, ib]) => {
       bump(teams[ia], 'r32', teams[ib]);
@@ -2794,32 +3003,7 @@ const simMC_CB = (cfg, nS, ak, eo, teamElos, teamAD, opts) => {
         bump(nb, 'r16', na);
         // Edições do usuário (simUni_cbR16): perna completa fica FIXA; perna faltante é simulada
         // (mando correto). Ida+volta completas = vencedor determinístico; empate = pênaltis 50/50.
-        const u = useR16 && cbR16Eff(CB_USER.r16, CB_AUTO.r16, idx) || {};
-        const hasI = u.g1a != null && u.g1b != null,
-          hasV = u.g2a != null && u.g2b != null;
-        if (hasI || hasV) {
-          const {
-            mc: m1,
-            mf: m2
-          } = getML(cfg, 'CB');
-          let g1a = u.g1a,
-            g1b = u.g1b,
-            g2a = u.g2a,
-            g2b = u.g2b;
-          if (!hasI) {
-            const l1 = calcL(at2[na], df2[na], at2[nb], df2[nb], el2[na], el2[nb], m1, m2, cfg.homeAdv, eo, cfg.c0Log);
-            g1a = poissonRandom(l1.lC);
-            g1b = poissonRandom(l1.lF);
-          }
-          if (!hasV) {
-            const l2 = calcL(at2[nb], df2[nb], at2[na], df2[na], el2[nb], el2[na], m1, m2, cfg.homeAdv, eo, cfg.c0Log);
-            g2b = poissonRandom(l2.lC);
-            g2a = poissonRandom(l2.lF);
-          }
-          const aa = g1a + g2a,
-            ab2 = g1b + g2b;
-          r16p.push(aa > ab2 ? na : ab2 > aa ? nb : Math.random() < 0.5 ? na : nb);
-        } else r16p.push(s2L(na, nb));
+        r16p.push(s2L_fix(na, nb, useR16 && cbR16Eff(CB_USER.r16, CB_AUTO.r16, idx) || null, null));
       });
     } else {
       const sh16 = shuffle(r32);
@@ -2831,24 +3015,50 @@ const simMC_CB = (cfg, nS, ak, eo, teamElos, teamAD, opts) => {
         r16p.push(s2L(a, b));
       }
     }
-    const sh8 = shuffle(r16p);
-    const qfp = [];
-    for (let i = 0; i < sh8.length; i += 2) {
-      const a = sh8[i],
-        b = sh8[i + 1];
-      bump(a, 'qf', b);
-      bump(b, 'qf', a);
-      qfp.push(s2L(a, b));
+    // v4.84: quartas em diante seguem o chaveamento REAL da CBF (CB_AUTO.ko) quando os 8 das
+    // quartas são exatamente os vencedores simulados das oitavas; placares reais entram conforme
+    // a máscara (cbMask). Sem dado real (ou vencedores divergentes): sorteio a cada sim, como antes.
+    const plan = cbKoPlan(r16p, cbMask);
+    let qfp;
+    if (plan.qf) {
+      qfp = plan.qf.map(t => {
+        bump(t.a, 'qf', t.b);
+        bump(t.b, 'qf', t.a);
+        return s2L_fix(t.a, t.b, t.sc, t.pen);
+      });
+    } else {
+      const sh8 = shuffle(r16p);
+      qfp = [];
+      for (let i = 0; i < sh8.length; i += 2) {
+        const a = sh8[i],
+          b = sh8[i + 1];
+        bump(a, 'qf', b);
+        bump(b, 'qf', a);
+        qfp.push(s2L(a, b));
+      }
     }
-    const sh4 = shuffle(qfp);
-    bump(sh4[0], 'sf', sh4[1]);
-    bump(sh4[1], 'sf', sh4[0]);
-    bump(sh4[2], 'sf', sh4[3]);
-    bump(sh4[3], 'sf', sh4[2]);
-    const sfp = [s2L(sh4[0], sh4[1]), s2L(sh4[2], sh4[3])];
+    let sfp;
+    if (plan.qf && plan.sfLinks) {
+      sfp = plan.sfLinks.map(([i, j]) => {
+        let a = qfp[i], b = qfp[j];
+        const rt = plan.sfOf(a, b);
+        if (rt) { a = rt.a; b = rt.b; }
+        bump(a, 'sf', b);
+        bump(b, 'sf', a);
+        return s2L_fix(a, b, rt && rt.sc, rt && rt.pen);
+      });
+    } else {
+      const sh4 = shuffle(qfp);
+      bump(sh4[0], 'sf', sh4[1]);
+      bump(sh4[1], 'sf', sh4[0]);
+      bump(sh4[2], 'sf', sh4[3]);
+      bump(sh4[3], 'sf', sh4[2]);
+      sfp = [s2L(sh4[0], sh4[1]), s2L(sh4[2], sh4[3])];
+    }
     bump(sfp[0], 'fin', sfp[1]);
     bump(sfp[1], 'fin', sfp[0]);
-    const fin = sFin(sfp[0], sfp[1]);
+    const rf = plan.finOf(sfp[0], sfp[1]);
+    const fin = rf && rf.sc.g1a != null && rf.sc.g1b != null ? (rf.sc.g1a > rf.sc.g1b ? rf.a : rf.sc.g1b > rf.sc.g1a ? rf.b : rf.pen === 'A' ? rf.a : rf.pen === 'B' ? rf.b : Math.random() < 0.5 ? rf.a : rf.b) : sFin(sfp[0], sfp[1]);
     r32.forEach(w => ct[w].r16++);
     r16p.forEach(w => ct[w].qf++);
     qfp.forEach(w => ct[w].sf++);
@@ -16067,25 +16277,14 @@ function CalibSim({
 // Resultados keyados por SLOT (posição), então persistem mesmo se a projeção mudar.
 function LeaguePhaseEdit({ serie, probs }) {
   if (serie !== 'B' && serie !== 'C') return null;
-  const RES = serie === 'B' ? SB_RES : SC_RES;
-  const NM = serie === 'B' ? SB_NM : SC_NM;
   const KEY = serie === 'B' ? 'simUni_bPO' : 'simUni_cQuad';
   const [data, setData] = useState(() => { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { return {}; } });
   useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {} }, [data]);
   const setV = (k, f, val) => setData(p => ({ ...p, [k]: { ...p[k], [f]: val === '' ? undefined : Math.max(0, Math.min(30, parseInt(val) || 0)) } }));
   const setPenK = (k, val) => setData(p => ({ ...p, [k]: { ...p[k], pen: val || undefined } }));
   const reset = () => setData({});
-  // classificação projetada
-  const teams = [...new Set(Object.values(NM))];
-  const st = {};
-  teams.forEach(t => st[t] = { P: 0, V: 0, E: 0, D: 0, GP: 0, GC: 0, J: 0 });
-  RES.forEach(r => { const c = r.c, f = r.f; if (!st[c] || !st[f]) return; st[c].J++; st[f].J++; st[c].GP += r.gc; st[c].GC += r.gf; st[f].GP += r.gf; st[f].GC += r.gc; if (r.gc > r.gf) { st[c].V++; st[c].P += 3; st[f].D++; } else if (r.gc === r.gf) { st[c].E++; st[f].E++; st[c].P++; st[f].P++; } else { st[f].V++; st[f].P += 3; st[c].D++; } });
-  const cl = teams.map(t => ({ t, ...st[t], SG: st[t].GP - st[t].GC })).sort((a, b) => b.P - a.P || b.V - a.V || b.SG - a.SG || b.GP - a.GP);
-  const totalRounds = serie === 'B' ? 38 : 19;
-  const mx = t => st[t].P + 3 * Math.max(0, totalRounds - st[t].J);
-  const fase1Done = cl.every(c => st[c.t].J >= totalRounds);
-  // posição i (0-idx) só preenchida se MATEMATICAMENTE travada (conservador, ignora desempate)
-  const seed = cl.map((c, i) => { const A = c.t; const best = 1 + cl.filter(x => x.t !== A && st[x.t].P > mx(A)).length; const worst = 1 + cl.filter(x => x.t !== A && mx(x.t) >= st[A].P).length; return (best === worst && best === i + 1) ? A : null; });
+  // classificação projetada (v4.84: sobre os resultados mesclados — bcSeeds)
+  const { teams, st, cl, seed, fase1Done } = bcSeeds(serie);
   const tm = t => t ? React.createElement(TN, { name: t }) : React.createElement('span', { className: 'text-slate-600 italic' }, 'a definir');
   const num = (k, f, en) => React.createElement('input', { type: 'number', min: 0, value: (effTie(k)[f] != null) ? effTie(k)[f] : '', disabled: !en || (k === 'final' && !!finalRealAB && finalRealAB[f] != null), onChange: e => setV(k, f, e.target.value), className: 'w-7 text-center bg-slate-900/70 border border-slate-600 rounded text-[11px] py-0.5 ' + (en ? 'text-white' : 'text-slate-600') });
   // confronto ida/volta (A=mostrado à esquerda; placares sempre na ordem A×B). Retorna vencedor.
@@ -16216,6 +16415,109 @@ function LeaguePhaseEdit({ serie, probs }) {
       React.createElement('div', { className: 'mt-2 text-[11px]' }, React.createElement('span', { className: 'text-amber-300 font-semibold' }, 'Campeão da Série C: '), champ ? tm(champ) : React.createElement('span', { className: 'text-slate-500' }, '— preencha a final —'))));
 }
 
+// v4.84: sub-aba "Próxima fase" do Monte Carlo de B/C — o que o MC diz sobre o playoff (B) ou
+// o quadrangular + final (C), em vez de deixar isso escondido em colunas da tabela da liga.
+function LeagueNextPhaseMC({ serie, rMC }) {
+  const h = React.createElement;
+  const probs = rMC && rMC.probs || [];
+  const P = {}; probs.forEach(p => P[p.time] = p);
+  const fmt = v => v == null ? '–' : v < 0.5 && v > 0 ? '<1' : String(Math.round(v));
+  const pct = (v, cls) => h('td', { className: 'text-center font-mono ' + (cls || '') }, fmt(v), v == null ? '' : '%');
+  const tn = t => t ? h(TN, { name: t }) : h('span', { className: 'text-slate-600 italic' }, 'a definir');
+  const { seed, fase1Done } = bcSeeds(serie);
+  const th = (l, cls) => h('th', { className: 'py-1 px-1 ' + (cls || 'text-center') }, l);
+  const box = (title, body) => h('div', { className: 'bg-slate-900/40 rounded-xl p-3 border border-slate-700/40 mb-3' }, h('h3', { className: 'text-sm font-semibold text-emerald-300 mb-2' }, title), body);
+  if (serie === 'B') {
+    const rows = probs.filter(p => (p.bPlayoff || 0) >= 0.5 || (p.g4 || 0) >= 0.5).sort((a, b) => (b.bAccess || 0) - (a.bAccess || 0));
+    const t6 = seed.slice(0, 6);
+    const pairs = [[t6[2], t6[5], '3º', '6º'], [t6[3], t6[4], '4º', '5º']];
+    const bracket = h('div', { className: 'space-y-1' }, pairs.map(([a, b, la, lb], i) => h('div', { key: i, className: 'flex items-center gap-1 text-xs py-1 border-b border-slate-700/30' },
+      h('span', { className: 'text-slate-500 text-[10px] w-5' }, la),
+      h('span', { className: 'flex-1 text-right truncate' }, tn(a)),
+      h('span', { className: 'w-12 text-center font-mono text-[10px] text-sky-300' }, a && P[a] ? fmt(P[a].bAccess) + '%' : ''),
+      h('span', { className: 'text-slate-600 px-1' }, 'vs'),
+      h('span', { className: 'w-12 text-center font-mono text-[10px] text-sky-300' }, b && P[b] ? fmt(P[b].bAccess) + '%' : ''),
+      h('span', { className: 'flex-1 truncate' }, tn(b)),
+      h('span', { className: 'text-slate-500 text-[10px] w-5 text-right' }, lb))));
+    return h('div', null,
+      box('Playoff de acesso — chaveamento ' + (fase1Done ? 'definido' : 'pelas posições já travadas'), h('div', null,
+        h('p', { className: 'text-[10px] text-slate-500 mb-2' }, '3º×6º e 4º×5º, ida e volta; os 2 vencedores sobem junto com 1º e 2º. Ao lado de cada clube: P(acesso) do Monte Carlo. Posição ainda em aberto aparece como "a definir" — veja a tabela abaixo.'),
+        h('div', { className: 'text-[11px] text-blue-300 mb-1' }, 'Acesso direto: ', tn(t6[0]), ' · ', tn(t6[1])),
+        bracket)),
+      box('Probabilidades por clube', h('div', { className: 'overflow-x-auto' }, h('table', { className: 'w-full text-xs' },
+        h('thead', null, h('tr', { className: 'text-slate-400 border-b border-slate-700 text-[10px]' }, th('Time', 'text-left'), th('G2 direto'), th('Playoff'), th('Sobe via playoff'), th('Acesso total'))),
+        h('tbody', null, rows.map(p => h('tr', { key: p.time, className: 'border-b border-slate-700/20' },
+          h('td', { className: 'py-1 px-1 font-medium' }, h(TN, { name: p.time })),
+          pct(p.g4, 'text-blue-300'), pct(p.bPlayoff, 'text-sky-300'), pct(Math.max(0, (p.bAccess || 0) - (p.g4 || 0)), 'text-emerald-300'), pct(p.bAccess, 'text-yellow-300 font-bold'))))))),
+      box('Cruzamentos mais prováveis do playoff', h(MatchupsView, { probs: probs.filter(p => (p.bPlayoff || 0) >= 1), phases: [{ key: 'po', label: 'Playoff', probKey: 'bPlayoff' }], sortKey: 'bPlayoff' })));
+  }
+  // Série C
+  const QA = QUAD_C_AUTO;
+  const t8 = seed.slice(0, 8);
+  const groups = QA.groups ? [QA.groups[0], QA.groups[1]] : [[t8[0], t8[3], t8[4], t8[7]], [t8[1], t8[2], t8[5], t8[6]]];
+  const known = groups.every(g => g.every(Boolean));
+  const stand = g => { // classificação REAL do grupo (jogos disputados do quad_c)
+    const s = {}; g.forEach(t => t && (s[t] = { t, P: 0, J: 0, SG: 0 }));
+    if (!QA.groups) return g.filter(Boolean).map(t => s[t]);
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { if (i === j) continue; const r = g[i] && g[j] && QA.games[g[i] + '>' + g[j]]; if (!r) continue; s[g[i]].J++; s[g[j]].J++; s[g[i]].SG += r[0] - r[1]; s[g[j]].SG += r[1] - r[0]; if (r[0] > r[1]) s[g[i]].P += 3; else if (r[0] === r[1]) { s[g[i]].P++; s[g[j]].P++; } else s[g[j]].P += 3; }
+    return g.filter(Boolean).map(t => s[t]).sort((a, b) => b.P - a.P || b.SG - a.SG || ((P[b.t] && P[b.t].q4) || 0) - ((P[a.t] && P[a.t].q4) || 0));
+  };
+  const grp = (g, gi) => h('div', { key: gi, className: 'bg-slate-900/30 rounded-lg p-2' },
+    h('div', { className: 'text-[11px] font-semibold text-teal-300 mb-1' }, 'Grupo ' + (gi === 0 ? 'A' : 'B') + ' · ' + (QA.labels ? 'Grupo ' + QA.labels[gi] + ' da CBF' : (gi === 0 ? '1º, 4º, 5º, 8º' : '2º, 3º, 6º, 7º'))),
+    h('table', { className: 'w-full text-xs' },
+      h('thead', null, h('tr', { className: 'text-slate-400 border-b border-slate-700 text-[10px]' }, th('Time', 'text-left'), th('P'), th('J'), th('SG'), th('Acesso'), th('Final'), th('Título'))),
+      h('tbody', null, stand(g).map((r, i) => { const p = P[r.t] || {}; return h('tr', { key: r.t, className: 'border-b border-slate-700/20 ' + ((p.q4 || 0) >= 50 ? 'text-emerald-200' : '') },
+        h('td', { className: 'py-1 px-1 font-medium' }, h('span', { className: 'text-slate-500 mr-1' }, (i + 1) + 'º'), h(TN, { name: r.t })),
+        h('td', { className: 'text-center font-mono' }, r.P), h('td', { className: 'text-center font-mono text-slate-400' }, r.J), h('td', { className: 'text-center font-mono text-slate-400' }, (r.SG > 0 ? '+' : '') + r.SG),
+        pct(p.q4, 'text-emerald-300 font-bold'), pct(p.qFin, 'text-amber-300'), pct(p.qChamp, 'text-yellow-300')); }))));
+  const fin = probs.filter(p => (p.qFin || 0) >= 1).sort((a, b) => (b.qChamp || 0) - (a.qChamp || 0));
+  return h('div', null,
+    box('Quadrangular — ' + (QA.groups ? 'grupos oficiais (Tabelas CBF)' : known ? 'composição presumida pela classificação' : 'composição ainda em aberto'), h('div', null,
+      h('p', { className: 'text-[10px] text-slate-500 mb-2' }, 'P/J/SG = jogos já disputados no quadrangular. Acesso = top-2 do grupo (sobe à Série B); Final = vence o grupo; Título = campeão da Série C. Placares reais ficam fixos no Monte Carlo; o resto é simulado.'),
+      QA.groups || known ? h('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-2' }, groups.map(grp)) : h('p', { className: 'text-xs text-slate-500' }, 'Os 8 classificados ainda não estão todos matematicamente definidos — veja as probabilidades abaixo.'))),
+    box('Candidatos ao título', h('div', { className: 'overflow-x-auto' }, h('table', { className: 'w-full text-xs max-w-md' },
+      h('thead', null, h('tr', { className: 'text-slate-400 border-b border-slate-700 text-[10px]' }, th('Time', 'text-left'), th('G8'), th('Acesso'), th('Final'), th('Título'))),
+      h('tbody', null, (fin.length ? fin : probs.filter(p => (p.g4 || 0) >= 1)).map(p => h('tr', { key: p.time, className: 'border-b border-slate-700/20' }, h('td', { className: 'py-1 px-1 font-medium' }, h(TN, { name: p.time })), pct(p.g4, 'text-teal-300'), pct(p.q4, 'text-emerald-300'), pct(p.qFin, 'text-amber-300'), pct(p.qChamp, 'text-yellow-300 font-bold'))))))),
+    box('Finais mais prováveis', h(MatchupsView, { probs: probs.filter(p => ((p.qFin || 0) >= 1) || ((p.g4 || 0) >= 1)), phases: [{ key: 'quad', label: 'Quadran.', probKey: 'g4' }, { key: 'camp', label: 'Final', probKey: 'qFin' }], sortKey: 'qFin' })));
+}
+// v4.84: sub-aba "Próxima fase" do 1 Sim — resultado detalhado do playoff (B) ou do
+// quadrangular + final (C) daquela simulação (simFase2BC).
+function LeagueNextPhaseSU({ serie, f2 }) {
+  const h = React.createElement;
+  const tn = t => h(TN, { name: t });
+  const tag = g => g.real ? h('span', { className: 'text-[9px] text-emerald-400 ml-1', title: 'placar oficial' }, '●') : g.user ? h('span', { className: 'text-[9px] text-amber-400 ml-1', title: 'edição sua' }, '✎') : null;
+  const gRow = (g, i) => h('div', { key: i, className: 'flex items-center gap-1 text-xs p-1 rounded ' + (g.real ? 'bg-emerald-900/20 border-l-2 border-emerald-500' : g.user ? 'bg-amber-900/20 border-l-2 border-amber-400' : 'bg-slate-700/30') },
+    h('span', { className: 'flex-1 text-right truncate' }, tn(g.casa)), h('span', { className: 'font-mono font-bold w-12 text-center ' + (g.gc > g.gf ? 'text-emerald-400' : g.gc < g.gf ? 'text-red-400' : 'text-yellow-400') }, g.gc + ' x ' + g.gf), h('span', { className: 'flex-1 truncate' }, tn(g.fora)), tag(g));
+  const tie = (t, la, lb) => h('div', { key: t.a + t.b, className: 'mb-2 bg-slate-900/30 rounded-lg p-2' },
+    h('div', { className: 'flex items-center gap-1 text-xs mb-1' },
+      la ? h('span', { className: 'text-slate-500 text-[10px] w-5' }, la) : null,
+      h('span', { className: 'flex-1 text-right truncate ' + (t.w === t.a ? 'text-emerald-300 font-semibold' : '') }, tn(t.a)),
+      h('span', { className: 'font-mono w-16 text-center text-emerald-400 font-bold' }, t.aggA + '–' + t.aggB + (t.pen ? ' pên' : '')),
+      h('span', { className: 'flex-1 truncate ' + (t.w === t.b ? 'text-emerald-300 font-semibold' : '') }, tn(t.b)),
+      lb ? h('span', { className: 'text-slate-500 text-[10px] w-5 text-right' }, lb) : null),
+    gRow(t.ida, 'i'), gRow(t.volta, 'v'));
+  const legend = h('p', { className: 'text-[10px] text-slate-500 mt-2 italic' }, '● placar oficial · ✎ edição sua (aba Próxima fase) · sem marca = simulado nesta rodada do 1 Sim.');
+  if (serie === 'B') return h('div', null,
+    h('h3', { className: 'text-sm font-semibold text-emerald-300 mb-1' }, 'Playoff de acesso (3º×6º, 4º×5º)'),
+    h('p', { className: 'text-[10px] text-slate-500 mb-2' }, 'Ida na casa do pior colocado, volta na do melhor. Empate no agregado → pênaltis.'),
+    h('div', { className: 'text-[11px] text-blue-300 mb-2' }, 'Acesso direto: ', tn(f2.top2[0]), ' · ', tn(f2.top2[1])),
+    f2.ties.map(t => tie(t, t.la, t.lb)),
+    h('div', { className: 'mt-2 text-xs' }, h('span', { className: 'text-emerald-300 font-semibold' }, 'Sobem à Série A: '), f2.sobem.map((t, i) => h('span', { key: i }, i ? ', ' : '', tn(t)))), legend);
+  const grp = g => h('div', { key: g.name, className: 'bg-slate-900/30 rounded-lg p-2' },
+    h('div', { className: 'text-[11px] font-semibold text-teal-300 mb-1' }, 'Grupo ' + g.name + ' · ' + g.label),
+    h('table', { className: 'w-full text-xs mb-1' }, h('thead', null, h('tr', { className: 'text-slate-400 border-b border-slate-700 text-[10px]' }, ['#', 'Time', 'P', 'J', 'V', 'E', 'D', 'SG'].map((l, i) => h('th', { key: l, className: i === 1 ? 'text-left py-1' : 'text-center py-1' }, l)))),
+      h('tbody', null, g.standing.map(r => h('tr', { key: r.time, className: 'border-b border-slate-700/20 ' + (r.pos <= 2 ? 'text-emerald-200' : 'text-slate-400') }, h('td', { className: 'text-center text-slate-500' }, r.pos), h('td', { className: 'py-0.5 font-medium' }, tn(r.time)), h('td', { className: 'text-center font-mono font-bold' }, r.P), h('td', { className: 'text-center' }, r.J), h('td', { className: 'text-center' }, r.V), h('td', { className: 'text-center' }, r.E), h('td', { className: 'text-center' }, r.D), h('td', { className: 'text-center' }, (r.SG > 0 ? '+' : '') + r.SG))))),
+    h('details', null, h('summary', { className: 'text-[10px] text-emerald-400 cursor-pointer mb-1' }, 'Jogos do grupo (12)'), h('div', { className: 'space-y-0.5' }, g.games.map(gRow))));
+  const F = f2.final;
+  return h('div', null,
+    h('h3', { className: 'text-sm font-semibold text-emerald-300 mb-1' }, 'Quadrangular final (2 grupos, ida e volta)'),
+    h('p', { className: 'text-[10px] text-slate-500 mb-2' }, 'Top-2 de cada grupo (verde) sobem à Série B; os vencedores de grupo decidem o título.'),
+    h('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-2 mb-3' }, f2.groups.map(grp)),
+    h('h3', { className: 'text-sm font-semibold text-amber-300 mb-1' }, 'Final'),
+    tie({ a: F.a, b: F.b, ida: F.ida, volta: F.volta, aggA: F.aggA, aggB: F.aggB, w: F.w, pen: F.pen }),
+    h('div', { className: 'mt-2 text-xs' }, h('span', { className: 'text-amber-300 font-semibold' }, '🏆 Campeão da Série C: '), tn(f2.campeao), F.pen ? h('span', { className: 'text-slate-500' }, ' (pênaltis' + (F.penSrc === 'real' ? ' — oficiais' : F.penSrc === 'user' ? ' — sua edição' : ' — simulados') + ')') : null),
+    h('div', { className: 'mt-1 text-xs' }, h('span', { className: 'text-emerald-300 font-semibold' }, 'Sobem à Série B: '), f2.sobem.map((t, i) => h('span', { key: i }, i ? ', ' : '', tn(t)))), legend);
+}
 function LeagueSim({
   times,
   ranking,
@@ -16240,6 +16542,10 @@ function LeagueSim({
   const [busy, setBusy] = useState(false);
   const [rF, setRF] = useState(0);
   const [chView, setChView] = useState('confrontos'); // sub-visão da aba Chaves (v4.55)
+  const [mcView, setMcView] = useState('liga'); // v4.84: sub-visão do Monte Carlo (liga | fase2)
+  const [suView, setSuView] = useState('liga'); // v4.84: sub-visão do 1 Sim (liga | fase2)
+  const f2Label = meta.key === 'B' ? 'Playoff de acesso' : 'Quadrangular + final';
+  const subSwitch = (view, setView) => (meta.key === 'B' || meta.key === 'C') ? React.createElement('div', { className: 'flex bg-slate-800/60 rounded-lg p-0.5 border border-slate-600/50 w-fit mb-3' }, [['liga', 'Fase de liga'], ['fase2', f2Label]].map(([v, l]) => React.createElement('button', { key: v, onClick: () => setView(v), className: 'px-2 py-0.5 rounded-md text-[11px] ' + (view === v ? 'bg-emerald-600/80 text-white shadow' : 'text-slate-400 hover:text-white') }, l))) : null;
   // Drift efetivo: usa valor do dashboard (ou 0 se não definido)
   const effCfg = useMemo(() => ({
     ...cfg,
@@ -16678,7 +16984,7 @@ function LeagueSim({
     className: "text-slate-400 text-center py-8"
   }, "Rode \"\u26A1 Simular Tudo\" no dashboard acima para ver os resultados Monte Carlo.") : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h2", {
     className: "text-base font-semibold text-emerald-300 mb-3"
-  }, rMC.nSims.toLocaleString(), " sims", eo && ' (ELO)'), rMC.cortes && /*#__PURE__*/React.createElement("div", {
+  }, rMC.nSims.toLocaleString(), " sims", eo && ' (ELO)'), subSwitch(mcView, setMcView), mcView === 'fase2' && (meta.key === 'B' || meta.key === 'C') ? /*#__PURE__*/React.createElement(LeagueNextPhaseMC, { serie: meta.key, rMC: rMC }) : /*#__PURE__*/React.createElement(React.Fragment, null, rMC.cortes && /*#__PURE__*/React.createElement("div", {
     className: "mb-4 overflow-x-auto"
   }, /*#__PURE__*/React.createElement("table", {
     className: "text-xs w-full max-w-md"
@@ -17033,7 +17339,7 @@ function LeagueSim({
       backgroundColor: heatColor(v / 100)
     },
     title: `${p.time} em ${pi + 1}º: ${v.toFixed(1)}%`
-  }, v < 0.5 ? '' : Math.round(v))))))))))), aba === 'fase2' && /*#__PURE__*/React.createElement(LeaguePhaseEdit, { serie: meta.key, probs: rMC && rMC.probs || null }), aba === 'chaves' && /*#__PURE__*/React.createElement("div", {
+  }, v < 0.5 ? '' : Math.round(v)))))))))))), aba === 'fase2' && /*#__PURE__*/React.createElement(LeaguePhaseEdit, { serie: meta.key, probs: rMC && rMC.probs || null }), aba === 'chaves' && /*#__PURE__*/React.createElement("div", {
     className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"
   }, !rMC ? /*#__PURE__*/React.createElement("p", {
     className: "text-slate-400 text-center py-8"
@@ -17089,7 +17395,7 @@ function LeagueSim({
     className: "text-slate-400 text-center py-8"
   }, "Clique \"1 Sim\"") : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h2", {
     className: "text-base font-semibold text-emerald-300 mb-3"
-  }, "Simula\xE7\xE3o \xDAnica"), /*#__PURE__*/React.createElement(CT, {
+  }, "Simula\xE7\xE3o \xDAnica"), subSwitch(suView, setSuView), suView === 'fase2' && rSU.fase2 ? /*#__PURE__*/React.createElement(LeagueNextPhaseSU, { serie: meta.key, f2: rSU.fase2 }) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(CT, {
     data: rSU.classificacao
   }), /*#__PURE__*/React.createElement("h3", {
     className: "text-sm font-semibold text-slate-300 mt-4 mb-2"
@@ -17098,7 +17404,7 @@ function LeagueSim({
   }, rSU.jogos.map((j, i) => /*#__PURE__*/React.createElement(GameRow, {
     key: i,
     j: j
-  }))))));
+  })))))));
 }
 
 // ============================================================================
@@ -18721,7 +19027,8 @@ function CopaBrasilSim({
   initialAk,
   initialEo,
   initialDrift,
-  cbAuto
+  cbAuto,
+  cbKo // v4.84: só para re-renderizar quando o results.json assentar (CB_AUTO.ko é global)
 }) {
   const [aba, setAba] = useState('ratings');
   const [nS, setNS] = useState(1000);
@@ -18826,7 +19133,7 @@ function CopaBrasilSim({
 
   // Simular confronto 2 jogos ida/volta. `fix` (opcional): perna já conhecida fica FIXA
   // ({g1a,g1b} e/ou {g2a,g2b}) e só a perna faltante é simulada, com o mando correto.
-  const sim2L = (a, b, at, df, el, fix) => {
+  const sim2L = (a, b, at, df, el, fix, pen) => {
     const {
       mc,
       mf
@@ -18859,8 +19166,9 @@ function CopaBrasilSim({
       g2b,
       aa,
       ab,
-      w: aa > ab ? a : ab > aa ? b : Math.random() < 0.5 ? a : b,
-      pen: aa === ab
+      w: aa > ab ? a : ab > aa ? b : pen === 'A' ? a : pen === 'B' ? b : Math.random() < 0.5 ? a : b,
+      pen: aa === ab,
+      real: !!(fix && (fix.g1a != null || fix.g2a != null))
     };
   };
   // Final neutro (jogo único)
@@ -18946,12 +19254,26 @@ function CopaBrasilSim({
       const sh16 = shuffle(winners);
       for (let i = 0; i < sh16.length; i += 2) r16p.push(sim2L(sh16[i], sh16[i + 1], at, df, el));
     }
-    const sh8 = shuffle(r16p.map(m => m.w));
-    const qfp = [];
-    for (let i = 0; i < sh8.length; i += 2) qfp.push(sim2L(sh8[i], sh8[i + 1], at, df, el));
-    const sh4 = shuffle(qfp.map(m => m.w));
-    const sfp = [sim2L(sh4[0], sh4[1], at, df, el), sim2L(sh4[2], sh4[3], at, df, el)];
-    const fin = simFin(sfp[0].w, sfp[1].w, at, df, el);
+    // v4.84: quartas → final com o chaveamento real da CBF (cbKoPlan), placares reais fixos
+    // (useCbScores) e o resto simulado — mesma regra do simMC_CB do dashboard.
+    const plan = cbKoPlan(r16p.map(m => m.w), useCbScores ? null : new Set());
+    let qfp;
+    if (plan.qf) qfp = plan.qf.map(t => sim2L(t.a, t.b, at, df, el, t.sc, t.pen));
+    else {
+      const sh8 = shuffle(r16p.map(m => m.w));
+      qfp = [];
+      for (let i = 0; i < sh8.length; i += 2) qfp.push(sim2L(sh8[i], sh8[i + 1], at, df, el));
+    }
+    let sfp;
+    if (plan.qf && plan.sfLinks) sfp = plan.sfLinks.map(([i, j]) => { let a = qfp[i].w, b = qfp[j].w; const rt = plan.sfOf(a, b); if (rt) { a = rt.a; b = rt.b; } return sim2L(a, b, at, df, el, rt && rt.sc, rt && rt.pen); });
+    else {
+      const sh4 = shuffle(qfp.map(m => m.w));
+      sfp = [sim2L(sh4[0], sh4[1], at, df, el), sim2L(sh4[2], sh4[3], at, df, el)];
+    }
+    const rf = plan.finOf(sfp[0].w, sfp[1].w);
+    const fin = rf && rf.sc.g1a != null && rf.sc.g1b != null
+      ? { a: rf.a, b: rf.b, ga: rf.sc.g1a, gb: rf.sc.g1b, w: rf.sc.g1a > rf.sc.g1b ? rf.a : rf.sc.g1b > rf.sc.g1a ? rf.b : rf.pen === 'A' ? rf.a : rf.pen === 'B' ? rf.b : Math.random() < 0.5 ? rf.a : rf.b, pen: rf.sc.g1a === rf.sc.g1b, real: true }
+      : simFin(sfp[0].w, sfp[1].w, at, df, el);
     return {
       r32,
       r16: r16p,
@@ -19098,11 +19420,40 @@ function CopaBrasilSim({
     const card = cbTieCard(t16, true, 'r16-' + i16);
     return right ? React.createElement('div', { key: 'n' + i16, className: 'flex items-center' }, card, tick, rail, stack) : React.createElement('div', { key: 'n' + i16, className: 'flex items-center' }, stack, rail, tick, card);
   };
+  // v4.84: confronto real de quartas/semis/final (CB_AUTO.ko) no formato dos cards da árvore.
+  const cbKoTie = (t, single) => {
+    const s = t.sc || {};
+    const complete = single ? s.g1a != null && s.g1b != null : s.g1a != null && s.g1b != null && s.g2a != null && s.g2b != null;
+    const aa = (s.g1a || 0) + (s.g2a || 0), ab = (s.g1b || 0) + (s.g2b || 0);
+    const w = complete ? aa > ab ? t.a : ab > aa ? t.b : t.pen === 'A' ? t.a : t.pen === 'B' ? t.b : null : null;
+    return { a: t.a, b: t.b, aa, ab, complete, w, pen: complete && aa === ab };
+  };
+  // v4.84: quartas → final REAIS (results.json.cb via CB_AUTO.ko), somente leitura.
+  const koRealSec = (() => {
+    const KO = CB_AUTO.ko || { QF: [], SF: [], F: [] };
+    if (!KO.QF.length && !KO.SF.length && !KO.F.length) return null;
+    const row = (t, single) => {
+      const s = t.sc || {};
+      const hasI = s.g1a != null, hasV = s.g2a != null;
+      const tie = cbKoTie(t, single);
+      const dt = (t.data && (t.data.ida || t.data.volta)) ? (t.data.ida || '') + (t.data.volta ? ' · ' + t.data.volta : '') : '';
+      return React.createElement('div', { key: t.fase + (t.gr || t.a), className: 'flex items-center gap-1 text-xs p-1.5 rounded ' + (tie.complete ? 'bg-emerald-900/20 border-l-2 border-emerald-500' : 'bg-slate-700/30') },
+        React.createElement('span', { className: 'text-slate-500 w-10 font-mono text-[10px]', title: dt }, t.gr ? 'GR' + t.gr : ''),
+        React.createElement('span', { className: 'flex-1 text-right truncate pr-1 font-medium text-[11px] ' + (tie.w === t.a ? 'text-emerald-300' : '') }, React.createElement(TN, { name: t.a })),
+        React.createElement('span', { className: 'font-mono text-[10px] w-32 text-center' }, single ? (hasI ? s.g1a + ' x ' + s.g1b : 'x') : (hasI ? s.g1a + '-' + s.g1b : '–') + ' / ' + (hasV ? s.g2b + '-' + s.g2a : '–') + (tie.complete ? ' (' + tie.aa + '×' + tie.ab + (tie.pen ? ' pên' : '') + ')' : '')),
+        React.createElement('span', { className: 'flex-1 truncate pl-1 font-medium text-[11px] ' + (tie.w === t.b ? 'text-emerald-300' : '') }, React.createElement(TN, { name: t.b })));
+    };
+    const sec = (lb, arr, single) => arr.length ? React.createElement('div', { key: lb, className: 'mb-2' }, React.createElement('div', { className: 'text-[11px] font-semibold text-amber-300 mb-1' }, lb), arr.map(t => row(t, single))) : null;
+    return React.createElement('div', { className: 'mt-4 pt-3 border-t border-slate-700/50' },
+      React.createElement('h3', { className: 'text-sm font-semibold text-emerald-300 mb-1' }, 'Quartas → Final — chaveamento e placares oficiais (Tabelas CBF)'),
+      React.createElement('p', { className: 'text-[10px] text-slate-500 mb-2' }, 'Somente leitura (results.json, automação). Ida na casa do time da esquerda, volta na do da direita; a volta aparece como mandante-visitante. Jogo sem placar = ainda não disputado: o Monte Carlo usa o chaveamento e simula o placar.'),
+      sec('Quartas de final', KO.QF, false), sec('Semifinal', KO.SF, false), sec('Final (jogo único)', KO.F, true));
+  })();
   const cbCenter = React.createElement('div', { className: 'flex flex-col justify-center items-center gap-3 shrink-0 px-2 w-48' },
-    [{ lb: 'Quartas · sorteio', n: 4 }, { lb: 'Semifinal · sorteio', n: 2 }, { lb: '🏆 Final', n: 1 }].map(g =>
+    [{ lb: CB_AUTO.ko.QF.length === 4 ? 'Quartas · CBF' : 'Quartas · sorteio', n: 4, real: CB_AUTO.ko.QF }, { lb: CB_AUTO.ko.SF.length === 2 ? 'Semifinal · CBF' : 'Semifinal · sorteio', n: 2, real: CB_AUTO.ko.SF }, { lb: '🏆 Final', n: 1, real: CB_AUTO.ko.F }].map(g =>
       React.createElement('div', { key: g.lb, className: 'flex flex-col items-center gap-1' },
         React.createElement('div', { className: 'text-[9px] uppercase tracking-wider text-emerald-400/80 font-bold' }, g.lb),
-        Array.from({ length: g.n }, (_, i) => React.createElement('div', { key: i, className: 'w-32 h-8 rounded-lg border border-dashed border-slate-600/50 flex items-center justify-center text-[9px] text-slate-600' }, 'sorteio')))),
+        Array.from({ length: g.n }, (_, i) => g.real && g.real[i] ? cbTieCard(cbKoTie(g.real[i], g.n === 1), false, g.lb + i) : React.createElement('div', { key: i, className: 'w-32 h-8 rounded-lg border border-dashed border-slate-600/50 flex items-center justify-center text-[9px] text-slate-600' }, 'sorteio')))),
     rMC && rMC.probs ? React.createElement('div', { className: 'mt-1 w-full' },
       React.createElement('div', { className: 'text-[9px] uppercase tracking-wider text-slate-500 font-bold text-center mb-1' }, 'Título (MC)'),
       rMC.probs.slice(0, 5).map(p => React.createElement('div', { key: p.time, className: 'flex items-center gap-1 px-1 py-0.5' },
@@ -19423,7 +19774,7 @@ function CopaBrasilSim({
     className: "text-xs text-red-400"
   }, "Limpar")), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500 mt-2"
-  }, "ida: mandante = time da esquerda | volta: mandante = time da direita")), aba === 'arvore' && cbArvore, aba === 'bracket' && /*#__PURE__*/React.createElement("div", {
+  }, "ida: mandante = time da esquerda | volta: mandante = time da direita"), koRealSec), aba === 'arvore' && cbArvore, aba === 'bracket' && /*#__PURE__*/React.createElement("div", {
     className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"
   }, /*#__PURE__*/React.createElement("h2", {
     className: "text-base font-semibold text-emerald-300 mb-3"
@@ -19443,7 +19794,7 @@ function CopaBrasilSim({
     className: "text-emerald-300 font-bold"
   }, "Final:"), " Jogo \xFAnico em campo neutro (\u03BB = MN_MM = ", cfg.mnMM, "). Empate = p\xEAnaltis."), /*#__PURE__*/React.createElement("p", {
     className: "text-amber-300 mt-2 font-medium"
-  }, "A R16 \xE9 fixa (sorteio j\xE1 realizado); das quartas em diante cada simula\xE7\xE3o faz um sorteio independente."))), aba === 'mc' && /*#__PURE__*/React.createElement("div", {
+  }, CB_AUTO.ko.QF.length === 4 ? 'Quartas, semifinal e final seguem o chaveamento oficial da CBF (Tabelas CBF, results.json): placares reais ficam fixos e o resto \xE9 simulado.' : "A R16 \xE9 fixa (sorteio j\xE1 realizado); das quartas em diante cada simula\xE7\xE3o faz um sorteio independente."))), aba === 'mc' && /*#__PURE__*/React.createElement("div", {
     className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"
   }, !rMC ? /*#__PURE__*/React.createElement("p", {
     className: "text-slate-400 text-center py-8"
@@ -20273,7 +20624,20 @@ const evoCbPoints = () => {
   });
   const pts = [{ label: 'Antes da R32', short: 'Pré-R32', sub: 'oitavas sorteadas a cada simulação', mask: new Set() },
                { label: 'Após R32', short: 'R32', sub: 'R32 real; oitavas com o sorteio oficial', mask: new Set(['R32']) }];
-  if (n16) pts.push({ label: 'Após oitavas' + (full16 < CB_R16_PAIRS.length ? ' (parcial)' : ''), short: 'Oitavas', sub: 'R32 + oitavas reais; quartas em diante sorteadas e simuladas', mask: null });
+  if (n16) pts.push({ label: 'Após oitavas' + (full16 < CB_R16_PAIRS.length ? ' (parcial)' : ''), short: 'Oitavas', sub: 'R32 + oitavas reais; quartas com o chaveamento oficial (se houver) e placares simulados', mask: new Set(['R32', 'R16']) });
+  // v4.84: quartas / semis / final reais (CB_AUTO.ko). O chaveamento vale em todos os pontos; só
+  // o PLACAR de cada fase entra a partir do ponto dela.
+  const KO = CB_AUTO.ko || { QF: [], SF: [], F: [] };
+  const cnt = arr => { let n = 0, full = 0; for (const t of arr) { const s = t.sc || {}; const legs = (s.g1a != null ? 1 : 0) + (s.g2a != null ? 1 : 0); if (legs) n++; if (legs === 2) full++; } return { n, full }; };
+  const letters = ['R32', 'R16'];
+  for (const [ph, nome, short, nT] of [['QF', 'quartas', 'Quartas', 4], ['SF', 'semis', 'Semis', 2]]) {
+    const c = cnt(KO[ph]);
+    if (!c.n) return pts;
+    letters.push(ph);
+    pts.push({ label: 'Após ' + nome + (c.full < nT ? ' (parcial)' : ''), short, sub: 'resultados reais até aqui; o resto simulado', mask: new Set(letters) });
+    if (c.full < nT) return pts;
+  }
+  if (KO.F[0] && KO.F[0].sc.g1a != null) pts.push({ label: 'Após a final', short: 'Final', sub: 'tudo real', mask: null });
   return pts;
 };
 const evoOutcome = (g, team) => {
@@ -20573,11 +20937,17 @@ function SimuladorUnificado() {
     [sk]: typeof upd === 'function' ? upd(prev[sk]) : upd
   })), []);
   // Merge com precedência embutido > manual > buscado — fonte única do "Simular Tudo".
-  const mergedRes = useMemo(() => ({
-    A: mergeRes(SA_RES, userResAll.A, fetchedRes.A),
-    B: mergeRes(SB_RES, userResAll.B, fetchedRes.B),
-    C: mergeRes(SC_RES, userResAll.C, fetchedRes.C)
-  }), [fetchedRes, userResAll]);
+  const mergedRes = useMemo(() => {
+    const m = {
+      A: mergeRes(SA_RES, userResAll.A, fetchedRes.A),
+      B: mergeRes(SB_RES, userResAll.B, fetchedRes.B),
+      C: mergeRes(SC_RES, userResAll.C, fetchedRes.C)
+    };
+    // v4.84: bcSeeds (posições travadas de B/C para playoff/quadrangular) lê este global —
+    // atribuído aqui, e não num useEffect, para já valer no render dos filhos.
+    BC_RES_MERGED.B = m.B; BC_RES_MERGED.C = m.C;
+    return m;
+  }, [fetchedRes, userResAll]);
   const [showSearch, setShowSearch] = useState(false);
   // Normalizar nomes de times (busca → simulador)
   const normName = n => {
@@ -20705,6 +21075,8 @@ function SimuladorUnificado() {
           lastRun: !Array.isArray(d) && d.last_run || null,
           dates: !Array.isArray(d) && Array.isArray(d.dates) ? d.dates : [],
           cbR16,
+          cb: !Array.isArray(d) && Array.isArray(d.cb) ? d.cb : [], // v4.84: log da Config
+          cbKo: CB_AUTO.ko, // v4.84: quartas → final (re-render da aba Copa BR)
           results: arr,
           koD,
           quadC
@@ -21105,14 +21477,47 @@ function SimuladorUnificado() {
     const riskKey = s.k === 'D' ? 'f3' : 'z4';
     const riskLabel = s.k === 'D' ? 'F3%' : 'Reb%';
     const isD = s.k === 'D';
+    // v4.84: série DECIDIDA (toda probabilidade em 0 ou 100) → resumo em vez do ranking: campeão,
+    // vice, acesso, rebaixados; na D o drop-down lista quem garantiu a D 2027 pela 3ª fase e os eliminados.
+    const bin = v => v == null || v < 0.05 || v > 99.95;
+    const is100 = v => (v || 0) > 99.95;
+    const decided = d.probs.length > 0 && (isD ? d.probs.every(p => bin(p.ac) && bin(p.ch) && bin(p.f3) && bin(p.fin))
+      : s.k === 'CB' ? d.probs.every(p => bin(p.ch) && bin(p.fin))
+      : d.probs.every(p => bin(p.titulo) && bin(p[s.metricKey]) && bin(p.z4)));
+    const chip = (t, cls) => /*#__PURE__*/React.createElement("span", { key: t, className: 'inline-block rounded px-1.5 py-0.5 text-[11px] font-medium mr-1 mb-1 ' + cls, title: t }, t);
+    const lst = (label, arr, cls) => arr.length ? /*#__PURE__*/React.createElement("div", { className: "mb-1.5" }, /*#__PURE__*/React.createElement("div", { className: "text-[10px] uppercase tracking-wide text-slate-500 mb-0.5" }, label, ' (', arr.length, ')'), arr.map(t => chip(t, cls))) : null;
+    const names = f => d.probs.filter(f).map(p => p.time);
+    let summary = null, dropdown = null;
+    if (decided) {
+      const chK = isD || s.k === 'CB' ? 'ch' : s.k === 'C' ? 'qChamp' : 'titulo';
+      const finK = isD || s.k === 'CB' ? 'fin' : s.k === 'C' ? 'qFin' : null;
+      const champ = names(p => is100(p[chK]));
+      const vice = finK ? names(p => is100(p[finK]) && !is100(p[chK])) : [];
+      const up = s.k === 'A' ? [] : names(p => is100(p[s.metricKey]));
+      const g4 = s.k === 'A' ? names(p => is100(p.g4)) : [];
+      const reb = isD || s.k === 'CB' ? [] : names(p => is100(p.z4));
+      summary = /*#__PURE__*/React.createElement("div", { className: "text-xs" },
+        /*#__PURE__*/React.createElement("div", { className: "text-[10px] text-emerald-400 font-semibold mb-1.5" }, '✓ Definido'),
+        lst('🏆 Campeão', champ, 'bg-yellow-900/40 border border-yellow-500/40 text-yellow-200'),
+        lst('Vice', vice, 'bg-slate-700/60 border border-slate-500/40 text-slate-200'),
+        lst(isD ? 'Acesso à Série C' : s.k === 'B' ? 'Acesso à Série A' : 'Acesso à Série B', up, 'bg-blue-900/40 border border-blue-500/40 text-blue-200'),
+        lst('G4', g4, 'bg-blue-900/40 border border-blue-500/40 text-blue-200'),
+        lst('Rebaixados', reb, 'bg-red-900/40 border border-red-500/40 text-red-200'));
+      if (isD) {
+        const withUf = arr => arr.map(t => t + (SD_INFO[t] ? ' (' + SD_INFO[t].uf + ')' : ''));
+        dropdown = /*#__PURE__*/React.createElement("div", { className: "text-xs mt-2 pt-2 border-t border-slate-700/30" },
+          lst('Série D 2027 pela 3ª fase (Critério 3)', withUf(names(p => is100(p.f3) && !is100(p.ac))), 'bg-purple-900/40 border border-purple-500/40 text-purple-200'),
+          lst('Eliminados — voltam aos estaduais', withUf(names(p => !is100(p.f3))), 'bg-slate-800/80 border border-slate-600/40 text-slate-400'));
+      }
+    }
     return /*#__PURE__*/React.createElement("div", {
       key: s.k,
       className: "bg-slate-900/60 backdrop-blur-sm rounded-xl p-3 border border-slate-700/40 hover:border-slate-600/60 transition-colors"
     }, /*#__PURE__*/React.createElement("h4", {
       className: `text-sm font-bold ${s.c} mb-1 tracking-tight`
-    }, s.l), /*#__PURE__*/React.createElement("div", {
+    }, s.l), decided ? summary : /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-600 mb-2 font-mono uppercase tracking-wide"
-    }, isD ? `Grupo · ${s.metricLabel} · ${riskLabel}` : `Pts mediano · ${s.metricLabel}${isExpanded ? ` · ${riskLabel}` : ''}`), /*#__PURE__*/React.createElement("div", {
+    }, isD ? `Grupo · ${s.metricLabel} · ${riskLabel}` : `Pts mediano · ${s.metricLabel}${isExpanded ? ` · ${riskLabel}` : ''}`), decided && isD && isExpanded ? dropdown : (!decided || isExpanded) && /*#__PURE__*/React.createElement("div", {
       className: "space-y-1 max-h-[520px] overflow-y-auto"
     }, sorted.slice(0, limit).map((p, i) => {
       // Para D: rebValue = F3% (probabilidade de chegar à 3ª fase, top-32 de 96).
@@ -21153,7 +21558,7 @@ function SimuladorUnificado() {
     })), sorted.length > 8 && /*#__PURE__*/React.createElement("button", {
       onClick: () => toggleExpanded(s.k),
       className: "mt-2 w-full text-[11px] text-slate-400 hover:text-emerald-300 py-1 border-t border-slate-700/30 transition-colors"
-    }, isExpanded ? '▲ Mostrar só top 8' : `▼ Ver todos (${sorted.length})${isD ? '' : ' + rebaixamento'}`), d.cortes && !isExpanded && /*#__PURE__*/React.createElement("div", {
+    }, decided ? (isExpanded ? '▲ Ocultar' : isD ? '▼ Série D 2027 e eliminados' : '▼ Ver classificação completa') : isExpanded ? '▲ Mostrar só top 8' : `▼ Ver todos (${sorted.length})${isD ? '' : ' + rebaixamento'}`), d.cortes && !isExpanded && !decided && /*#__PURE__*/React.createElement("div", {
       className: "mt-2 pt-2 border-t border-slate-700/30 text-[10px] text-slate-500 font-mono"
     }, "T:", d.cortes.titulo.p50, " G4:", d.cortes.g4.p50, " Z4:", d.cortes.z4.p50));
   }))), /*#__PURE__*/React.createElement("div", {
@@ -21223,7 +21628,8 @@ function SimuladorUnificado() {
     initialAk: dash?.ak,
     initialEo: dash?.eo,
     initialDrift: dash?.drift,
-    cbAuto: resMeta && resMeta.cbR16 || null
+    cbAuto: resMeta && resMeta.cbR16 || null,
+    cbKo: resMeta && resMeta.cbKo || null
   }), tab === 'rnc' && /*#__PURE__*/React.createElement(RankingNacionalSim, {
     dash: dash
   }), tab === 'evolucao' && /*#__PURE__*/React.createElement(EvolucaoSim, {
@@ -21268,13 +21674,13 @@ function SimuladorUnificado() {
     className: "text-base font-semibold text-emerald-300 mb-1"
   }, "\ud83d\udce1 Atualiza\xE7\xF5es autom\xE1ticas \u2014 Tabelas CBF"), /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-slate-500 mb-2 italic"
-  }, "Toda sexta a automa\xE7\xE3o baixa as Tabelas Detalhadas oficiais da CBF e publica no results.json os jogos da FASE DE LIGA de A/B/C e as pernas de MATA-MATA da S\xE9rie D (ex.: D01\xB7i = ida do confronto D01) que ainda n\xE3o est\xE3o embutidos no app. Copa do Brasil segue por atualiza\xE7\xE3o versionada do app."), !resMeta ? /*#__PURE__*/React.createElement("p", {
+  }, "Toda sexta a automa\xE7\xE3o baixa as Tabelas Detalhadas oficiais da CBF e publica no results.json os jogos da FASE DE LIGA de A/B/C e as pernas de MATA-MATA da S\xE9rie D (ex.: D01\xB7i = ida do confronto D01) que ainda n\xE3o est\xE3o embutidos no app. Copa do Brasil: oitavas, quartas, semifinal e final (fase\xB7i/v) tamb\xE9m entram (v4.84)."), !resMeta ? /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-400"
   }, "results.json ainda n\xE3o carregado nesta sess\xE3o (offline, file:// ou primeiro deploy).") : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-300 mb-2"
   }, "\xDAltima execu\xE7\xE3o: ", /*#__PURE__*/React.createElement("span", {
     className: "font-mono text-emerald-300"
-  }, resMeta.updatedAt ? new Date(resMeta.updatedAt).toLocaleString('pt-BR') : '\u2014'), " \xB7 ", resMeta.results.length + (resMeta.koD ? resMeta.koD.length : 0) + quadCPlayed(resMeta), " resultado(s) acumulados"), resMeta.results.length + (resMeta.koD ? resMeta.koD.length : 0) + quadCPlayed(resMeta) === 0 ? /*#__PURE__*/React.createElement("p", {
+  }, resMeta.updatedAt ? new Date(resMeta.updatedAt).toLocaleString('pt-BR') : '\u2014'), " \xB7 ", resMeta.results.length + (resMeta.koD ? resMeta.koD.length : 0) + quadCPlayed(resMeta) + (resMeta.cb || []).filter(r => r && r.gc != null).length, " resultado(s) acumulados"), resMeta.results.length + (resMeta.koD ? resMeta.koD.length : 0) + quadCPlayed(resMeta) === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500"
   }, "Nenhuma inser\xE7\xE3o ainda \u2014 tudo que os PDFs trazem j\xE1 est\xE1 embutido no app.") : /*#__PURE__*/React.createElement("div", {
     className: "space-y-0.5 max-h-[320px] overflow-y-auto"
@@ -21294,6 +21700,15 @@ function SimuladorUnificado() {
     gc: r.gm,
     gf: r.gv,
     fora: r.vis,
+    confirmed_at: r.confirmed_at,
+    source: r.source
+  })), ...(resMeta.cb || []).filter(r => r && r.gc != null).map(r => ({
+    serie: 'CB',
+    rodada: (r.fase || 'R16') + (r.leg ? (r.leg === 'volta' ? '\xB7v' : '\xB7i') : ''),
+    casa: r.casa,
+    gc: r.gc,
+    gf: r.gf,
+    fora: r.fora,
     confirmed_at: r.confirmed_at,
     source: r.source
   }))].sort((a, b) => new Date(b.confirmed_at || 0) - new Date(a.confirmed_at || 0)).map((r, i) => /*#__PURE__*/React.createElement("div", {
@@ -21325,7 +21740,7 @@ function SimuladorUnificado() {
     className: "text-[10px] text-blue-400 hover:text-blue-300 shrink-0"
   }, "fonte")))))), /*#__PURE__*/React.createElement("div", {
     className: "mt-4 text-center text-slate-500 text-xs"
-  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R16+) | C:", SC_RES.length, " (R13) | D:", SD_RES.length, " (grupos) + mata-mata | Copa BR: R16 (edit\xE1vel) | " + APP_VERSION + " \u2014 Ranking Nacional + composi\xE7\xE3o da S\xE9rie D 2027"))));
+  }, /*#__PURE__*/React.createElement("p", null, "A:", SA_RES.length, " jogos (R18) | B:", SB_RES.length, " (R16+) | C:", SC_RES.length, " (R13) | D:", SD_RES.length, " (grupos) + mata-mata | Copa BR: R16 (edit\xE1vel) + quartas\u2192final via automa\xE7\xE3o | " + APP_VERSION + " \u2014 Ranking Nacional + composi\xE7\xE3o da S\xE9rie D 2027"))));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(SimuladorUnificado));
 </script>
