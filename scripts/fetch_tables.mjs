@@ -17,7 +17,7 @@
 //  3. jogo que JÁ está embutido no app (SX_RES do index.html) não entra no results.json
 //  4. NUNCA sobrescreve placar já gravado — registra conflito e mantém o original
 //  5. teto de jogos novos por execução
-//  6. fase de liga em A/B/C; mata-mata da D → ko_d; oitavas da Copa BR → cb; 2ª fase da C
+//  6. fase de liga em A/B/C; mata-mata da D → ko_d; oitavas→final da Copa BR → cb; 2ª fase da C
 //     (quadrangulares + final) → quad_c (fixture inteira, placar null no jogo não disputado)
 //
 // Mantenha TEAMS/NORM_NAME em sincronia com o app e com scripts/fetch_results.mjs.
@@ -96,11 +96,18 @@ async function findPdfUrl(serie) {
   });
   try {
     const data = await fetchWithFallback(`${CMS_API}?${qs}`, 'json');
+    let basica = null;
     for (const doc of data.data || []) {
       const at = doc.attributes || {};
       const url = at.url || (at.file && at.file.data && at.file.data.attributes && at.file.data.attributes.url);
-      if (url && /tabela/i.test(at.title || '') && new URL(url).hostname === PDF_HOST && url.toLowerCase().endsWith('.pdf')) return url;
+      if (!url || new URL(url).hostname !== PDF_HOST || !url.toLowerCase().endsWith('.pdf')) continue;
+      // v4.84: só a Tabela DETALHADA tem placar. Em 09/2026 a CBF tirou a Detalhada da C e da D do
+      // CMS e deixou só a "Tabela Básica"; o filtro /tabela/i pegava a Básica, a extração devolvia
+      // 0 jogos e a cache passava a apontar para um PDF sem resultado (e a 2ª fase da C congelou).
+      if (/detalhada/i.test(at.title || '')) return url;
+      if (/b[aá]sica/i.test(at.title || '')) basica = basica || url;
     }
+    if (basica) console.error(`::warning::Série ${serie}: o CMS só lista a Tabela Básica (sem placar) — sem Tabela Detalhada publicada, pulando a série (cache intacta).`);
   } catch (e) {
     console.error(`::warning::Série ${serie}: CMS falhou: ${e.message}`);
   }
@@ -316,11 +323,12 @@ function sanitizeQuadC(rows, source) {
 }
 
 // ---------------------------------------------------------------------------
-// Copa do Brasil — OITAVAS (R16). A R32 já está 100% oficial e embutida
+// Copa do Brasil — OITAVAS em diante (v4.84). A R32 já está 100% oficial e embutida
 // (CB_RES_IDA/VOLTA). O app indexa as oitavas por POSIÇÃO em CB_R16_PAIRS, com
-// {g1a,g1b} = ida (a manda) e {g2a,g2b} = volta (b manda; g2a são os gols de a).
-// Aqui só extraímos por NOME; quem resolve a posição e a orientação é o app, que
-// é dono de CB_R16_PAIRS — assim o scraper não duplica o chaveamento.
+// {g1a,g1b} = ida (a manda) e {g2a,g2b} = volta (b manda; g2a são os gols de a); quartas,
+// semifinal e final (fase QF/SF/F) vão por NOME + GR + ida/volta, jogo futuro com placar null —
+// é assim que o app aprende o CHAVEAMENTO (as quartas de 2026 têm chave fixa até a final) antes
+// de a fase ser jogada. Quem resolve posição e orientação é o app, dono de CB_R16_PAIRS.
 // ---------------------------------------------------------------------------
 async function loadCbPairs() {
   try {
@@ -337,24 +345,52 @@ async function loadCbPairs() {
 function buildCbPrompt(names) {
   return [
     `Este PDF é a Tabela Detalhada oficial da CBF da Copa do Brasil 2026.`,
-    `Extraia APENAS os jogos das OITAVAS DE FINAL (16 avos já foram; ignore fases anteriores e posteriores) que JÁ TÊM PLACAR preenchido.`,
-    `Use EXATAMENTE estes nomes de times: ${names.join(', ')}.`,
-    `Cada confronto tem ida e volta. Responda APENAS com um array JSON no formato:`,
-    `[{"casa":"...","gc":0,"gf":0,"fora":"..."}]`,
-    `casa = mandante daquele jogo, gc = gols do mandante, gf = gols do visitante.`,
-    `Jogo SEM placar (apenas "x" entre os times) NÃO pode aparecer — NUNCA invente placar para jogo futuro; na dúvida, omita.`,
+    `Extraia APENAS os jogos da SEXTA FASE (OITAVAS-DE-FINAL) em diante: sexta fase (oitavas), sétima fase (quartas-de-final), oitava fase (semifinal) e nona fase (final), TENHAM PLACAR OU NÃO. IGNORE completamente da primeira à quinta fase.`,
+    `Cada linha tem a coluna I/V (I = jogo de ida, V = volta), o número GR do confronto (ex.: 119), mandante, placar e visitante. Pênaltis aparecem entre parênteses ao redor do placar: "(5) 1 x 1 (4)" = 5 cobranças convertidas pelo mandante e 4 pelo visitante.`,
+    `Use EXATAMENTE estes nomes de times: ${names.join(', ')}. Jogo cuja equipe ainda não está definida (ex.: "Venc. Gr. 123 ou 124") fica de fora.`,
+    `Responda APENAS com UM ÚNICO array JSON (todas as fases juntas, sem dividir em blocos) no formato:`,
+    `[{"fase":"QF","gr":119,"leg":"ida","data":"27/08","casa":"Internacional","gc":0,"gf":0,"fora":"Grêmio","pen_c":null,"pen_f":null}]`,
+    `fase = "R16" nas oitavas, "QF" nas quartas, "SF" na semifinal, "F" na final; leg = "ida" (coluna I) ou "volta" (coluna V); gr = número da coluna GR.`,
+    `gc/gf = gols de mandante/visitante quando o placar está preenchido; null quando o jogo ainda não tem placar (apenas "x" entre os times). pen_c/pen_f = pênaltis entre parênteses, quando houver.`,
+    `data = dia/mês da linha (dd/mm). ATENÇÃO: NUNCA invente 0x0 para jogo futuro — jogo sem placar tem gc e gf null.`,
   ].join(' ');
 }
 
 function sanitizeCb(rows, nameSet, source) {
   const out = [];
+  let futureNulled = 0;
+  const nowBrt = new Date(Date.now() - 3 * 3600 * 1000);
   for (const r of rows || []) {
+    const fase = String(r.fase || 'R16').toUpperCase().trim();
+    if (!['R16', 'QF', 'SF', 'F'].includes(fase)) continue;
     const casa = norm(r.casa), fora = norm(r.fora);
-    const gc = Number(r.gc), gf = Number(r.gf);
     if (!nameSet.has(casa) || !nameSet.has(fora) || casa === fora) continue;
-    if (!Number.isInteger(gc) || !Number.isInteger(gf) || gc < 0 || gc > 14 || gf < 0 || gf > 14) continue;
-    out.push({ fase: 'R16', casa, fora, gc, gf, source });
+    const leg = String(r.leg || 'ida').toLowerCase().trim();
+    if (leg !== 'ida' && leg !== 'volta') continue;
+    const grN = Number(r.gr);
+    const gr = Number.isInteger(grN) && grN > 0 && grN < 1000 ? grN : null;
+    const dm = /^(\d{1,2})\/(\d{1,2})$/.exec(String(r.data || '').trim());
+    const data = dm && Number(dm[1]) >= 1 && Number(dm[1]) <= 31 && Number(dm[2]) >= 1 && Number(dm[2]) <= 12
+      ? `${dm[1].padStart(2, '0')}/${dm[2].padStart(2, '0')}` : null;
+    let gc = r.gc == null ? null : Number(r.gc), gf = r.gf == null ? null : Number(r.gf);
+    if ((gc == null) !== (gf == null)) continue; // meio placar não existe
+    if (gc != null && (!Number.isInteger(gc) || !Number.isInteger(gf) || gc < 0 || gc > 14 || gf < 0 || gf > 14)) continue;
+    let pen_c = null, pen_f = null;
+    if (gc != null && r.pen_c != null && r.pen_f != null) {
+      const pc = Number(r.pen_c), pf = Number(r.pen_f);
+      if (Number.isInteger(pc) && Number.isInteger(pf) && pc >= 0 && pc <= 30 && pf >= 0 && pf <= 30) { pen_c = pc; pen_f = pf; }
+    }
+    // Placar em jogo com DATA FUTURA (horário de Brasília) é alucinação: a fixture fica, o placar cai.
+    if (gc != null && data) {
+      const gameDate = new Date(Date.UTC(2026, Number(data.slice(3, 5)) - 1, Number(data.slice(0, 2))));
+      if (gameDate.getTime() > nowBrt.getTime()) { gc = null; gf = null; pen_c = null; pen_f = null; futureNulled++; }
+    }
+    // Oitavas: só entram com placar (compatível com o formato anterior; o chaveamento delas já é
+    // do app). Quartas em diante: entram mesmo sem placar — é o chaveamento.
+    if (fase === 'R16' && gc == null) continue;
+    out.push({ fase, gr, leg, data, casa, fora, gc, gf, pen_c, pen_f, source });
   }
+  if (futureNulled) console.error(`::warning::Copa do Brasil: ${futureNulled} placar(es) em jogo com DATA FUTURA descartado(s) (fixture mantida).`);
   return out;
 }
 
@@ -661,10 +697,14 @@ async function main() {
     arr.map((r) => ({ code: r.code, leg: r.leg, mand: r.mand, gm: r.gm, gv: r.gv, vis: r.vis, pen_m: r.pen_m, pen_v: r.pen_v }))
        .sort((a, b) => `${a.code}|${a.leg}`.localeCompare(`${b.code}|${b.leg}`))
   );
-  // ---- Copa do Brasil: oitavas → cb ----
-  let cbAdded = 0, cbUnchanged = 0;
+  // ---- Copa do Brasil: oitavas → final → cb ----
+  // Chave = fase|casa|fora (a mesma das oitavas de antes). Fixture (gr/leg/data) segue o PDF;
+  // placar gravado NUNCA é sobrescrito (conflito é logado); jogo futuro entra com gc/gf null e
+  // recebe o placar quando for jogado.
+  let cbAdded = 0, cbUnchanged = 0, cbFixture = 0;
+  const cbKey = (r) => `${r.fase}|${r.casa}|${r.fora}`;
   const cbByKey = new Map();
-  for (const r of existingCb) cbByKey.set(`${r.fase}|${r.casa}|${r.fora}`, r);
+  for (const r of existingCb) cbByKey.set(cbKey(r), r);
   {
     const pairs = await loadCbPairs();
     const names = [...new Set(pairs.flat())];
@@ -682,20 +722,30 @@ async function main() {
           const rows = sanitizeCb(await extractFromPdf('CB', await downloadPdfB64(url), buildCbPrompt(names)), nameSet, url);
           extracted++;
           if (!lastExtractTruncated) pdfCache.CB = url;
-          // só aceita jogo entre times que formam um confronto REAL das oitavas
+          // oitavas: só aceita jogo entre times que formam um confronto REAL (CB_R16_PAIRS)
           const pairKeys = new Set(pairs.map(([a, b]) => [a, b].sort().join('|')));
-          const valid = rows.filter((r) => pairKeys.has([r.casa, r.fora].sort().join('|')));
-          if (rows.length !== valid.length) console.error(`::warning::Copa do Brasil: ${rows.length - valid.length} jogo(s) descartado(s) por não formarem confronto das oitavas.`);
+          const valid = rows.filter((r) => r.fase !== 'R16' || pairKeys.has([r.casa, r.fora].sort().join('|')));
+          if (rows.length !== valid.length) console.error(`::warning::Copa do Brasil: ${rows.length - valid.length} jogo(s) de oitavas descartado(s) por não formarem confronto real.`);
+          const now = new Date().toISOString();
           for (const c of valid) {
-            const k = `${c.fase}|${c.casa}|${c.fora}`;
+            const k = cbKey(c);
             const prev = cbByKey.get(k);
-            if (!prev) { cbByKey.set(k, { ...c, confirmed_at: new Date().toISOString() }); cbAdded++; }
-            else if (Number(prev.gc) !== c.gc || Number(prev.gf) !== c.gf) {
-              conflicts.push(k);
+            if (!prev) {
+              cbByKey.set(k, { ...c, confirmed_at: c.gc != null ? now : null });
+              if (c.gc != null) cbAdded++; else cbFixture++;
+              continue;
+            }
+            const upd = { ...prev, gr: c.gr != null ? c.gr : (prev.gr != null ? prev.gr : null), leg: c.leg || prev.leg, data: c.data || prev.data || null };
+            if (prev.gc == null && c.gc != null) {
+              Object.assign(upd, { gc: c.gc, gf: c.gf, pen_c: c.pen_c, pen_f: c.pen_f, confirmed_at: now, source: url });
+              cbAdded++;
+            } else if (prev.gc != null && c.gc != null && (Number(prev.gc) !== c.gc || Number(prev.gf) !== c.gf)) {
+              conflicts.push('CB|' + k);
               console.error(`::warning::Conflito CB ${k}: gravado ${prev.gc}-${prev.gf} vs PDF ${c.gc}-${c.gf} (mantido o gravado)`);
-            } else cbUnchanged++;
+            } else if (prev.gc != null) cbUnchanged++;
+            cbByKey.set(k, upd);
           }
-          console.log(`Copa do Brasil: ${valid.length} jogo(s) de oitavas com placar no PDF.`);
+          console.log(`Copa do Brasil: ${valid.filter((r) => r.gc != null).length} jogo(s) com placar e ${valid.filter((r) => r.gc == null).length} sem placar (chaveamento) no PDF, das oitavas em diante.`);
         } catch (e) {
           console.error(`::warning::Copa do Brasil falhou: ${e.message}`);
         }
@@ -707,8 +757,9 @@ async function main() {
   await savePdfCache(pdfCache);
   console.log(`Extrações via API: ${extracted}; séries puladas por cache: ${skippedCache}.`);
 
-  const mergedCb = [...cbByKey.values()].sort((a, b) => `${a.fase}|${a.casa}`.localeCompare(`${b.fase}|${b.casa}`));
-  const canonCb = (arr) => JSON.stringify(arr.map((r) => ({ fase: r.fase, casa: r.casa, fora: r.fora, gc: r.gc, gf: r.gf })));
+  const cbOrd = (r) => `${({ R16: 1, QF: 2, SF: 3, F: 4 })[r.fase] || 9}|${String(r.gr || 0).padStart(3, '0')}|${r.leg === 'volta' ? 2 : 1}|${r.casa}`;
+  const mergedCb = [...cbByKey.values()].sort((a, b) => cbOrd(a).localeCompare(cbOrd(b)));
+  const canonCb = (arr) => JSON.stringify(arr.map((r) => ({ fase: r.fase, gr: r.gr, leg: r.leg, data: r.data, casa: r.casa, fora: r.fora, gc: r.gc, gf: r.gf, pen_c: r.pen_c, pen_f: r.pen_f })).sort((a, b) => cbOrd(a).localeCompare(cbOrd(b))));
   const cbChanged = canonCb(mergedCb) !== canonCb(existingCb);
 
   const quadOrd = (r) => `${r.fase === 'Q' ? '1' : '2'}|${r.grupo || ''}|${r.rodada}|${r.casa}`;
@@ -725,19 +776,18 @@ async function main() {
   const canonD = (arr) => JSON.stringify(arr.map((d) => ({ serie: d.serie, rodada: d.rodada, casa: d.casa, fora: d.fora, data: d.data })));
   const datesChanged = canonD(mergedDates) !== canonD(existingDates);
 
-  console.log(`Resumo: +${added} liga + ${koAdded} mata-mata D + ${quadAdded} 2ª fase C novos, ${unchanged + koUnchanged + quadUnchanged} iguais, ${skippedBuiltIn + koSkipped} já embutidos no app, ${conflicts.length} conflito(s), ${mergedDates.length} data(s) remarcada(s)${datesChanged ? ' (MUDOU)' : ''}, +${cbAdded} Copa BR nova(s) (${mergedCb.length} no total), 2ª fase C: ${mergedQuad.filter((r) => r.gc != null).length}/${mergedQuad.length} disputado(s)${quadChanged ? ' (MUDOU)' : ''}.`);
+  console.log(`Resumo: +${added} liga + ${koAdded} mata-mata D + ${quadAdded} 2ª fase C novos, ${unchanged + koUnchanged + quadUnchanged} iguais, ${skippedBuiltIn + koSkipped} já embutidos no app, ${conflicts.length} conflito(s), ${mergedDates.length} data(s) remarcada(s)${datesChanged ? ' (MUDOU)' : ''}, +${cbAdded} Copa BR nova(s) (${mergedCb.filter((r) => r.gc != null).length}/${mergedCb.length} com placar${cbFixture ? ', +' + cbFixture + ' de chaveamento' : ''}), 2ª fase C: ${mergedQuad.filter((r) => r.gc != null).length}/${mergedQuad.length} disputado(s)${quadChanged ? ' (MUDOU)' : ''}.`);
   if (canon(merged) === canon(existing) && canonKo(mergedKo) === canonKo(existingKo) && !datesChanged && !cbChanged && !quadChanged) { console.log('Sem mudanças em results.json.'); return; }
 
   // last_run: quantos jogos ESTA execução acrescentou, para o selo do app mostrar o
   // delta em vez do acumulado. Só é escrito quando houve mudança (o return acima corta
   // execuções sem novidade), então ele sempre descreve a última atualização efetiva.
-  // cb_added fica FORA de total_new enquanto o app nao consumir results.json.cb:
-  // o selo anunciaria "+16 resultado(s)" que nao aparecem em lugar nenhum na UI.
-  // quad_added ENTRA em total_new: o app consome results.json.quad_c (v4.81) e o log da
-  // Config lista esses jogos, então o selo "+N resultado(s)" bate com o que a UI mostra.
-  const lastRun = { at: new Date().toISOString(), added: added, ko_added: koAdded, quad_added: quadAdded, total_new: added + koAdded + quadAdded, cb_added: cbAdded, dates: mergedDates.length, dates_changed: datesChanged };
+  // quad_added e cb_added ENTRAM em total_new: o app consome results.json.quad_c (v4.81) e
+  // results.json.cb (oitavas desde a v4.64, quartas→final desde a v4.84) e o log da Config lista
+  // esses jogos, então o selo "+N resultado(s)" bate com o que a UI mostra.
+  const lastRun = { at: new Date().toISOString(), added: added, ko_added: koAdded, quad_added: quadAdded, cb_added: cbAdded, total_new: added + koAdded + quadAdded + cbAdded, dates: mergedDates.length, dates_changed: datesChanged };
   await writeFile(RESULTS_PATH, JSON.stringify({ schema: 2, updated_at: new Date().toISOString(), last_run: lastRun, results: merged, ko_d: mergedKo, cb: mergedCb, quad_c: mergedQuad, dates: mergedDates }, null, 2) + '\n', 'utf8');
-  console.log(`results.json atualizado (${merged.length} resultado(s) de liga + ${mergedKo.length} perna(s) de mata-mata D + ${mergedQuad.length} jogo(s) da 2ª fase C + ${mergedDates.length} data(s) remarcada(s); last_run.total_new=${lastRun.total_new}).`);
+  console.log(`results.json atualizado (${merged.length} resultado(s) de liga + ${mergedKo.length} perna(s) de mata-mata D + ${mergedQuad.length} jogo(s) da 2ª fase C + ${mergedCb.length} da Copa BR + ${mergedDates.length} data(s) remarcada(s); last_run.total_new=${lastRun.total_new}).`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
