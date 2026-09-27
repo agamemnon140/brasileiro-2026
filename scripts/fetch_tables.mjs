@@ -81,6 +81,51 @@ async function fetchWithFallback(url, kind) {
   }
 }
 
+// GWEB (27/09/2026): a API do próprio site da CBF, que a página "Tabelas" consome via proxy
+// interno — GET https://www.cbf.com.br/api/cbf/jogos/campeonato/<edição>/rodada/<n>/fase devolve
+// os jogos de TODAS as fases da rodada n ({grupos, jogos:[{grupo:"GRUPO B", jogo:[...]}]}), com
+// placar (gols null = ainda não disputado), data dd/mm/aaaa, hora e pênaltis (panaltis, sic, por
+// lado). Não depende do PDF nem da Anthropic. Descoberta quando a CBF tirou a Tabela Detalhada da
+// C e da D do CMS (09/2026) e a 2ª fase da C ficou sem fonte. Ids das edições 2026, lidos de
+// /api/cbf/campeonatos/anos (categorias[].id_campeonato, último = 2026):
+const GWEB_EDITION = { A: '1260611', B: '1260612', C: '1260613', D: '1260635', CB: '1260615' };
+// Grafias do GWEB que diferem da lista do app (o resto o NORM_NAME já cobre).
+const GWEB_NORM = { 'Amazonas SAF': 'Amazonas', 'Barra Futebol Clube': 'Barra', 'Botafogo Pb Saf': 'Botafogo-PB', 'ITUANO FC': 'Ituano', 'Maringá FC SAF': 'Maringá' };
+const gwebNorm = (n) => norm(GWEB_NORM[(n || '').trim()] || n);
+const gwebUrl = (edition, rodada) => `https://www.cbf.com.br/api/cbf/jogos/campeonato/${edition}/rodada/${rodada}/fase`;
+async function fetchGwebRound(edition, rodada) {
+  const j = await fetchWithFallback(gwebUrl(edition, rodada), 'json');
+  return j && Array.isArray(j.jogos) ? j.jogos : [];
+}
+// 2ª fase da C no GWEB: nas rodadas 1-6, "GRUPO A" é a 1ª fase (10 jogos/rodada) e "GRUPO B"/
+// "GRUPO C" são os quadrangulares (2 jogos/rodada cada); a final deve chegar como grupo "FINAL"
+// (formato ainda não visto — vai para fase FINAL com a rodada do próprio registro). Devolve as
+// mesmas linhas que sanitizeQuadC produz do PDF, então a mesclagem é a mesma.
+async function fetchQuadCGweb() {
+  const rows = [];
+  let ignorados = new Set();
+  for (let r = 1; r <= 6; r++) {
+    const grupos = await fetchGwebRound(GWEB_EDITION.C, r);
+    for (const g of grupos) {
+      const nome = String(g.grupo || '').toUpperCase().trim();
+      const isFinal = /FINAL/.test(nome);
+      const m = /^GRUPO\s+([B-D])$/.exec(nome);
+      if (!isFinal && !m) { if (!/^GRUPO\s+A$/.test(nome)) ignorados.add(nome); continue; }
+      for (const x of g.jogo || []) {
+        const md = x.mandante || {}, vs = x.visitante || {};
+        const gc = md.gols == null || md.gols === '' ? null : Number(md.gols);
+        const gf = vs.gols == null || vs.gols === '' ? null : Number(vs.gols);
+        const dm = /^(\d{2})\/(\d{2})\/\d{4}$/.exec(String(x.data || '').trim());
+        const pm = Number(md.panaltis) || 0, pv = Number(vs.panaltis) || 0;
+        const comPen = gc != null && (pm > 0 || pv > 0);
+        rows.push({ fase: isFinal ? 'FINAL' : 'Q', grupo: isFinal ? null : m[1], rodada: isFinal ? (Number(x.rodada) || r) : r, data: dm ? `${dm[1]}/${dm[2]}` : null, casa: gwebNorm(md.nome), fora: gwebNorm(vs.nome), gc, gf, pen_c: comPen ? pm : null, pen_f: comPen ? pv : null });
+      }
+    }
+  }
+  if (ignorados.size) console.error(`::warning::Série C (GWEB): grupo(s) desconhecido(s) ignorado(s): ${[...ignorados].join(', ')}`);
+  return sanitizeQuadC(rows, gwebUrl(GWEB_EDITION.C, 'N'));
+}
+
 // Copa do Brasil: slug próprio no CMS. Tem vizinhos-armadilha com o mesmo prefixo
 // (copa-do-brasil/sub-15/2026, .../feminino/2026), então o filtro é por slug EXATO.
 const CB_SLUG = 'copa-do-brasil/masculino/2026';
@@ -492,6 +537,13 @@ async function savePdfCache(urls) {
 }
 
 async function main() {
+  // QUAD_GWEB_DRY=1: só consulta o GWEB da 2ª fase da C e imprime o que viria (sem API, sem gravar).
+  if (process.env.QUAD_GWEB_DRY) {
+    const qs = await fetchQuadCGweb();
+    for (const q of qs) console.log(`${q.fase} ${q.grupo || '-'} R${q.rodada} ${q.data || '--/--'}  ${q.casa} ${q.gc == null ? 'x' : q.gc + ' x ' + q.gf} ${q.fora}${q.pen_c != null ? ' (pên ' + q.pen_c + '-' + q.pen_f + ')' : ''}`);
+    console.log(`${qs.length} jogo(s), ${qs.filter((q) => q.gc != null).length} com placar.`);
+    return;
+  }
   if (!API_KEY) { console.error('ANTHROPIC_API_KEY ausente.'); process.exit(1); }
 
   let existing = [], existingKo = [], existingDates = [], existingCb = [], existingQuad = [];
@@ -515,9 +567,7 @@ async function main() {
   let quadAdded = 0, quadUnchanged = 0;
   // Extrai a 2ª fase da C do PDF já baixado e mescla em quadByKey. Fixture (grupo/rodada/
   // data) segue sempre o PDF; placar gravado NUNCA é sobrescrito (conflito é logado).
-  const runQuadC = async (pdfB64, url) => {
-    const qs = sanitizeQuadC(await extractFromPdf('C', pdfB64, buildPromptQuadC(TEAMS.C)), url);
-    extracted++;
+  const mergeQuadRows = (qs, url, origem) => {
     const now = new Date().toISOString();
     for (const q of qs) {
       const k = quadKey(q);
@@ -533,12 +583,23 @@ async function main() {
         quadAdded++;
       } else if (prev.gc != null && q.gc != null && (Number(prev.gc) !== q.gc || Number(prev.gf) !== q.gf)) {
         conflicts.push('C2|' + k);
-        console.error(`::warning::Conflito C 2ª fase ${k}: gravado ${prev.gc}-${prev.gf} vs PDF ${q.gc}-${q.gf} (mantido o gravado)`);
+        console.error(`::warning::Conflito C 2ª fase ${k}: gravado ${prev.gc}-${prev.gf} vs ${origem} ${q.gc}-${q.gf} (mantido o gravado)`);
       } else if (prev.gc != null) quadUnchanged++;
       quadByKey.set(k, upd);
     }
-    console.log(`Série C: 2ª fase — ${qs.length} jogo(s) na fixture do PDF, ${qs.filter((q) => q.gc != null).length} com placar.`);
-    if (!qs.length) console.error('::warning::Série C: 2ª fase sem nenhuma linha válida — prompt/allowlist a revisar.');
+    console.log(`Série C: 2ª fase (${origem}) — ${qs.length} jogo(s) na fixture, ${qs.filter((q) => q.gc != null).length} com placar.`);
+    if (!qs.length) console.error(`::warning::Série C: 2ª fase (${origem}) sem nenhuma linha válida — prompt/allowlist a revisar.`);
+  };
+  const runQuadC = async (pdfB64, url) => {
+    const qs = sanitizeQuadC(await extractFromPdf('C', pdfB64, buildPromptQuadC(TEAMS.C)), url);
+    extracted++;
+    mergeQuadRows(qs, url, 'PDF');
+  };
+  // GWEB primeiro e sempre: é a fonte que continua viva quando a CBF some com a Tabela Detalhada
+  // (a 2ª fase da C congelou em 8/24 jogos entre 14/09 e 27/09 por isso) e não custa API.
+  const runQuadCGweb = async () => {
+    try { mergeQuadRows(await fetchQuadCGweb(), gwebUrl(GWEB_EDITION.C, 'N'), 'GWEB'); }
+    catch (e) { console.error(`::warning::Série C: 2ª fase via GWEB falhou: ${e.message}`); }
   };
 
   const builtIn = await loadBuiltIn();
@@ -565,6 +626,8 @@ async function main() {
   // download falhou, extração falhou) precisam ter as datas já gravadas reinjetadas
   // depois do laço — senão a substituição em bloco lá embaixo apagaria as delas.
   const datesFresh = new Set();
+
+  await runQuadCGweb();
 
   for (const serie of ['A', 'B', 'C']) {
     const url = await findPdfUrl(serie);
