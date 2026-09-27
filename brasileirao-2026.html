@@ -31,7 +31,17 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.84
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.85
+// v4.85 (27/09/2026): COPA RIO DECIDIDA. Boavista campeão (1×1 na ida em 19/09, 2×0 no Nova
+//        Iguaçu na volta em 26/09, Elcyrzão); Sampaio Corrêa-RJ 3º (3×1 no agregado sobre o
+//        Madureira). Escolhas (informadas em 27/09): Boavista → Série D 2027, Nova Iguaçu →
+//        Copa do Brasil 2027, Sampaio Corrêa-RJ fica com a Copa Sul-Sudeste. A 3ª vaga
+//        estadual do RJ passa a ser do Boavista (a linha "8º do Carioca" dele mais abaixo é
+//        pulada por dentro[]). Nenhuma cascata: o Nova Iguaçu continua entrando pelo Ranking
+//        (Critério 4, ~100%) — o único cenário que mexia na linha do Ranking era ele ficar com
+//        a Série D, e medido no modelo isso liberava a vaga dele para Guarany de Bagé / São
+//        Raimundo-RR / Operário-MT. Sem vaga estadual pendente no RJ, restam Copa Paulista
+//        (18/10) e Copa SC (nov).
 // v4.84 (24/09/2026): PRÓXIMA FASE DE B/C NO MC E NO 1 SIM; COPA DO BRASIL ATÉ A FINAL; RESUMO
 //        DAS SÉRIES DECIDIDAS NO DASHBOARD; SCRAPER SÓ ACEITA "TABELA DETALHADA".
 //        SÉRIES B/C — o playoff (B) e o quadrangular + final (C) só apareciam como colunas soltas
@@ -190,7 +200,7 @@ const {
 //        o slot "em disputa", até uma rodada de pesquisa notar. APP_VERSION vira const
 //        colada neste cabeçalho — o rodapé já ficou preso duas vezes (v4.59, v4.73) por
 //        ser string solta.
-const APP_VERSION = 'v4.84';
+const APP_VERSION = 'v4.85';
 // v4.77 (19/08/2026): FILA DE SUCESSÃO nos 27 estados (antes 14 com fonte, 11 sem folga
 //        alguma sobre a cota) + coluna Copa do Brasil 2027 na aba Ranking CBF.
 //        A rodada de pesquisa corrigiu a ordem campeão/vice em SETE estados (AC, AP, MS,
@@ -13842,7 +13852,7 @@ const EST_FILA_2027 = {
        { n: 'Velo Clube', via: '15º do Paulistão', st: 'ok', src: 'I' }],
   RJ: [{ n: 'Madureira', via: '4º do Carioca, semifinalista', st: 'ok', src: 'C' },
        { n: 'Bangu', via: '6º do Carioca, vice da Taça Rio', st: 'ok', src: 'C' },
-       { n: '', via: 'Copa Rio — final Boavista × Nova Iguaçu (ida 1×1 em 19/09; volta prevista para 26-27/09). Campeão escolhe entre Copa do Brasil, Série D e Copa Sul-Sudeste; vice escolhe depois; 3º (Madureira × Sampaio Corrêa-RJ) fica com o resto', st: 'pend', src: 'C', dt: '2026-09-27' },
+       { n: 'Boavista', via: 'campeão da Copa Rio 2026 (1×1 e 2×0 no Nova Iguaçu, 26/09), optou pela Série D; o Nova Iguaçu (vice) optou pela Copa do Brasil e o Sampaio Corrêa-RJ (3º) ficou com a Copa Sul-Sudeste', st: 'ok', src: 'C' },
        { n: 'Boavista', via: '8º do Carioca', st: 'ok', src: 'I' },
        { n: 'Sampaio Corrêa-RJ', via: '10º do Carioca', st: 'ok', src: 'I' },
        { n: 'Nova Iguaçu', via: '11º do Carioca', st: 'ok', src: 'I' },
