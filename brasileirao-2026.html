@@ -31,7 +31,35 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.85
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.86
+// v4.86 (27/09/2026): COPA DO BRASIL 2027 — sub-aba "2027" na Copa BR com quem já tem vaga, em que
+//        fase entra e o que falta. Regras do REC da Copa do Brasil 2026 (Art. 2º e §17, que já
+//        escreve 2027): 128 clubes; Série A 2027 → 5ª fase; campeões de Copa do Nordeste, Copa
+//        Norte, Copa Centro-Oeste, Copa Sul-Sudeste, Série C e Série D 2026 → 3ª fase (campeão de
+//        copa regional na Série A 2027 passa a vaga ao próximo da copa; quem ganha regional e
+//        nacional fica com a regional e a nacional desce na Série); 102 vagas estaduais pela
+//        classificação geral de cada estadual, pulando quem veio pelos Critérios 1 e 2, + copas
+//        estaduais nas últimas vagas. 1ª x 2ª fase: premissa derivada do REC (4ª fase entrega 12
+//        à 5ª; 3ª fase = 48) → 2ª fase = 18 vencedores da 1ª + 66 diretos; os 66 melhores do
+//        Critério 3 no RNC 2027 (projetado por buildRNC até o oficial de dezembro) vão à 2ª.
+//        DADOS (CB27_UF/CB27_REG, levantados em 27/09): classificação geral dos 27 estaduais,
+//        copas estaduais (Copa Rio → Nova Iguaçu; Copa Alagoas → CSE; Copa Grão-Pará → Capitão
+//        Poço; em disputa: Copa Paulista 18/10, Copa Paraná 28/11, Copa SC 29/11, Copa FMF-MT,
+//        Copa MS 06/12, Copa Paraíba 04/12, Taça Fares Lopes 06/12; a Copa Governador da BA foi
+//        cancelada e as 4 vagas baianas voltaram ao Baiano) e regionais (Nordeste: Vitória,
+//        Fortaleza, Sport, ABC; Norte: Paysandu, Nacional-AM, Águia de Marabá, Porto Velho — em
+//        2026 a Copa Verde virou Norte + Centro-Oeste; Centro-Oeste: Anápolis, Rio Branco-ES, Vila
+//        Nova, Gama; Sul-Sudeste: Avaí, Chapecoense, Novorizontino, Volta Redonda). Homônimos de
+//        outra UF ganham sufixo (Cruzeiro-AL, Barcelona-BA/-RO, Atlético-BA/-CE, Capital-TO).
+//        Ordem inferida (src 'I') onde a federação não publicou a geral: parte de MA, PI, RN, GO,
+//        MT, MS, PA, RO, TO, RS e SC.
+//        MOTOR: simMC passa a guardar rastros por simulação — A.rebTrace (na A só isso; o bloco de
+//        UF de B/C não liga), B.accTrace (1º, 2º e vencedores do playoff) e C.finTrace ([campeão,
+//        vice]). buildCB2027 sorteia a Série A 2027 e a final da C juntas por simulação e caminha
+//        cada estado. "Garantido" é regra de pontos (Série A: 4 certamente abaixo; B: G2 travado;
+//        vaga estadual: menos clubes acima, não certamente excluídos, do que vagas; campeão de
+//        Critério 2 decidido nunca ocupa vaga estadual), nunca Monte Carlo — o harness cb27.cjs
+//        exige que todo garantido tenha P = 100% no MC.
 // v4.85 (27/09/2026): COPA RIO DECIDIDA. Boavista campeão (1×1 na ida em 19/09, 2×0 no Nova
 //        Iguaçu na volta em 26/09, Elcyrzão); Sampaio Corrêa-RJ 3º (3×1 no agregado sobre o
 //        Madureira). Escolhas (informadas em 27/09): Boavista → Série D 2027, Nova Iguaçu →
@@ -200,7 +228,7 @@ const {
 //        o slot "em disputa", até uma rodada de pesquisa notar. APP_VERSION vira const
 //        colada neste cabeçalho — o rodapé já ficou preso duas vezes (v4.59, v4.73) por
 //        ser string solta.
-const APP_VERSION = 'v4.85';
+const APP_VERSION = 'v4.86';
 // v4.77 (19/08/2026): FILA DE SUCESSÃO nos 27 estados (antes 14 com fonte, 11 sem folga
 //        alguma sobre a cota) + coluna Copa do Brasil 2027 na aba Ranking CBF.
 //        A rodada de pesquisa corrigiu a ordem campeão/vice em SETE estados (AC, AP, MS,
@@ -1558,10 +1586,10 @@ const simMC = (times, ranking, tab, res, cfg, sk, nS, ak, eo, opts) => {
     elFinal = {},
     atFinal = {},
     dfFinal = {};
-  const extraStats = sk === 'C' || sk === 'B' ? {} : null;
+  const extraStats = sk === 'C' || sk === 'B' ? {} : sk === 'A' ? { __rebTrace: [] } : null; // v4.86: na A só os rebaixados
   // v4.55: distribuição CONJUNTA por UF (acesso/rebaixamento) para B/C, como na Série D.
   // Chave especial __uf (não é nome de time; simMC_single acumula e simMC_finalize emite rMC.ufDist).
-  if (extraStats) {
+  if (extraStats && sk !== 'A') {
     const ufTeams = {};
     times.forEach(t => {
       const u = ufOfTeam(t);
@@ -1581,6 +1609,9 @@ const simMC = (times, ranking, tab, res, cfg, sk, nS, ak, eo, opts) => {
     };
     // v4.68: rebaixados da Série C por simulação, para o Critério 1 da Série D 2027.
     if (sk === 'C') extraStats.__rebTrace = [];
+    // v4.86: rastros para a Copa do Brasil 2027 (Critério 1 = Série A 2027; Critério 2 = campeão da C)
+    if (sk === 'B') extraStats.__accTrace = [];
+    if (sk === 'C') extraStats.__finTrace = [];
   }
   const ptsAtPos = Array.from({
     length: times.length
@@ -1802,6 +1833,7 @@ const simMC_single = (times, ranking, tab, res, cfg, sk, ak, eo, lg, mc, mf, ct,
     const w2 = bcWinB(playoff[1], playoff[2]) || ttest(playoff[1], playoff[2]); // 4º×5º
     extraStats[w1].bAccess++;
     extraStats[w2].bAccess++;
+    if (extraStats.__accTrace) extraStats.__accTrace.push(top2[0], top2[1], w1, w2); // v4.86
     ufTally([top2[0], top2[1], w1, w2], 'acesso'); // v4.55: acessos reais desta sim, por UF
   }
   // Série C: simula quadrangular final (G8→top-4 sobem).
@@ -1926,6 +1958,7 @@ const simMC_single = (times, ranking, tab, res, cfg, sk, ak, eo, lg, mc, mf, ct,
       }
     }
     extraStats[camp].qChamp++;
+    if (extraStats.__finTrace) extraStats.__finTrace.push(camp, camp === fa ? fb : fa); // v4.86: [campeão, vice]
   }
 };
 const simMC_finalize = (times, ct, pts, posF, ptsAtPos, nS, elFinal, extraStats, atFinal, dfFinal, ranking, initAD, nReb) => {
@@ -1996,6 +2029,9 @@ const simMC_finalize = (times, ct, pts, posF, ptsAtPos, nS, elFinal, extraStats,
     ufDist: extraStats && extraStats.__uf ? buildUfDist(extraStats.__uf.acc, extraStats.__uf.ufTeams, nS, ['acesso', 'topN', 'reb'], 'acesso') : null,
     // v4.68: nomes dos rebaixados, achatados (nRebN por simulação, na ordem dos sorteios).
     rebTrace: extraStats && extraStats.__rebTrace || null,
+    // v4.86: acessos da B (4 por sim: 1º, 2º, vencedores do playoff) e final da C ([campeão, vice] por sim).
+    accTrace: extraStats && extraStats.__accTrace || null,
+    finTrace: extraStats && extraStats.__finTrace || null,
     cortes: {
       titulo: pc(0),
       g4: pc(3),
@@ -2028,10 +2064,10 @@ const simMC_async = (times, ranking, tab, res, cfg, sk, nS, ak, eo, onProgress, 
     elFinal = {},
     atFinal = {},
     dfFinal = {};
-  const extraStats = sk === 'C' || sk === 'B' ? {} : null;
+  const extraStats = sk === 'C' || sk === 'B' ? {} : sk === 'A' ? { __rebTrace: [] } : null; // v4.86: na A só os rebaixados
   // v4.55: distribuição CONJUNTA por UF (acesso/rebaixamento) para B/C, como na Série D.
   // Chave especial __uf (não é nome de time; simMC_single acumula e simMC_finalize emite rMC.ufDist).
-  if (extraStats) {
+  if (extraStats && sk !== 'A') {
     const ufTeams = {};
     times.forEach(t => {
       const u = ufOfTeam(t);
@@ -2051,6 +2087,9 @@ const simMC_async = (times, ranking, tab, res, cfg, sk, nS, ak, eo, onProgress, 
     };
     // v4.68: rebaixados da Série C por simulação, para o Critério 1 da Série D 2027.
     if (sk === 'C') extraStats.__rebTrace = [];
+    // v4.86: rastros para a Copa do Brasil 2027 (Critério 1 = Série A 2027; Critério 2 = campeão da C)
+    if (sk === 'B') extraStats.__accTrace = [];
+    if (sk === 'C') extraStats.__finTrace = [];
   }
   const ptsAtPos = Array.from({
     length: times.length
@@ -13847,7 +13886,7 @@ const EST_FILA_2027 = {
   SP: [{ n: 'Portuguesa-SP', via: '5º do Paulistão', st: 'ok', src: 'C' },
        { n: 'Capivariano', via: '7º do Paulistão', st: 'ok', src: 'C' },
        { n: 'Primavera-SP', via: '12º do Paulistão', st: 'ok', src: 'C' },
-       { n: '', via: 'Copa Paulista — semifinais entre Noroeste, São José, Grêmio Prudente e Juventus/União São João; final em 18/10. O campeão opta entre Copa do Brasil e Série D; a não escolhida fica com o vice', st: 'pend', src: 'C', dt: '2026-10-18' },
+       { n: '', via: 'Copa Paulista — semifinais entre Noroeste, São José, Grêmio Prudente e União São João (voltas em 03/10); final em 18/10. O campeão opta entre Copa do Brasil e Série D; a não escolhida fica com o vice', st: 'pend', src: 'C', dt: '2026-10-18' },
        { n: 'Noroeste', via: '14º do Paulistão', st: 'ok', src: 'C' },
        { n: 'Velo Clube', via: '15º do Paulistão', st: 'ok', src: 'I' }],
   RJ: [{ n: 'Madureira', via: '4º do Carioca, semifinalista', st: 'ok', src: 'C' },
@@ -14109,6 +14148,193 @@ const sdBits = (arr, off) => {
 };
 const SD27_MAXK = 14;
 
+// ====== COPA DO BRASIL 2027 (v4.86) ======
+// Regras: REC da Copa do Brasil 2026, Art. 2º e §17 (a partir de 2027 são 128 clubes).
+//   Critério 1 — os 20 clubes da Série A 2027 → 5ª fase.
+//   Critério 2 — campeões de Copa do Nordeste, Copa Norte, Copa Centro-Oeste, Copa Sul-Sudeste,
+//     Série C e Série D de 2026 → 3ª fase. Campeão de copa regional que já está na Série A 2027:
+//     a vaga segue a classificação final daquela copa (alínea a). Clube que ganhou duas coisas do
+//     Critério 2 fica com a regional e a vaga nacional segue a classificação da Série (alínea b).
+//   Critério 3 — 102 vagas pelos estaduais (tabela de vagas por federação), chamando a
+//     CLASSIFICAÇÃO GERAL do estadual e pulando quem já veio pelos Critérios 1 e 2; copas
+//     estaduais (Copa Paulista, Copa Rio, ...) ficam com as últimas vagas do estado.
+// Fases (premissa derivada do REC 2026: 4ª fase entrega 12 à 5ª, 3ª fase = 48 clubes): com 6 no
+// Critério 2, a 2ª fase tem 84 clubes = 18 vencedores da 1ª + 66 diretos. Os 66 mais bem
+// ranqueados do Critério 3 no RNC 2027 entram na 2ª fase; os 36 piores jogam a 1ª. O RNC 2027
+// oficial sai em dezembro — até lá a fase é a do RNC 2027 PROJETADO (buildRNC).
+const CB27_N2 = 66;
+// Dados levantados em 27/09/2026 (classificação geral dos estaduais, copas estaduais e regionais).
+// src 'C' = ordem confirmada em fonte; 'I' = parte da ordem inferida/calculada (ver changelog v4.86).
+const CB27_REG = [{"k":"Copa do Nordeste 2026","st":"ok","ordem":["Vitória","Fortaleza","Sport","ABC"],"uf":["BA","CE","PE","RN"],"obs":""},{"k":"Copa Norte 2026","st":"ok","ordem":["Paysandu","Nacional-AM","Águia de Marabá","Porto Velho"],"uf":["PA","AM","PA","RO"],"obs":""},{"k":"Copa Centro-Oeste 2026","st":"ok","ordem":["Anápolis","Rio Branco-ES","Vila Nova","Gama"],"uf":["GO","ES","GO","DF"],"obs":""},{"k":"Copa Sul-Sudeste 2026","st":"ok","ordem":["Avaí","Chapecoense","Novorizontino","Volta Redonda"],"uf":["SC","SC","SP","RJ"],"obs":""}];
+const CB27_NAC_D = { ordem: ['Uberlândia', 'ASA'] };
+const CB27_UF = {
+  AC: {"est":{"comp":"Campeonato Acreano 2026 - Série A","vagas":3,"src":"C","ordem":["Santa Cruz-AC","Rio Branco","Galvez","Humaitá","Independência","ADESG","São Francisco","Vasco-AC"]},"copas":[]},
+  AL: {"est":{"comp":"Campeonato Alagoano 2026","vagas":3,"src":"C","ordem":["CRB","ASA","CSA","Murici","Cruzeiro-AL","Coruripe","Penedense","CSE"]},"copas":[{"nome":"Copa Alagoas 2026","vagas":1,"st":"ok","dono":"CSE","ordem":["CSA","ASA","CSE","CRB"],"dt":null,"cand":[]}]},
+  AM: {"est":{"comp":"Campeonato Amazonense 2026 - Série A","vagas":4,"src":"C","ordem":["Nacional-AM","Amazonas","Manaus","Manauara","Princesa do Solimões","Parintins","Itacoatiara","São Raimundo-AM"]},"copas":[]},
+  AP: {"est":{"comp":"Campeonato Amapaense de Futebol Profissional Série A 2026","vagas":3,"src":"C","ordem":["Santos-AP","São José-AP","Oratório","Independente","Trem","Ypiranga-AP","Macapá","Cristal"]},"copas":[]},
+  BA: {"est":{"comp":"Campeonato Baiano 2026","vagas":4,"src":"C","ordem":["Bahia","Vitória","Jacuipense","Juazeirense","Jequié","Porto-BA","Barcelona-BA","Galícia","Bahia de Feira","Atlético-BA"]},"copas":[]},
+  CE: {"est":{"comp":"Campeonato Cearense 2026","vagas":3,"src":"C","ordem":["Fortaleza","Ceará","Ferroviário","Floresta","Iguatu","Horizonte","Maranguape","Maracanã","Quixadá","Tirol"]},"copas":[{"nome":"Taça Fares Lopes 2026","vagas":1,"st":"pend","dono":null,"ordem":[],"dt":"2026-12-06","cand":["Quixadá","Guarani de Juazeiro","Icasa","Ceará","Atlético-CE","Vila Real","Fortaleza","Tirol","Palmácia"]}]},
+  DF: {"est":{"comp":"Campeonato Brasiliense","vagas":3,"src":"C","ordem":["Gama","Sobradinho","Ceilândia","Samambaia","Capital","Brasiliense","Real Brasília","Paranoá","Brasília","ARUC"]},"copas":[]},
+  ES: {"est":{"comp":"Campeonato Capixaba 2026","vagas":3,"src":"C","ordem":["Porto Vitória","Serra","Vitória-ES","Vilavelhense","Real Noroeste","Rio Branco-ES","Desportiva","Forte","Capixaba","Rio Branco VN"]},"copas":[]},
+  GO: {"est":{"comp":"Campeonato Goiano","vagas":4,"src":"I","ordem":["Goiás","Atlético-GO","Vila Nova","Anapolina","ABECAT","Jataiense","CRAC","Anápolis","Goiatuba","Aparecidense","Centro Oeste","Inhumas"]},"copas":[]},
+  MA: {"est":{"comp":"Campeonato Maranhense 2026","vagas":3,"src":"I","ordem":["IAPE","Maranhão","Sampaio Corrêa","Moto Club","Luminense","Imperatriz","Tuntum","ITZ Sport"]},"copas":[]},
+  MG: {"est":{"comp":"Campeonato Mineiro 2026 – Módulo I","vagas":5,"src":"C","ordem":["Cruzeiro","Atlético-MG","América-MG","Pouso Alegre","North","URT","Tombense","Uberlândia","Betim","Itabirito","Democrata GV","Athletic"]},"copas":[]},
+  MS: {"est":{"comp":"Campeonato Sul-Mato-Grossense 2026","vagas":2,"src":"C","ordem":["Operário-MS","Bataguassu","Naviraiense","Corumbaense","Ivinhema","Dourados","CR Aquidauana","Pantanal","Costa Rica","Águia Negra"]},"copas":[{"nome":"Copa MS 2026","vagas":1,"st":"pend","dono":null,"ordem":[],"dt":"2026-12-06","cand":["Pantanal","Dourados","Naviraiense","União ABC","São Gabriel","Sete de Setembro"]}]},
+  MT: {"est":{"comp":"Campeonato Mato-Grossense 2026","vagas":3,"src":"C","ordem":["Mixto","Luverdense","Sport Sinop","Operário-MT","Cuiabá","Nova Mutum","Chapada","União-MT","Primavera","Várzea Grande"]},"copas":[{"nome":"Copa FMF 2026","vagas":1,"st":"pend","dono":null,"ordem":[],"dt":null,"cand":["Chapada","União-MT","Uirapuru","Várzea Grande","Santa Cruz-MT","Campo Novo","Cacerense","Cuiabá","Sorriso"]}]},
+  PA: {"est":{"comp":"Campeonato Paraense 2026 - Série A1","vagas":3,"src":"I","ordem":["Paysandu","Remo","Cametá","Castanhal","Águia de Marabá","Capitão Poço","Tuna Luso","Santa Rosa","São Raimundo-PA","Amazônia","Bragantino-PA","São Francisco-PA"]},"copas":[{"nome":"Copa Grão-Pará 2026","vagas":1,"st":"ok","dono":"Capitão Poço","ordem":["Capitão Poço","Castanhal","Cametá","Águia de Marabá","Tuna Luso","Santa Rosa"],"dt":null,"cand":[]}]},
+  PB: {"est":{"comp":"Campeonato Paraibano 2026","vagas":2,"src":"C","ordem":["Botafogo-PB","Sousa","Campinense","Serra Branca","Nacional","Treze","Esporte de Patos","Atlético Cajazeirense","Confiança-PB","Pombal"]},"copas":[{"nome":"Copa Paraíba 2026","vagas":1,"st":"pend","dono":null,"ordem":[],"dt":"2026-12-04","cand":["Atlético Cajazeirense","Campinense","Esporte de Patos","Nacional","Serra Branca","Treze"]}]},
+  PE: {"est":{"comp":"Campeonato Pernambucano 2026","vagas":4,"src":"C","ordem":["Sport","Náutico","Retrô","Santa Cruz","Decisão","Maguary","Vitória das Tabocas","Jaguar"]},"copas":[]},
+  PI: {"est":{"comp":"Campeonato Piauiense 2026","vagas":3,"src":"I","ordem":["Piauí","Atlético Piauiense","Fluminense-PI","Altos","Oeirense","Teresina","Corisabbá","Parnahyba"]},"copas":[]},
+  PR: {"est":{"comp":"Campeonato Paranaense 2026 - 1ª Divisão","vagas":4,"src":"C","ordem":["Operário-PR","Londrina","Athletico-PR","Coritiba","São Joseense","Azuriz","Foz do Iguaçu","Cianorte","Maringá","FC Cascavel","Andraus","Galo Maringá"]},"copas":[{"nome":"Copa Paraná 2026","vagas":1,"st":"pend","dono":null,"ordem":[],"dt":"2026-11-28","cand":["Paranavaí","Paraná","Athletico-PR","Londrina","Foz do Iguaçu","Azuriz","FC Cascavel","São Joseense"]}]},
+  RJ: {"est":{"comp":"Campeonato Carioca 2026 - Série A","vagas":5,"src":"C","ordem":["Flamengo","Fluminense","Vasco","Madureira","Botafogo","Bangu","Volta Redonda","Boavista","Portuguesa-RJ","Sampaio Corrêa-RJ","Nova Iguaçu","Maricá"]},"copas":[{"nome":"Copa Rio 2026","vagas":1,"st":"ok","dono":"Nova Iguaçu","ordem":["Boavista","Nova Iguaçu","Sampaio Corrêa-RJ"],"dt":null,"cand":[]}]},
+  RN: {"est":{"comp":"Campeonato Potiguar 2026","vagas":3,"src":"I","ordem":["América-RN","ABC","Potiguar","QFC","Laguna","Santa Cruz-RN","Potyguar Seridoense","Globo"]},"copas":[]},
+  RO: {"est":{"comp":"Campeonato Rondoniense 2026 - Série A","vagas":3,"src":"I","ordem":["Guaporé","Rondoniense","Ji-Paraná","Porto Velho","Barcelona-RO","Genus","União Cacoalense"]},"copas":[]},
+  RR: {"est":{"comp":"Campeonato Roraimense 2026","vagas":3,"src":"C","ordem":["GAS","Baré","São Raimundo-RR","Monte Roraima","River-RR","Progresso","Rio Negro-RR","Náutico-RR","Atlético Roraima"]},"copas":[]},
+  RS: {"est":{"comp":"Campeonato Gaúcho 2026 - Série A","vagas":5,"src":"I","ordem":["Grêmio","Internacional","Juventude","Ypiranga","São Luiz-RS","Novo Hamburgo","Caxias","São José-RS","Monsoon","Guarany de Bagé","Avenida","Inter de Santa Maria"]},"copas":[]},
+  SC: {"est":{"comp":"Campeonato Catarinense 2026 - Série A","vagas":3,"src":"I","ordem":["Barra","Chapecoense","Criciúma","Camboriú","Brusque","Avaí","Santa Catarina","Concórdia","Marcílio Dias","Carlos Renaux","Figueirense","Joinville"]},"copas":[{"nome":"Copa Santa Catarina 2026","vagas":1,"st":"pend","dono":null,"ordem":[],"dt":"2026-11-29","cand":["Marcílio Dias","Hercílio Luz","Joinville","Figueirense","Santa Catarina","Metropolitano","Barra","Blumenau","Nação"]}]},
+  SE: {"est":{"comp":"Campeonato Sergipano 2026","vagas":3,"src":"C","ordem":["Sergipe","Confiança","Itabaiana","América de Propriá","Lagarto","Guarany-SE","Falcon","Atlético Gloriense","Dorense","Desportiva Aracaju"]},"copas":[]},
+  SP: {"est":{"comp":"Campeonato Paulista 2026 - Série A1","vagas":5,"src":"C","ordem":["Palmeiras","Novorizontino","São Paulo","Corinthians","Portuguesa-SP","Red Bull Bragantino","Capivariano","Santos","Guarani","Botafogo-SP","Mirassol","Primavera-SP","São Bernardo","Noroeste","Velo Clube","Ponte Preta"]},"copas":[{"nome":"Copa Paulista 2026","vagas":1,"st":"pend","dono":null,"ordem":[],"dt":"2026-10-18","cand":["Noroeste","São José","Grêmio Prudente","União São João"]}]},
+  TO: {"est":{"comp":"Campeonato Tocantinense 2026","vagas":3,"src":"I","ordem":["Tocantinópolis","União","Gurupi","Capital-TO","Araguaína","Bela Vista","Palmas","Guaraí"]},"copas":[]}
+};
+// Série A/B: posições matematicamente garantidas (sem desempate: conservador).
+const cb27Standings = (times, res) => {
+  const st = {};
+  times.forEach(t => st[t] = { P: 0, J: 0 });
+  (res || []).forEach(r => {
+    if (!st[r.c] || !st[r.f]) return;
+    st[r.c].J++; st[r.f].J++;
+    if (r.gc > r.gf) st[r.c].P += 3; else if (r.gc < r.gf) st[r.f].P += 3; else { st[r.c].P++; st[r.f].P++; }
+  });
+  const nJ = 2 * (times.length - 1);
+  return { st, mx: t => st[t].P + 3 * Math.max(0, nJ - st[t].J) };
+};
+// dash precisa dos rastros A.rebTrace, B.accTrace e C.finTrace (v4.86); rncProj = buildRNC(dash).
+function buildCB2027(dash, rncProj, resA, resB) {
+  if (!dash || !dash.A || !dash.B || !dash.C || !dash.A.rebTrace || !dash.B.accTrace || !dash.C.finTrace) return null;
+  const A26 = Object.keys(SA_RANKING), B26 = Object.keys(SB_RANKING);
+  const nD = Math.min(dash.A.rebTrace.length / 4, dash.B.accTrace.length / 4, dash.C.finTrace.length / 2);
+  if (!nD) return null;
+  // --- certezas (independem de qualquer resultado pendente) ---
+  const sA = cb27Standings(A26, resA || SA_RES), sB = cb27Standings(B26, resB || SB_RES);
+  const conta = (arr, f) => arr.reduce((n, u) => n + (f(u) ? 1 : 0), 0);
+  const certA27 = {}, certFora = {};
+  A26.forEach(t => {
+    certA27[t] = conta(A26, u => u !== t && sA.mx(u) < sA.st[t].P) >= 4;          // 4 certamente abaixo
+    certFora[t] = conta(A26, u => u !== t && sA.st[u].P > sA.mx(t)) >= 17;        // certamente no Z4
+  });
+  B26.forEach(t => {
+    certA27[t] = conta(B26, u => u !== t && sB.mx(u) >= sB.st[t].P) <= 1;         // G2 travado
+    certFora[t] = conta(B26, u => u !== t && sB.st[u].P > sB.mx(t)) >= 6;         // fora do G6
+  });
+  const podeA27 = t => (t in certA27) && !certFora[t];
+  const ehCertA27 = t => !!certA27[t];
+  // dono certo de uma lista ordenada (copa regional / nacional): o 1º que certamente NÃO está na
+  // Série A 2027, desde que todos antes dele certamente estejam.
+  const donoCerto = ordem => { for (const t of ordem) { if (ehCertA27(t)) continue; return podeA27(t) ? null : t; } return null; };
+  const regCert = {};
+  CB27_REG.forEach(r => { regCert[r.k] = r.st === 'ok' ? donoCerto(r.ordem) : null; });
+  const dCert = donoCerto(CB27_NAC_D.ordem.filter(t => !Object.values(regCert).includes(t)));
+  const c2Cert = new Set(Object.values(regCert).concat([dCert]).filter(Boolean));
+  // certamente FORA da chamada do estadual: vai para a Série A 2027 ou, se não for, é o campeão de
+  // uma competição do Critério 2 já decidida (e aí a vaga dela é dele). Ex.: o Vitória, campeão do
+  // Nordeste, nunca ocupa vaga do Baiano — ou fica na Série A, ou herda a vaga do Nordeste.
+  const excluidoCerto = x => ehCertA27(x) || c2Cert.has(x) || CB27_NAC_D.ordem[0] === x || CB27_REG.some(r => r.st === 'ok' && r.ordem[0] === x);
+  const vivosC = new Set((dash.C.probs || []).filter(p => (p.qChamp || 0) > 0).map(p => p.time));
+  // regional em disputa: só os candidatos vivos (cand) podem levá-la
+  const podeC2 = t => vivosC.has(t) || CB27_NAC_D.ordem.includes(t) || CB27_REG.some(r => (r.st === 'ok' ? r.ordem : (r.cand || [])).includes(t));
+  // --- RNC 2027 projetado (fase de entrada do Critério 3) ---
+  const rncOf = {};
+  (rncProj && rncProj.clubes || []).forEach(c => { rncOf[rncKey(c.n) + '|' + c.u] = c.rnc27; if (c.app) rncOf['app|' + c.app] = c.rnc27; });
+  const rnc27 = (n, u) => rncOf['app|' + n] != null ? rncOf['app|' + n] : rncOf[rncKey(n) + '|' + u] != null ? rncOf[rncKey(n) + '|' + u] : -1e9;
+  const ufMap = {};
+  Object.keys(CB27_UF).forEach(u => { const U = CB27_UF[u]; U.est.ordem.forEach(t => ufMap[t] = ufMap[t] || u); U.copas.forEach(c => [c.dono].concat(c.ordem || []).filter(Boolean).forEach(t => ufMap[t] = ufMap[t] || u)); });
+  CB27_REG.forEach(r => (r.uf || []).forEach((u, i) => { if (u && r.ordem[i]) ufMap[r.ordem[i]] = ufMap[r.ordem[i]] || u; }));
+  const ufDe = t => { const u = ufOfTeam(t); return u && u !== '??' ? u : (ufMap[t] || '??'); };
+  // --- sorteios ---
+  const acc = {};
+  const conta1 = (n, k, via) => { const a = acc[n] = acc[n] || { n, uf: ufDe(n), a27: 0, c2: 0, est: 0, est2: 0, vias: {} }; a[k]++; if (via) a.vias[via] = (a.vias[via] || 0) + 1; };
+  const c2Slots = {}, estUF = {};
+  Object.keys(CB27_UF).forEach(u => estUF[u] = { pend: 0, curta: 0 });
+  for (let d = 0; d < nD; d++) {
+    const reb = new Set(dash.A.rebTrace.slice(4 * d, 4 * d + 4));
+    const a27 = new Set(A26.filter(t => !reb.has(t)).concat(dash.B.accTrace.slice(4 * d, 4 * d + 4)));
+    a27.forEach(t => conta1(t, 'a27', 'Série A 2027'));
+    const c2 = new Set();
+    const slot = (k, n) => { const m = c2Slots[k] = c2Slots[k] || {}; m[n || ''] = (m[n || ''] || 0) + 1; if (n) { c2.add(n); conta1(n, 'c2', k); } };
+    CB27_REG.forEach(r => slot(r.k, r.st === 'ok' ? (r.ordem.find(t => !a27.has(t) && !c2.has(t)) || null) : null));
+    slot('Série D 2026', CB27_NAC_D.ordem.find(t => !a27.has(t) && !c2.has(t)) || null);
+    const fin = [dash.C.finTrace[2 * d], dash.C.finTrace[2 * d + 1]];
+    slot('Série C 2026', fin.find(t => !a27.has(t) && !c2.has(t)) || null);
+    const picked = [];
+    for (const u of Object.keys(CB27_UF)) {
+      const U = CB27_UF[u], taken = new Set();
+      let k = 0;
+      for (const t of U.est.ordem) {
+        if (k >= U.est.vagas) break;
+        if (a27.has(t) || c2.has(t)) continue;
+        taken.add(t); picked.push({ n: t, u, via: U.est.comp }); k++;
+      }
+      if (k < U.est.vagas) estUF[u].curta += U.est.vagas - k;
+      for (const cp of U.copas) for (let v = 0; v < cp.vagas; v++) {
+        if (cp.st !== 'ok') { estUF[u].pend++; continue; }
+        const o = [cp.dono].concat(cp.ordem || []).filter(Boolean).find(t => !a27.has(t) && !c2.has(t) && !taken.has(t));
+        if (o) { taken.add(o); picked.push({ n: o, u, via: cp.nome }); } else estUF[u].curta++;
+      }
+    }
+    // vaga ainda sem dono conta como a pior do RNC: não empurra ninguém para a 1ª fase
+    picked.sort((x, y) => rnc27(y.n, y.u) - rnc27(x.n, x.u));
+    picked.forEach((x, i) => { conta1(x.n, 'est', x.via); if (i < CB27_N2) acc[x.n].est2++; });
+  }
+  // --- garantidos (regra, não Monte Carlo) ---
+  const garantido = {};
+  A26.concat(B26).forEach(t => { if (ehCertA27(t)) garantido[t] = 'Série A 2027'; });
+  c2Cert.forEach(t => garantido[t] = garantido[t] || 'Critério 2');
+  const estCertos = {};
+  Object.keys(CB27_UF).forEach(u => {
+    const U = CB27_UF[u];
+    estCertos[u] = [];
+    U.est.ordem.forEach((t, i) => {
+      const acima = U.est.ordem.slice(0, i).filter(x => !excluidoCerto(x)).length;
+      if (acima >= U.est.vagas) return;
+      // garantido na CdB: sobe pela A 2027 / Critério 2, ou pega vaga do estado no pior caso
+      garantido[t] = garantido[t] || U.est.comp;
+      // dono CERTO de vaga estadual: além disso, certamente fora da A 2027 e do Critério 2
+      if (!podeA27(t) && !podeC2(t) && !c2Cert.has(t)) estCertos[u].push(t);
+    });
+    U.copas.forEach(cp => { if (cp.st === 'ok' && cp.dono && !podeA27(cp.dono) && !podeC2(cp.dono)) { garantido[cp.dono] = garantido[cp.dono] || cp.nome; estCertos[u].push(cp.dono); } });
+  });
+  const clubes = Object.values(acc).map(a => ({
+    n: a.n, uf: a.uf,
+    p: (a.a27 + a.c2 + a.est) / nD * 100,
+    pA27: a.a27 / nD * 100, pC2: a.c2 / nD * 100, pEst: a.est / nD * 100,
+    p2a: a.est ? a.est2 / a.est * 100 : null,
+    via: Object.keys(a.vias).sort((x, y) => a.vias[y] - a.vias[x]),
+    garantido: garantido[a.n] || null
+  })).sort((x, y) => y.p - x.p || y.pA27 - x.pA27 || x.n.localeCompare(y.n));
+  const c2 = ['Copa do Nordeste 2026', 'Copa Norte 2026', 'Copa Centro-Oeste 2026', 'Copa Sul-Sudeste 2026', 'Série C 2026', 'Série D 2026'].map(k => {
+    const r = CB27_REG.find(x => x.k === k);
+    const m = c2Slots[k] || {};
+    const dist = Object.keys(m).map(n => ({ n, p: m[n] / nD * 100 })).sort((x, y) => y.p - x.p);
+    const certo = k === 'Série D 2026' ? dCert : k === 'Série C 2026' ? null : regCert[k];
+    return { k, st: r ? r.st : 'ok', obs: r ? r.obs : '', dt: r ? r.dt : null, ordem: r ? r.ordem : (k === 'Série D 2026' ? CB27_NAC_D.ordem : []), certo, dist };
+  });
+  const ufs = Object.keys(CB27_UF).sort().map(u => {
+    const U = CB27_UF[u];
+    const vagas = U.est.vagas + U.copas.reduce((s, c) => s + c.vagas, 0);
+    return { u, vagas, est: U.est, copas: U.copas, certos: estCertos[u], abertas: vagas - estCertos[u].length,
+      pend: estUF[u].pend / nD, curta: estUF[u].curta / nD,
+      clubes: clubes.filter(c => c.pEst > 0 && c.uf === u || (c.uf === u && (c.pA27 > 0 || c.pC2 > 0) && U.est.ordem.includes(c.n))) };
+  });
+  const a27 = clubes.filter(c => c.pA27 > 0).sort((x, y) => y.pA27 - x.pA27);
+  return {
+    nDraws: nD, clubes, a27, c2, ufs,
+    garantidos: Object.keys(garantido).length,
+    a27Certos: A26.concat(B26).filter(ehCertA27).length,
+    c2Certos: c2.filter(x => x.certo).length,
+    estCertos: Object.values(estCertos).reduce((s, l) => s + l.length, 0),
+    rncParcial: !rncProj || rncProj.parcial
+  };
+}
 function build2027Alloc(dashD, dashC, rncProj, cfg) {
   const C = Object.assign({}, SD27_CFG, cfg || {});
   // A fila pode vir por cfg (o editor passa a sua versão ao vivo); sem cfg, mescla o
@@ -19029,6 +19255,58 @@ function SerieDSim({
 // ============================================================================
 // COPA DO BRASIL — bracket 32 times, ida/volta + final neutra
 // ============================================================================
+// v4.86: sub-aba "2027" da Copa do Brasil — quem já tem vaga, em que fase entra, o que falta.
+function CopaBrasil2027({ dash, mergedRes }) {
+  const h = React.createElement;
+  const [soAbertas, setSoAbertas] = useState(false);
+  const rnc = useMemo(() => { try { return dash ? buildRNC(dash) : null; } catch (e) { return null; } }, [dash]);
+  const R = useMemo(() => { try { return buildCB2027(dash, rnc, mergedRes && mergedRes.A, mergedRes && mergedRes.B); } catch (e) { console.error('CB2027', e); return null; } }, [dash, rnc, mergedRes]);
+  const box = (title, body, sub) => h('div', { className: 'bg-slate-900/40 rounded-xl p-3 border border-slate-700/40 mb-3' }, h('h3', { className: 'text-sm font-semibold text-emerald-300' }, title), sub ? h('p', { className: 'text-[10px] text-slate-500 mb-2' }, sub) : h('div', { className: 'mb-2' }), body);
+  if (!R) return h('div', { className: 'bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50' }, h('p', { className: 'text-slate-400 text-center py-8' }, 'Rode "⚡ Simular Tudo" com as Séries A, B e C marcadas: a composição da Copa do Brasil 2027 depende de quem fica na Série A e de quem ganha a Série C.'));
+  const pct = v => v == null ? '–' : v >= 99.95 ? '100%' : v < 0.5 ? '<1%' : Math.round(v) + '%';
+  const fase = c => c.pA27 >= 99.95 ? '5ª' : c.pC2 >= 99.95 ? '3ª' : c.pEst >= 99.95 ? (c.p2a >= 99.5 ? '2ª' : c.p2a <= 0.5 ? '1ª' : '2ª ' + pct(c.p2a) + ' · 1ª ' + pct(100 - c.p2a)) : [c.pA27 > 0 ? '5ª ' + pct(c.pA27) : null, c.pC2 > 0 ? '3ª ' + pct(c.pC2) : null, c.pEst > 0 ? (c.p2a >= 50 ? '2ª' : '1ª') + ' ' + pct(c.pEst) : null].filter(Boolean).join(' · ');
+  const chip = (c, cls) => h('span', { key: c.n, className: 'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] mr-1 mb-1 border ' + cls, title: (c.via || []).join(' · ') }, h(TN, { name: c.n }), h('span', { className: 'text-[9px] text-slate-400 ml-1' }, fase(c)));
+  const G = R.clubes.filter(c => c.garantido);
+  const g5 = G.filter(c => c.pA27 >= 99.95), g3 = G.filter(c => c.pC2 >= 99.95), gE = G.filter(c => c.pEst >= 99.95), gX = G.filter(c => c.pA27 < 99.95 && c.pC2 < 99.95 && c.pEst < 99.95);
+  // Cada garantido ocupa exatamente uma das 128 vagas, então o que falta é 128 − garantidos.
+  const faltam = 128 - G.length;
+  const resumo = h('div', { className: 'grid grid-cols-3 sm:grid-cols-6 gap-2 mb-3' },
+    [['Garantidos', G.length, '/ 128', 'text-emerald-300'], ['5ª fase', g5.length, '/ 20', 'text-blue-300'], ['3ª fase', g3.length, '/ 6', 'text-amber-300'], ['1ª ou 2ª fase', gE.length, '', 'text-teal-300'], ['Fase a definir', gX.length, '', 'text-fuchsia-300'], ['Vagas em aberto', faltam, '', 'text-amber-300']].map(([l, v, t, cor], i) => h('div', { key: i, className: 'bg-slate-900/50 rounded-lg p-2 border ' + (i === 5 ? 'border-amber-600/40' : 'border-slate-700/40') },
+      h('div', { className: 'text-[10px] uppercase tracking-wide text-slate-500' }, l),
+      h('div', { className: 'text-lg font-bold ' + cor }, v, h('span', { className: 'text-xs text-slate-500 font-normal' }, ' ' + t)))));
+  const secGarantidos = box('Já classificados', h('div', null,
+    g5.length ? h('div', { className: 'mb-2' }, h('div', { className: 'text-[10px] uppercase text-blue-300 mb-1' }, '5ª fase — Série A 2027 (' + g5.length + ')'), g5.map(c => chip(c, 'bg-blue-900/30 border-blue-500/30'))) : null,
+    g3.length ? h('div', { className: 'mb-2' }, h('div', { className: 'text-[10px] uppercase text-amber-300 mb-1' }, '3ª fase — campeões nacionais e regionais (' + g3.length + ')'), g3.map(c => chip(c, 'bg-amber-900/30 border-amber-500/30'))) : null,
+    gE.length ? h('div', { className: 'mb-2' }, h('div', { className: 'text-[10px] uppercase text-emerald-300 mb-1' }, 'Estaduais — 1ª ou 2ª fase pelo RNC 2027 projetado (' + gE.length + ')'), gE.slice().sort((a, b) => a.uf.localeCompare(b.uf) || a.n.localeCompare(b.n)).map(c => chip(c, 'bg-emerald-900/20 border-emerald-500/30'))) : null,
+    gX.length ? h('div', null, h('div', { className: 'text-[10px] uppercase text-fuchsia-300 mb-1' }, 'Classificados, fase ainda depende de outro resultado (' + gX.length + ')'), gX.map(c => chip(c, 'bg-fuchsia-900/20 border-fuchsia-500/30'))) : null),
+    'Garantido = classificado em qualquer cenário ainda possível (conta de pontos, não Monte Carlo). Ao lado, a fase de entrada; quando depende de resultado pendente, a chance de cada uma. A divisão 1ª/2ª fase usa o RNC 2027 projetado — o oficial sai em dezembro.');
+  const distRow = (x, i) => h('span', { key: i, className: 'mr-2 whitespace-nowrap' }, x.n ? h(TN, { name: x.n }) : h('span', { className: 'text-slate-500 italic' }, 'sem dono'), h('span', { className: 'text-slate-400 font-mono text-[10px] ml-1' }, pct(x.p)));
+  const secA = box('5ª fase — Série A 2027 (20 vagas)', h('div', { className: 'flex flex-wrap gap-y-1 text-xs' }, R.a27.filter(c => !(c.garantido === 'Série A 2027')).map((c, i) => h('span', { key: c.n, className: 'mr-3 whitespace-nowrap' }, h(TN, { name: c.n }), h('span', { className: 'font-mono text-[10px] ml-1 ' + (c.pA27 >= 50 ? 'text-blue-300' : 'text-slate-400') }, pct(c.pA27)), c.garantido ? h('span', { className: 'text-[9px] text-emerald-400 ml-1', title: 'se não ficar na Série A, entra pelo ' + c.garantido }, '✓CdB') : null))),
+    'Os 16 que ficam na Série A + os 4 que sobem da B. % = chance de estar na Série A 2027 (Monte Carlo); ' + R.a27Certos + ' já têm a vaga garantida na conta de pontos. ✓CdB = garantido na Copa do Brasil por outra via se não subir/ficar.');
+  const secC2 = box('3ª fase — campeões de 2026 (6 vagas)', h('div', { className: 'space-y-1' }, R.c2.map(x => h('div', { key: x.k, className: 'text-xs flex flex-wrap items-baseline gap-1 border-b border-slate-700/30 py-1' },
+    h('span', { className: 'w-44 shrink-0 text-amber-300' }, x.k),
+    x.certo ? h('span', null, '✓ ', h(TN, { name: x.certo })) : x.st !== 'ok' ? h('span', { className: 'text-slate-400' }, 'em disputa' + (x.dt ? ' — até ' + x.dt.slice(8, 10) + '/' + x.dt.slice(5, 7) : '') + (x.obs ? ' · ' + x.obs : '')) : h('span', { className: 'flex flex-wrap' }, x.dist.slice(0, 6).map(distRow))))),
+    'Copa regional cujo campeão fica na Série A 2027 passa a vaga ao próximo da classificação final daquela copa; a Série C ainda está no quadrangular.');
+  const ufRows = R.ufs.filter(U => !soAbertas || U.abertas > 0);
+  const secUF = box('Estaduais — 102 vagas por federação', h('div', null,
+    h('label', { className: 'text-[11px] text-slate-400 flex items-center gap-1 mb-2' }, h('input', { type: 'checkbox', checked: soAbertas, onChange: e => setSoAbertas(e.target.checked) }), 'Só estados com vaga em aberto'),
+    h('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-2' }, ufRows.map(U => h('div', { key: U.u, className: 'bg-slate-900/30 rounded-lg p-2 border ' + (U.abertas ? 'border-amber-700/30' : 'border-slate-700/30') },
+      h('div', { className: 'flex items-baseline justify-between mb-1' },
+        h('span', { className: 'text-[12px] font-semibold text-teal-300' }, U.u + ' · ' + U.vagas + ' vagas'),
+        h('span', { className: 'text-[10px] ' + (U.abertas ? 'text-amber-300' : 'text-emerald-400') }, U.abertas ? U.abertas + ' em aberto' : 'completo')),
+      h('div', { className: 'text-[10px] text-slate-500 mb-1' }, U.est.comp + ' (' + U.est.vagas + ')' + U.copas.map(c => ' + ' + c.nome + ' (' + c.vagas + ')').join('') + (U.est.src === 'I' ? ' · ordem inferida' : '')),
+      h('table', { className: 'w-full text-[11px]' }, h('tbody', null, U.clubes.slice(0, 12).map(c => h('tr', { key: c.n, className: 'border-b border-slate-700/20' },
+        h('td', { className: 'py-0.5' }, h(TN, { name: c.n })),
+        h('td', { className: 'text-right font-mono ' + (c.garantido ? 'text-emerald-300' : 'text-slate-300') }, c.garantido ? '✓' : pct(c.p)),
+        h('td', { className: 'text-right text-[10px] text-slate-400 pl-2' }, fase(c)))))),
+      U.copas.filter(c => c.st !== 'ok').map(c => h('div', { key: c.nome, className: 'text-[10px] text-amber-300/90 mt-1' }, '⏳ ' + c.nome + (c.dt ? ' — decisão até ' + c.dt.slice(8, 10) + '/' + c.dt.slice(5, 7) : '') + (c.cand && c.cand.length ? ': ' + c.cand.join(', ') : ''))),
+      U.curta > 0.001 ? h('div', { className: 'text-[10px] text-red-300/80 mt-1' }, 'Classificação do estadual curta demais em alguns cenários — vaga sem dono.') : null)))),
+    'Cada estado chama a classificação geral do estadual pulando quem já entrou pela Série A 2027 ou como campeão (Critério 2); por isso a vaga "desce" quando um clube do estado sobe à Série A. % = chance de estar na Copa do Brasil 2027 por qualquer via.');
+  return h('div', { className: 'bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50' },
+    h('h2', { className: 'text-base font-semibold text-emerald-300 mb-1' }, 'Copa do Brasil 2027 — 128 clubes'),
+    h('p', { className: 'text-[10px] text-slate-500 mb-3' }, 'Regras do REC da Copa do Brasil 2026 (§17, vale para 2027). Série A 2027 entra na 5ª fase; campeões das Copas do Nordeste, Norte, Centro-Oeste e Sul-Sudeste e das Séries C e D de 2026 na 3ª; as 102 vagas estaduais na 2ª (66 melhores no RNC 2027) ou na 1ª (36 piores). ' + R.nDraws.toLocaleString() + ' cenários do Monte Carlo do dashboard.'),
+    resumo, secGarantidos, secA, secC2, secUF);
+}
 function CopaBrasilSim({
   cfg,
   allElos,
@@ -19038,7 +19316,9 @@ function CopaBrasilSim({
   initialEo,
   initialDrift,
   cbAuto,
-  cbKo // v4.84: só para re-renderizar quando o results.json assentar (CB_AUTO.ko é global)
+  cbKo, // v4.84: só para re-renderizar quando o results.json assentar (CB_AUTO.ko é global)
+  dash, // v4.86: sub-aba 2027
+  mergedRes
 }) {
   const [aba, setAba] = useState('ratings');
   const [nS, setNS] = useState(1000);
@@ -19508,6 +19788,9 @@ function CopaBrasilSim({
   }, {
     id: 'simU',
     l: '1 Sim'
+  }, {
+    id: 'cb27',
+    l: '2027'
   }].map(t => /*#__PURE__*/React.createElement("button", {
     key: t.id,
     onClick: () => setAba(t.id),
@@ -19784,7 +20067,7 @@ function CopaBrasilSim({
     className: "text-xs text-red-400"
   }, "Limpar")), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500 mt-2"
-  }, "ida: mandante = time da esquerda | volta: mandante = time da direita"), koRealSec), aba === 'arvore' && cbArvore, aba === 'bracket' && /*#__PURE__*/React.createElement("div", {
+  }, "ida: mandante = time da esquerda | volta: mandante = time da direita"), koRealSec), aba === 'arvore' && cbArvore, aba === 'cb27' && /*#__PURE__*/React.createElement(CopaBrasil2027, { dash: dash, mergedRes: mergedRes }), aba === 'bracket' && /*#__PURE__*/React.createElement("div", {
     className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"
   }, /*#__PURE__*/React.createElement("h2", {
     className: "text-base font-semibold text-emerald-300 mb-3"
@@ -21639,7 +21922,9 @@ function SimuladorUnificado() {
     initialEo: dash?.eo,
     initialDrift: dash?.drift,
     cbAuto: resMeta && resMeta.cbR16 || null,
-    cbKo: resMeta && resMeta.cbKo || null
+    cbKo: resMeta && resMeta.cbKo || null,
+    dash: dash,
+    mergedRes: mergedRes
   }), tab === 'rnc' && /*#__PURE__*/React.createElement(RankingNacionalSim, {
     dash: dash
   }), tab === 'evolucao' && /*#__PURE__*/React.createElement(EvolucaoSim, {
