@@ -28,7 +28,7 @@ This applies to `CLAUDE.md` itself: if this file contradicts the code, verify ag
 **`index.html` is the source.** There is no build step and no `.jsx` any more.
 
 - `index.html` / `brasileirao-2026.html` — kept byte-identical; `index.html` is what Pages
-  serves. This transpiled HTML is the source of truth: it is at **v4.84** and every change
+  serves. This transpiled HTML is the source of truth: it is at **v4.85** and every change
   since v4.48 was made by hand, directly in `React.createElement` form.
 - `results.json` — automation output, **written by the Action, not by hand** (see *Automatic
   result updates*). Never hand-edit the `results`/`ko_d`/`cb`/`quad_c` arrays and never commit an
