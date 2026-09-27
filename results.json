@@ -1,13 +1,14 @@
 {
   "schema": 2,
-  "updated_at": "2026-09-27T10:09:46.064Z",
+  "updated_at": "2026-09-27T20:12:54.247Z",
   "last_run": {
-    "at": "2026-09-27T10:09:46.064Z",
-    "added": 0,
+    "at": "2026-09-27T20:12:54.247Z",
+    "corrigidos": 1,
+    "added": 6,
     "ko_added": 0,
-    "quad_added": 7,
+    "quad_added": 0,
     "cb_added": 0,
-    "total_new": 7,
+    "total_new": 6,
     "dates": 552,
     "dates_changed": false
   },
@@ -2177,10 +2178,11 @@
       "rodada": 25,
       "casa": "Fortaleza",
       "gc": 1,
-      "gf": 0,
+      "gf": 1,
       "fora": "Operário-PR",
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_02_09_a5a49e0833.pdf",
-      "confirmed_at": "2026-09-04T13:22:29.037Z"
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260612/rodada/25/fase",
+      "confirmed_at": "2026-09-27T20:12:37.533Z",
+      "corrigido_de": "1-0"
     },
     {
       "serie": "B",
@@ -2911,6 +2913,66 @@
       "fora": "Operário-PR",
       "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_23_09_419c11fc88.pdf",
       "confirmed_at": "2026-09-25T14:30:34.001Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 30,
+      "casa": "Novorizontino",
+      "gc": 0,
+      "gf": 0,
+      "fora": "São Bernardo",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260612/rodada/30/fase",
+      "confirmed_at": "2026-09-27T20:12:37.533Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 30,
+      "casa": "Vila Nova",
+      "gc": 2,
+      "gf": 0,
+      "fora": "Londrina",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260612/rodada/30/fase",
+      "confirmed_at": "2026-09-27T20:12:37.533Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 30,
+      "casa": "Operário-PR",
+      "gc": 2,
+      "gf": 2,
+      "fora": "Ceará",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260612/rodada/30/fase",
+      "confirmed_at": "2026-09-27T20:12:37.533Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 30,
+      "casa": "Náutico",
+      "gc": 3,
+      "gf": 1,
+      "fora": "Sport",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260612/rodada/30/fase",
+      "confirmed_at": "2026-09-27T20:12:37.533Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 30,
+      "casa": "Goiás",
+      "gc": 0,
+      "gf": 1,
+      "fora": "Atlético-GO",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260612/rodada/30/fase",
+      "confirmed_at": "2026-09-27T20:12:37.533Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 30,
+      "casa": "Criciúma",
+      "gc": 3,
+      "gf": 0,
+      "fora": "Avaí",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260612/rodada/30/fase",
+      "confirmed_at": "2026-09-27T20:12:37.533Z"
     }
   ],
   "ko_d": [
