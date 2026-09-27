@@ -31,7 +31,16 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.87
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.88
+// v4.88 (27/09/2026): BARRAS DE SUB-ABAS NO CELULAR. As barras de sub-abas (flex com botões
+//        flex-1) não quebravam linha: no celular (360 px) a da Copa BR passava 11 px da tela e
+//        cortava o "2027" (v4.86), e a das Séries B/C passava 51 px e cortava o "1 Simulação" (a
+//        v4.84 somou "Próxima fase" e "Chaves"). As seis barras desse estilo ganharam flex-wrap:
+//        quando não cabem, os botões descem para uma 2ª linha; no desktop nada muda. Medido com
+//        uma sonda que lista todo elemento além da largura da tela, com o app num iframe de 375 px
+//        (o Edge headless não abre janela abaixo de ~480 px, então só o iframe dá o viewport real).
+//        Config: as linhas de "Perfis Alpha" e "Gols por jogo" (rótulo + 3 campos) vazavam até 108 px
+//        no celular — já antes desta versão; ganharam flex-wrap também.
 // v4.87 (27/09/2026): COPA DO BRASIL 2027 — VAGAS EM ABERTO À VISTA.
 //        Clubes que só aparecem na CdB 2027 (Capivariano, Anapolina, Sobradinho...) ficavam sem a
 //        UF discreta do TN: ufOf lê o UF_MAP, que não os conhecia. O bloco CB27 agora completa o
@@ -239,7 +248,7 @@ const {
 //        o slot "em disputa", até uma rodada de pesquisa notar. APP_VERSION vira const
 //        colada neste cabeçalho — o rodapé já ficou preso duas vezes (v4.59, v4.73) por
 //        ser string solta.
-const APP_VERSION = 'v4.87';
+const APP_VERSION = 'v4.88';
 // v4.77 (19/08/2026): FILA DE SUCESSÃO nos 27 estados (antes 14 com fonte, 11 sem folga
 //        alguma sobre a cota) + coluna Copa do Brasil 2027 na aba Ranking CBF.
 //        A rodada de pesquisa corrigiu a ordem campeão/vice em SETE estados (AC, AP, MS,
@@ -15200,7 +15209,7 @@ const Classificados2027View = ({
       " — não levantei nomes suficientes nesses estados. A vaga fica com o estado mesmo assim; ela ",
       h("span", { className: "underline" }, "não"), " vai para o Ranking por omissão."));
 
-  const seletor = h("div", { className: "flex gap-1 mb-3 bg-slate-800/40 rounded-xl p-1 max-w-2xl" },
+  const seletor = h("div", { className: "flex flex-wrap gap-1 mb-3 bg-slate-800/40 rounded-xl p-1 max-w-2xl" },
     [{ id: 'estados', l: 'Por estado' }, { id: 'comp', l: '2026 vs 2027' },
      { id: 'vagas', l: 'Quem pega vaga' }, { id: 'sorteio', l: 'Sorteio dos grupos' },
      { id: 'fila', l: 'Fila estadual' }].map(t =>
@@ -15853,7 +15862,7 @@ function SettingsTab({
     className: "text-sm font-bold text-emerald-300 mb-3"
   }, "Perfis Alpha (\u03B1_atk / \u03B1_def / K)"), Object.entries(cfg.alphas).map(([k, a]) => /*#__PURE__*/React.createElement("div", {
     key: k,
-    className: "flex items-center gap-3 mb-2"
+    className: "flex flex-wrap items-center gap-x-3 gap-y-1 mb-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-slate-300 w-24 font-medium"
   }, a.label), /*#__PURE__*/React.createElement(Inp, {
@@ -15874,7 +15883,7 @@ function SettingsTab({
     className: "text-xs text-slate-500 mb-2"
   }, "\u03BB_casa = total \xD7 pesoCasa | \u03BB_fora = total \xD7 (1 \u2212 pesoCasa)"), ['A', 'B', 'C', 'D', 'CB'].map(s => /*#__PURE__*/React.createElement("div", {
     key: s,
-    className: "flex items-center gap-3 mb-2"
+    className: "flex flex-wrap items-center gap-x-3 gap-y-1 mb-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-slate-300 w-16 font-medium"
   }, s === 'CB' ? 'Copa BR' : `Série ${s}`), /*#__PURE__*/React.createElement(Inp, {
@@ -16962,7 +16971,7 @@ function LeagueSim({
     onClick: doSU,
     className: "px-4 py-1.5 bg-slate-700 rounded-lg text-xs border border-slate-600 hover:bg-slate-600 transition-colors"
   }, "1 Sim r\xE1pido")), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-1 mb-3 bg-slate-800/40 rounded-xl p-1"
+    className: "flex flex-wrap gap-1 mb-3 bg-slate-800/40 rounded-xl p-1"
   }, [{
     id: 'ratings',
     l: 'Ratings'
@@ -18167,7 +18176,7 @@ function SerieDSim({
     onClick: doSU,
     className: "px-4 py-1.5 bg-slate-700 rounded-lg text-xs border border-slate-600 hover:bg-slate-600 transition-colors"
   }, "1 Sim r\xE1pido")), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-1 mb-3 bg-slate-800/40 rounded-xl p-1"
+    className: "flex flex-wrap gap-1 mb-3 bg-slate-800/40 rounded-xl p-1"
   }, [{
     id: 'ratings',
     l: 'Ratings'
@@ -18519,7 +18528,7 @@ function SerieDSim({
       className: "text-center font-mono"
     }, r.GP))))));
   })()), aba === 'grupos' && /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-1 mb-3 bg-slate-800/40 rounded-xl p-1 max-w-sm"
+    className: "flex flex-wrap gap-1 mb-3 bg-slate-800/40 rounded-xl p-1 max-w-sm"
   }, [{
     id: 'now',
     l: 'Classificação atual'
@@ -19816,7 +19825,7 @@ function CopaBrasilSim({
     onClick: doSU,
     className: "px-4 py-1.5 bg-slate-700 rounded-lg text-xs border border-slate-600 hover:bg-slate-600 transition-colors"
   }, "1 Sim r\xE1pido")), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-1 mb-3 bg-slate-800/40 rounded-xl p-1"
+    className: "flex flex-wrap gap-1 mb-3 bg-slate-800/40 rounded-xl p-1"
   }, [{
     id: 'ratings',
     l: 'Ratings'
@@ -20790,7 +20799,7 @@ function RankingNacionalSim({
     proj.parcial && h("p", { className: "text-[11px] text-amber-400 mt-1" },
       "⚠️ Nem todas as séries foram simuladas: quem ficou de fora entra com P26 = 0 e aparece caindo no ranking."));
 
-  const abas = h("div", { className: "flex gap-1 mb-3 bg-slate-800/40 rounded-xl p-1 max-w-sm" },
+  const abas = h("div", { className: "flex flex-wrap gap-1 mb-3 bg-slate-800/40 rounded-xl p-1 max-w-sm" },
     [{ id: 'proj', l: 'Projeção' }, { id: 'dados', l: 'Dados' }].map(t =>
       h("button", {
         key: t.id, onClick: () => setVis(t.id),

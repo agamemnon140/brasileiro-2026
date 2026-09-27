@@ -28,7 +28,7 @@ This applies to `CLAUDE.md` itself: if this file contradicts the code, verify ag
 **`index.html` is the source.** There is no build step and no `.jsx` any more.
 
 - `index.html` / `brasileirao-2026.html` — kept byte-identical; `index.html` is what Pages
-  serves. This transpiled HTML is the source of truth: it is at **v4.87** and every change
+  serves. This transpiled HTML is the source of truth: it is at **v4.88** and every change
   since v4.48 was made by hand, directly in `React.createElement` form.
 - `results.json` — automation output, **written by the Action, not by hand** (see *Automatic
   result updates*). Never hand-edit the `results`/`ko_d`/`cb`/`quad_c` arrays and never commit an
@@ -71,7 +71,7 @@ There is no test suite or linter. Two mechanisms:
   `simMC_D_single`. Boundaries are textual markers, never line numbers — a `slice(0, 1146)`
   rots silently, which is exactly what happened to the previous harnesses.
   `node scripts/validate_ufdist.cjs` should print `RESULT: PASS`.
-- **Screenshots** — `.claude/skills/verify/` documents a headless-Edge recipe. Stubbing
+- **Screenshots** — `.claude/skills/verify/` documents a headless-Edge recipe. For phone widths, load the test copy inside an `<iframe style="width:375px">`: headless Edge will not open a window narrower than ~480 px, so only an iframe gives Tailwind a real phone viewport (a narrowed `#root` keeps the desktop breakpoints and exaggerates overflow). A probe that lists every element whose right edge passes `documentElement.clientWidth` (skipping those inside overflow-x containers) is how the v4.88 overflow was found. Stubbing
   `window.fetch` in a scratchpad copy of the HTML is the way to exercise
   `results.json`-dependent UI without a live file.
 
