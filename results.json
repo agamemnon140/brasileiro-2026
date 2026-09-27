@@ -1,15 +1,15 @@
 {
   "schema": 2,
-  "updated_at": "2026-09-25T14:31:00.885Z",
+  "updated_at": "2026-09-27T10:09:46.064Z",
   "last_run": {
-    "at": "2026-09-25T14:31:00.885Z",
-    "added": 2,
+    "at": "2026-09-27T10:09:46.064Z",
+    "added": 0,
     "ko_added": 0,
-    "quad_added": 0,
-    "cb_added": 8,
-    "total_new": 10,
+    "quad_added": 7,
+    "cb_added": 0,
+    "total_new": 7,
     "dates": 552,
-    "dates_changed": true
+    "dates_changed": false
   },
   "results": [
     {
@@ -3731,7 +3731,7 @@
       "gf": 1,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
       "confirmed_at": "2026-09-11T13:20:20.373Z"
     },
     {
@@ -3745,7 +3745,7 @@
       "gf": 0,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
       "confirmed_at": "2026-09-11T13:20:20.373Z"
     },
     {
@@ -3759,7 +3759,7 @@
       "gf": 1,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
       "confirmed_at": "2026-09-14T19:04:07.580Z"
     },
     {
@@ -3773,7 +3773,7 @@
       "gf": 1,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
       "confirmed_at": "2026-09-14T19:04:07.580Z"
     },
     {
@@ -3783,12 +3783,12 @@
       "data": "19/09",
       "casa": "Maringá",
       "fora": "Botafogo-PB",
-      "gc": null,
-      "gf": null,
+      "gc": 2,
+      "gf": 0,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
-      "confirmed_at": null
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
+      "confirmed_at": "2026-09-27T10:09:44.097Z"
     },
     {
       "fase": "Q",
@@ -3797,12 +3797,12 @@
       "data": "20/09",
       "casa": "Santa Cruz",
       "fora": "Floresta",
-      "gc": null,
-      "gf": null,
+      "gc": 1,
+      "gf": 0,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
-      "confirmed_at": null
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
+      "confirmed_at": "2026-09-27T10:09:44.097Z"
     },
     {
       "fase": "Q",
@@ -3811,12 +3811,12 @@
       "data": "26/09",
       "casa": "Botafogo-PB",
       "fora": "Maringá",
-      "gc": null,
-      "gf": null,
+      "gc": 0,
+      "gf": 0,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
-      "confirmed_at": null
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
+      "confirmed_at": "2026-09-27T10:09:44.097Z"
     },
     {
       "fase": "Q",
@@ -3825,12 +3825,12 @@
       "data": "26/09",
       "casa": "Floresta",
       "fora": "Santa Cruz",
-      "gc": null,
-      "gf": null,
+      "gc": 1,
+      "gf": 1,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
-      "confirmed_at": null
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
+      "confirmed_at": "2026-09-27T10:09:44.097Z"
     },
     {
       "fase": "Q",
@@ -3843,7 +3843,7 @@
       "gf": null,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
       "confirmed_at": null
     },
     {
@@ -3857,7 +3857,7 @@
       "gf": null,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
       "confirmed_at": null
     },
     {
@@ -3871,7 +3871,7 @@
       "gf": null,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
       "confirmed_at": null
     },
     {
@@ -3885,7 +3885,7 @@
       "gf": null,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
       "confirmed_at": null
     },
     {
@@ -3899,7 +3899,7 @@
       "gf": 3,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
       "confirmed_at": "2026-09-11T13:20:20.373Z"
     },
     {
@@ -3913,7 +3913,7 @@
       "gf": 2,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
       "confirmed_at": "2026-09-11T13:20:20.373Z"
     },
     {
@@ -3927,7 +3927,7 @@
       "gf": 2,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
       "confirmed_at": "2026-09-14T19:04:07.580Z"
     },
     {
@@ -3941,7 +3941,7 @@
       "gf": 0,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
       "confirmed_at": "2026-09-14T19:04:07.580Z"
     },
     {
@@ -3951,12 +3951,12 @@
       "data": "20/09",
       "casa": "Ferroviária",
       "fora": "Brusque",
-      "gc": null,
-      "gf": null,
+      "gc": 3,
+      "gf": 2,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
-      "confirmed_at": null
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
+      "confirmed_at": "2026-09-27T10:09:44.097Z"
     },
     {
       "fase": "Q",
@@ -3965,12 +3965,12 @@
       "data": "20/09",
       "casa": "Paysandu",
       "fora": "Inter de Limeira",
-      "gc": null,
-      "gf": null,
+      "gc": 2,
+      "gf": 2,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
-      "confirmed_at": null
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
+      "confirmed_at": "2026-09-27T10:09:44.097Z"
     },
     {
       "fase": "Q",
@@ -3983,7 +3983,7 @@
       "gf": null,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
       "confirmed_at": null
     },
     {
@@ -3993,12 +3993,12 @@
       "data": "26/09",
       "casa": "Inter de Limeira",
       "fora": "Paysandu",
-      "gc": null,
-      "gf": null,
+      "gc": 2,
+      "gf": 0,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
-      "confirmed_at": null
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
+      "confirmed_at": "2026-09-27T10:09:44.097Z"
     },
     {
       "fase": "Q",
@@ -4011,7 +4011,7 @@
       "gf": null,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
       "confirmed_at": null
     },
     {
@@ -4025,7 +4025,7 @@
       "gf": null,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
       "confirmed_at": null
     },
     {
@@ -4039,7 +4039,7 @@
       "gf": null,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
       "confirmed_at": null
     },
     {
@@ -4053,7 +4053,7 @@
       "gf": null,
       "pen_c": null,
       "pen_f": null,
-      "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_C_2026_14_09_8fc02a8729.pdf",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
       "confirmed_at": null
     }
   ],
