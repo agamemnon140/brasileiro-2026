@@ -97,6 +97,55 @@ async function fetchGwebRound(edition, rodada) {
   const j = await fetchWithFallback(gwebUrl(edition, rodada), 'json');
   return j && Array.isArray(j.jogos) ? j.jogos : [];
 }
+// Fase de liga de A/B/C no GWEB (27/09/2026). Fonte AUTORITATIVA para placar: é o dado
+// estruturado da própria CBF, enquanto o placar do PDF passa por extração via modelo — que já
+// errou (Fortaleza 1×0 Operário-PR na R25 da B; o oficial é 1×1) e, como o writer nunca
+// sobrescreve placar gravado, o erro ficaria para sempre. Por isso este passe roda ANTES dos PDFs
+// e, ao contrário deles, CORRIGE placar divergente (com aviso no log). Na C só entra o "GRUPO A"
+// (1ª fase); os quadrangulares vão pelo fetchQuadCGweb.
+// Nomes por série: "Botafogo" é o do Rio na A e o Botafogo-SP na B.
+const GWEB_NORM_S = {
+  A: { 'Athletico Paranaense': 'Athletico-PR', 'Atlético Mineiro': 'Atlético-MG', 'Coritiba SAF': 'Coritiba', 'Santos FC': 'Santos', 'Vasco da Gama Saf': 'Vasco' },
+  B: { 'América': 'América-MG', 'Athletic SAF': 'Athletic', 'Atlético Goianiense Saf': 'Atlético-GO', 'Botafogo': 'Botafogo-SP', 'Fortaleza SAF': 'Fortaleza', 'Gremio Novorizontino - Saf': 'Novorizontino', 'Londrina SAF': 'Londrina', 'Operário': 'Operário-PR', 'Sport Recife': 'Sport', 'São Bernardo SAF': 'São Bernardo' },
+  C: {},
+};
+const gwebNormS = (serie, n) => norm(GWEB_NORM_S[serie][(n || '').trim()] || GWEB_NORM[(n || '').trim()] || n);
+// Jogo em andamento pode aparecer com placar parcial: só aceita placar de jogo que começou há
+// mais de 3 h (data dd/mm/aaaa + hora HH:MM, horário de Brasília).
+const gwebEncerrado = (x) => {
+  const d = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(x.data || '').trim());
+  if (!d) return false;
+  const h = /^(\d{1,2}):(\d{2})/.exec(String(x.hora || '').trim()) || [null, '23', '59'];
+  const inicioUtc = Date.UTC(+d[3], +d[2] - 1, +d[1], +h[1] + 3, +h[2]);
+  return Date.now() > inicioUtc + 3 * 3600 * 1000;
+};
+async function fetchLigaGweb(serie) {
+  const nR = serie === 'C' ? 19 : 38;
+  const out = [], fora = new Set();
+  let emAndamento = 0;
+  for (let r = 1; r <= nR; r++) {
+    const grupos = await fetchGwebRound(GWEB_EDITION[serie], r);
+    for (const g of grupos) {
+      if (serie === 'C' && !/^GRUPO\s+A$/i.test(String(g.grupo || '').trim())) continue;
+      for (const x of g.jogo || []) {
+        const md = x.mandante || {}, vs = x.visitante || {};
+        if (md.gols == null || md.gols === '' || vs.gols == null || vs.gols === '') continue;
+        if (!gwebEncerrado(x)) { emAndamento++; continue; }
+        const casa = gwebNormS(serie, md.nome), fora_ = gwebNormS(serie, vs.nome);
+        const gc = Number(md.gols), gf = Number(vs.gols), rodada = Number(x.rodada) || r;
+        if (!SETS[serie].has(casa)) { fora.add(md.nome); continue; }
+        if (!SETS[serie].has(fora_)) { fora.add(vs.nome); continue; }
+        if (casa === fora_ || !Number.isInteger(gc) || !Number.isInteger(gf) || gc < 0 || gc > 14 || gf < 0 || gf > 14) continue;
+        if (!Number.isInteger(rodada) || rodada < 1 || rodada > 38) continue;
+        out.push({ serie, rodada, casa, gc, gf, fora: fora_, source: gwebUrl(GWEB_EDITION[serie], rodada) });
+      }
+    }
+  }
+  if (fora.size) console.error(`::warning::Série ${serie} (GWEB): nome(s) fora da lista do app, jogo ignorado: ${[...fora].join(', ')}`);
+  if (emAndamento) console.log(`Série ${serie} (GWEB): ${emAndamento} jogo(s) ainda em andamento ignorado(s).`);
+  return out;
+}
+
 // 2ª fase da C no GWEB: nas rodadas 1-6, "GRUPO A" é a 1ª fase (10 jogos/rodada) e "GRUPO B"/
 // "GRUPO C" são os quadrangulares (2 jogos/rodada cada); a final deve chegar como grupo "FINAL"
 // (formato ainda não visto — vai para fase FINAL com a rodada do próprio registro). Devolve as
@@ -538,6 +587,26 @@ async function savePdfCache(urls) {
 
 async function main() {
   // QUAD_GWEB_DRY=1: só consulta o GWEB da 2ª fase da C e imprime o que viria (sem API, sem gravar).
+  if (process.env.LIGA_GWEB_DRY) {
+    const raw = JSON.parse(await readFile(RESULTS_PATH, 'utf8'));
+    const ex = new Map((raw.results || []).map((r) => [dedupKey(r), r]));
+    const bi = await loadBuiltIn();
+    for (const serie of ['A', 'B', 'C']) {
+      const rows = await fetchLigaGweb(serie);
+      let novos = 0, emb = 0;
+      const fix = [];
+      for (const c of rows) {
+        const k = dedupKey(c);
+        if (bi[serie].has(k)) { emb++; continue; }
+        const p = ex.get(k);
+        if (!p) novos++;
+        else if (Number(p.gc) !== c.gc || Number(p.gf) !== c.gf) fix.push(`R${c.rodada} ${c.casa} x ${c.fora}: gravado ${p.gc}-${p.gf} → oficial ${c.gc}-${c.gf}`);
+      }
+      console.log(`Série ${serie}: ${rows.length} encerrados na API · ${emb} embutidos · ${novos} novos · ${fix.length} a corrigir`);
+      fix.forEach((f) => console.log('   ' + f));
+    }
+    return;
+  }
   if (process.env.QUAD_GWEB_DRY) {
     const qs = await fetchQuadCGweb();
     for (const q of qs) console.log(`${q.fase} ${q.grupo || '-'} R${q.rodada} ${q.data || '--/--'}  ${q.casa} ${q.gc == null ? 'x' : q.gc + ' x ' + q.gf} ${q.fora}${q.pen_c != null ? ' (pên ' + q.pen_c + '-' + q.pen_f + ')' : ''}`);
@@ -628,6 +697,30 @@ async function main() {
   const datesFresh = new Set();
 
   await runQuadCGweb();
+
+  // Fase de liga de A/B/C pela API da CBF (autoritativa; corrige placar divergente).
+  let ligaCorrigidos = 0;
+  const correcoes = [];
+  for (const serie of ['A', 'B', 'C']) {
+    let rows;
+    try { rows = await fetchLigaGweb(serie); }
+    catch (e) { console.error(`::warning::Série ${serie} (GWEB) falhou: ${e.message}`); continue; }
+    let novo = 0, fix = 0;
+    const now = new Date().toISOString();
+    for (const c of rows) {
+      const k = dedupKey(c);
+      if (builtIn[serie] && builtIn[serie].has(k)) continue; // embutido no app
+      const prev = byKey.get(k);
+      if (!prev) { byKey.set(k, { ...c, confirmed_at: now }); added++; novo++; }
+      else if (Number(prev.gc) !== c.gc || Number(prev.gf) !== c.gf) {
+        console.error(`::warning::Corrigido pela API da CBF: ${k} gravado ${prev.gc}-${prev.gf} → oficial ${c.gc}-${c.gf}`);
+        correcoes.push(`${k} ${prev.gc}-${prev.gf}→${c.gc}-${c.gf}`);
+        byKey.set(k, { ...prev, rodada: c.rodada, gc: c.gc, gf: c.gf, source: c.source, confirmed_at: now, corrigido_de: `${prev.gc}-${prev.gf}` });
+        ligaCorrigidos++; fix++;
+      } else unchanged++;
+    }
+    console.log(`Série ${serie} (GWEB): ${rows.length} jogo(s) encerrado(s) na API; +${novo} novo(s), ${fix} corrigido(s).`);
+  }
 
   for (const serie of ['A', 'B', 'C']) {
     const url = await findPdfUrl(serie);
@@ -839,7 +932,7 @@ async function main() {
   const canonD = (arr) => JSON.stringify(arr.map((d) => ({ serie: d.serie, rodada: d.rodada, casa: d.casa, fora: d.fora, data: d.data })));
   const datesChanged = canonD(mergedDates) !== canonD(existingDates);
 
-  console.log(`Resumo: +${added} liga + ${koAdded} mata-mata D + ${quadAdded} 2ª fase C novos, ${unchanged + koUnchanged + quadUnchanged} iguais, ${skippedBuiltIn + koSkipped} já embutidos no app, ${conflicts.length} conflito(s), ${mergedDates.length} data(s) remarcada(s)${datesChanged ? ' (MUDOU)' : ''}, +${cbAdded} Copa BR nova(s) (${mergedCb.filter((r) => r.gc != null).length}/${mergedCb.length} com placar${cbFixture ? ', +' + cbFixture + ' de chaveamento' : ''}), 2ª fase C: ${mergedQuad.filter((r) => r.gc != null).length}/${mergedQuad.length} disputado(s)${quadChanged ? ' (MUDOU)' : ''}.`);
+  console.log(`Resumo: ${ligaCorrigidos ? ligaCorrigidos + ' placar(es) corrigido(s) pela API da CBF, ' : ''}+${added} liga + ${koAdded} mata-mata D + ${quadAdded} 2ª fase C novos, ${unchanged + koUnchanged + quadUnchanged} iguais, ${skippedBuiltIn + koSkipped} já embutidos no app, ${conflicts.length} conflito(s), ${mergedDates.length} data(s) remarcada(s)${datesChanged ? ' (MUDOU)' : ''}, +${cbAdded} Copa BR nova(s) (${mergedCb.filter((r) => r.gc != null).length}/${mergedCb.length} com placar${cbFixture ? ', +' + cbFixture + ' de chaveamento' : ''}), 2ª fase C: ${mergedQuad.filter((r) => r.gc != null).length}/${mergedQuad.length} disputado(s)${quadChanged ? ' (MUDOU)' : ''}.`);
   if (canon(merged) === canon(existing) && canonKo(mergedKo) === canonKo(existingKo) && !datesChanged && !cbChanged && !quadChanged) { console.log('Sem mudanças em results.json.'); return; }
 
   // last_run: quantos jogos ESTA execução acrescentou, para o selo do app mostrar o
@@ -848,7 +941,7 @@ async function main() {
   // quad_added e cb_added ENTRAM em total_new: o app consome results.json.quad_c (v4.81) e
   // results.json.cb (oitavas desde a v4.64, quartas→final desde a v4.84) e o log da Config lista
   // esses jogos, então o selo "+N resultado(s)" bate com o que a UI mostra.
-  const lastRun = { at: new Date().toISOString(), added: added, ko_added: koAdded, quad_added: quadAdded, cb_added: cbAdded, total_new: added + koAdded + quadAdded + cbAdded, dates: mergedDates.length, dates_changed: datesChanged };
+  const lastRun = { at: new Date().toISOString(), corrigidos: ligaCorrigidos, added: added, ko_added: koAdded, quad_added: quadAdded, cb_added: cbAdded, total_new: added + koAdded + quadAdded + cbAdded, dates: mergedDates.length, dates_changed: datesChanged };
   await writeFile(RESULTS_PATH, JSON.stringify({ schema: 2, updated_at: new Date().toISOString(), last_run: lastRun, results: merged, ko_d: mergedKo, cb: mergedCb, quad_c: mergedQuad, dates: mergedDates }, null, 2) + '\n', 'utf8');
   console.log(`results.json atualizado (${merged.length} resultado(s) de liga + ${mergedKo.length} perna(s) de mata-mata D + ${mergedQuad.length} jogo(s) da 2ª fase C + ${mergedCb.length} da Copa BR + ${mergedDates.length} data(s) remarcada(s); last_run.total_new=${lastRun.total_new}).`);
 }
