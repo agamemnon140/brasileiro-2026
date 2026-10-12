@@ -1,16 +1,16 @@
 {
   "schema": 2,
-  "updated_at": "2026-10-09T15:56:50.267Z",
+  "updated_at": "2026-10-12T21:55:41.063Z",
   "last_run": {
-    "at": "2026-10-09T15:56:50.267Z",
+    "at": "2026-10-12T21:55:41.063Z",
     "corrigidos": 0,
-    "added": 20,
+    "added": 12,
     "ko_added": 0,
     "quad_added": 4,
     "cb_added": 0,
-    "total_new": 24,
+    "total_new": 16,
     "dates": 612,
-    "dates_changed": true
+    "dates_changed": false
   },
   "results": [
     {
@@ -3333,6 +3333,126 @@
       "fora": "Novorizontino",
       "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_Brasileiro_Serie_B_2026_09_10_25ec926739.pdf",
       "confirmed_at": "2026-10-09T15:56:25.630Z"
+    },
+    {
+      "serie": "A",
+      "rodada": 30,
+      "casa": "Vasco",
+      "gc": 0,
+      "gf": 0,
+      "fora": "Remo",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260611/rodada/30/fase",
+      "confirmed_at": "2026-10-12T21:54:44.741Z"
+    },
+    {
+      "serie": "A",
+      "rodada": 30,
+      "casa": "São Paulo",
+      "gc": 2,
+      "gf": 1,
+      "fora": "Vitória",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260611/rodada/30/fase",
+      "confirmed_at": "2026-10-12T21:54:44.741Z"
+    },
+    {
+      "serie": "A",
+      "rodada": 30,
+      "casa": "Atlético-MG",
+      "gc": 2,
+      "gf": 1,
+      "fora": "Santos",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260611/rodada/30/fase",
+      "confirmed_at": "2026-10-12T21:54:44.741Z"
+    },
+    {
+      "serie": "A",
+      "rodada": 30,
+      "casa": "Grêmio",
+      "gc": 1,
+      "gf": 1,
+      "fora": "Internacional",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260611/rodada/30/fase",
+      "confirmed_at": "2026-10-12T21:54:44.741Z"
+    },
+    {
+      "serie": "A",
+      "rodada": 30,
+      "casa": "Palmeiras",
+      "gc": 4,
+      "gf": 1,
+      "fora": "Corinthians",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260611/rodada/30/fase",
+      "confirmed_at": "2026-10-12T21:54:44.741Z"
+    },
+    {
+      "serie": "A",
+      "rodada": 30,
+      "casa": "Flamengo",
+      "gc": 1,
+      "gf": 0,
+      "fora": "Fluminense",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260611/rodada/30/fase",
+      "confirmed_at": "2026-10-12T21:54:44.741Z"
+    },
+    {
+      "serie": "A",
+      "rodada": 30,
+      "casa": "Bahia",
+      "gc": 1,
+      "gf": 0,
+      "fora": "Mirassol",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260611/rodada/30/fase",
+      "confirmed_at": "2026-10-12T21:54:44.741Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 33,
+      "casa": "Juventude",
+      "gc": 2,
+      "gf": 2,
+      "fora": "São Bernardo",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260612/rodada/33/fase",
+      "confirmed_at": "2026-10-12T21:55:17.681Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 33,
+      "casa": "Atlético-GO",
+      "gc": 1,
+      "gf": 1,
+      "fora": "Sport",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260612/rodada/33/fase",
+      "confirmed_at": "2026-10-12T21:55:17.681Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 33,
+      "casa": "Náutico",
+      "gc": 0,
+      "gf": 2,
+      "fora": "Vila Nova",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260612/rodada/33/fase",
+      "confirmed_at": "2026-10-12T21:55:17.681Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 33,
+      "casa": "Cuiabá",
+      "gc": 0,
+      "gf": 1,
+      "fora": "Avaí",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260612/rodada/33/fase",
+      "confirmed_at": "2026-10-12T21:55:17.681Z"
+    },
+    {
+      "serie": "B",
+      "rodada": 33,
+      "casa": "Operário-PR",
+      "gc": 0,
+      "gf": 2,
+      "fora": "Goiás",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260612/rodada/33/fase",
+      "confirmed_at": "2026-10-12T21:55:17.681Z"
     }
   ],
   "ko_d": [
@@ -4289,12 +4409,12 @@
       "data": "10/10",
       "casa": "Botafogo-PB",
       "fora": "Santa Cruz",
-      "gc": null,
-      "gf": null,
+      "gc": 1,
+      "gf": 0,
       "pen_c": null,
       "pen_f": null,
       "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
-      "confirmed_at": null
+      "confirmed_at": "2026-10-12T21:54:14.850Z"
     },
     {
       "fase": "Q",
@@ -4303,12 +4423,12 @@
       "data": "10/10",
       "casa": "Maringá",
       "fora": "Floresta",
-      "gc": null,
-      "gf": null,
+      "gc": 2,
+      "gf": 0,
       "pen_c": null,
       "pen_f": null,
       "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
-      "confirmed_at": null
+      "confirmed_at": "2026-10-12T21:54:14.850Z"
     },
     {
       "fase": "Q",
@@ -4454,9 +4574,37 @@
       "fase": "Q",
       "grupo": "C",
       "rodada": 6,
-      "data": "10/10",
+      "data": "11/10",
       "casa": "Brusque",
       "fora": "Paysandu",
+      "gc": 1,
+      "gf": 1,
+      "pen_c": null,
+      "pen_f": null,
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
+      "confirmed_at": "2026-10-12T21:54:14.850Z"
+    },
+    {
+      "fase": "Q",
+      "grupo": "C",
+      "rodada": 6,
+      "data": "11/10",
+      "casa": "Ferroviária",
+      "fora": "Inter de Limeira",
+      "gc": 2,
+      "gf": 0,
+      "pen_c": null,
+      "pen_f": null,
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
+      "confirmed_at": "2026-10-12T21:54:14.850Z"
+    },
+    {
+      "fase": "Q",
+      "grupo": "D",
+      "rodada": 1,
+      "data": "17/10",
+      "casa": "Maringá",
+      "fora": "Ferroviária",
       "gc": null,
       "gf": null,
       "pen_c": null,
@@ -4466,11 +4614,11 @@
     },
     {
       "fase": "Q",
-      "grupo": "C",
-      "rodada": 6,
-      "data": "10/10",
+      "grupo": "D",
+      "rodada": 2,
+      "data": "24/10",
       "casa": "Ferroviária",
-      "fora": "Inter de Limeira",
+      "fora": "Maringá",
       "gc": null,
       "gf": null,
       "pen_c": null,
