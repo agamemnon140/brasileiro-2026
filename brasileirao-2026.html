@@ -31,7 +31,20 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.88
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.89
+// v4.89 (12/10/2026): BOTÃO "ATUALIZAR" NO LUGAR DO "BUSCAR". O "🔍 Buscar" (Claude + web_search
+//        direto do navegador, com API key no cliente) estava sem uso desde que a GitHub Action passou
+//        a ler as Tabelas Detalhadas e a API de jogos da CBF. No lugar dele, "📡 Atualizar" abre o
+//        AtualizarPanel, que dispara a MESMA Action (workflow_dispatch de update-tables.yml) pela API
+//        do GitHub, acompanha o run (fila → passo em execução → conclusão), verifica se houve commit
+//        do results.json e espera o Pages publicar o arquivo novo (updated_at ≥ início do run) para
+//        oferecer "Recarregar". Se já houver um run em andamento (o agendado, p.ex.), acompanha esse
+//        em vez de enfileirar outro. Autenticação: token fine-grained do GitHub (só este repositório,
+//        Actions: leitura e escrita) guardado em localStorage['simUni_ghToken'] — só no navegador
+//        de quem colou; sem token, o painel mostra o último run e um link para o "Run workflow" do
+//        GitHub. Opção "Reextrair tudo" = input force_refresh da Action. Saiu junto o "Limpar" dos
+//        resultados buscados: fetchedRes também guarda o que veio do results.json, e limpá-lo
+//        apagava resultados automáticos até o próximo carregamento.
 // v4.88 (27/09/2026): BARRAS DE SUB-ABAS NO CELULAR. As barras de sub-abas (flex com botões
 //        flex-1) não quebravam linha: no celular (360 px) a da Copa BR passava 11 px da tela e
 //        cortava o "2027" (v4.86), e a das Séries B/C passava 51 px e cortava o "1 Simulação" (a
@@ -248,7 +261,7 @@ const {
 //        o slot "em disputa", até uma rodada de pesquisa notar. APP_VERSION vira const
 //        colada neste cabeçalho — o rodapé já ficou preso duas vezes (v4.59, v4.73) por
 //        ser string solta.
-const APP_VERSION = 'v4.88';
+const APP_VERSION = 'v4.89';
 // v4.77 (19/08/2026): FILA DE SUCESSÃO nos 27 estados (antes 14 com fonte, 11 sem folga
 //        alguma sobre a cota) + coluna Copa do Brasil 2027 na aba Ranking CBF.
 //        A rodada de pesquisa corrigiu a ordem campeão/vice em SETE estados (AC, AP, MS,
@@ -20562,162 +20575,316 @@ function LiveSim({
 }
 
 // ============================================================================
-// BUSCA DE RESULTADOS VIA CLAUDE + WEB SEARCH
 // ============================================================================
-function SearchPanel({
-  onResults
+// ATUALIZAR AGORA (v4.89): dispara sob demanda a GitHub Action das Tabelas CBF
+// (a mesma que roda seg 11h / sex 6h) e acompanha até o results.json novo estar no ar.
+// ============================================================================
+const GH_REPO = 'agamemnon140/brasileiro-2026';
+const GH_WF = 'update-tables.yml';
+const GH_API = 'https://api.github.com/repos/' + GH_REPO;
+const GH_WF_URL = 'https://github.com/' + GH_REPO + '/actions/workflows/' + GH_WF;
+const GH_TOKEN_URL = 'https://github.com/settings/personal-access-tokens/new';
+// nomes dos passos do update-tables.yml → rótulo do progresso (passo desconhecido aparece cru)
+const GH_PASSOS = {
+  'Fetch CBF detailed tables (PDF) and extract results': 'lendo as tabelas da CBF',
+  'Commit if changed': 'publicando o results.json',
+  'Sanity harnesses (engine invariants)': 'validando a engine'
+};
+function AtualizarPanel({
+  ativo
 }) {
-  const [busy, setBusy] = useState(false);
-  const [found, setFound] = useState(null);
-  const [err, setErr] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [showKey, setShowKey] = useState(false);
-
-  // Pre-fill: compute which series had games yesterday
-  const hoje = new Date();
-  const ontem = new Date(hoje);
-  ontem.setDate(ontem.getDate() - 1);
-  const ddmm = d => (d.getDate() < 10 ? '0' : '') + d.getDate() + '/' + (d.getMonth() < 9 ? '0' : '') + (d.getMonth() + 1);
-  const dm = ddmm(ontem);
-  const series = [];
-  if (SA_DATES.includes(dm)) series.push('A');
-  if (SB_DATES.includes(dm)) series.push('B');
-  if (SC_DATES.includes(dm)) series.push('C');
-  const defaultQ = series.length > 0 ? 'Resultados Brasileirão Série ' + series.join(', ') + ' de ' + ontem.toLocaleDateString('pt-BR') : 'Resultados Brasileirão ' + ontem.toLocaleDateString('pt-BR');
-  const [query, setQuery] = useState(defaultQ);
-  const buscar = async () => {
-    const q = query || defaultQ;
-    setBusy(true);
-    setErr('');
-    setFound(null);
-    const prompt = 'Busque na web os resultados FINAIS (com placar) do ' + q + '. Procure em sites como ge.globo.com, espn.com.br, uol.com.br. Para cada jogo finalizado informe a série (A, B ou C), a rodada, o time mandante, gols do mandante, gols do visitante e time visitante.\n\nRetorne SOMENTE um array JSON, nada mais:\n[{"serie":"A","rodada":10,"casa":"Flamengo","gc":2,"gf":1,"fora":"Santos"}]\nVazio se nada: []\nNomes oficiais: Atlético-MG, São Paulo, Red Bull Bragantino, Athletico-PR, Operário-PR, Criciúma, Novorizontino, Goiás, Avaí, etc.';
-    const body = {
-      model: 'claude-sonnet-4-6',
-      max_tokens: 3000,
-      tools: [{
-        type: 'web_search_20250305',
-        name: 'web_search'
-      }],
-      messages: [{
-        role: 'user',
-        content: prompt
-      }]
-    };
-    const headers = {
-      'Content-Type': 'application/json'
-    };
-    if (apiKey) headers['x-api-key'] = apiKey;
+  const h = React.createElement;
+  const lsTok = () => {
     try {
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body)
-      });
-      if (!resp.ok) {
-        const errBody = await resp.text().catch(() => '');
-        if (resp.status === 401 || resp.status === 403) {
-          setShowKey(true);
-          setErr('API key necessária');
-          setBusy(false);
+      return localStorage.getItem('simUni_ghToken') || '';
+    } catch (e) {
+      return '';
+    }
+  };
+  const [token, setToken] = useState(lsTok);
+  const [tokIn, setTokIn] = useState('');
+  const [trocaTok, setTrocaTok] = useState(false);
+  const [force, setForce] = useState(false);
+  const [run, setRun] = useState(null); // último run conhecido da Action (+ .passo em execução)
+  const [fase, setFase] = useState('idle'); // idle|disparando|rodando|publicando|pronto|nada|erro
+  const [msg, setMsg] = useState('');
+  const [novo, setNovo] = useState(null); // last_run do results.json recém-publicado
+  const timer = useRef(null);
+  const carregou = useRef(false);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const gh = (path, opt = {}) => {
+    const headers = {
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      ...(opt.headers || {})
+    };
+    if (token) headers.Authorization = 'Bearer ' + token;
+    return fetch(GH_API + path, {
+      ...opt,
+      headers,
+      cache: 'no-store'
+    });
+  };
+  const ultimoRun = async () => {
+    const r = await gh('/actions/workflows/' + GH_WF + '/runs?per_page=1');
+    if (!r.ok) return null;
+    return ((await r.json()).workflow_runs || [])[0] || null;
+  };
+  // Espera o Pages servir um results.json gravado DURANTE este run (updated_at ≥ início do run).
+  const esperarPages = (desde, temCommit) => {
+    setFase('publicando');
+    const t0 = Date.now();
+    const tick = async () => {
+      try {
+        const r = await fetch('results.json?t=' + Date.now(), {
+          cache: 'no-store'
+        });
+        const d = r.ok ? await r.json() : null;
+        if (d && d.updated_at && Date.parse(d.updated_at) >= desde) {
+          setNovo(d.last_run || {});
+          setFase('pronto');
           return;
         }
-        setErr('Erro ' + resp.status + ': ' + errBody.slice(0, 100));
-        setBusy(false);
+      } catch (e) {}
+      if (Date.now() - t0 > (temCommit ? 6 : 2) * 60000) {
+        if (temCommit) {
+          setFase('erro');
+          setMsg('O results.json foi commitado, mas o GitHub Pages ainda não publicou. Recarregue o app em alguns minutos.');
+        } else setFase('nada');
         return;
       }
-      const data = await resp.json();
-      // Extract text from all content blocks (skip tool_use/web_search blocks)
-      let text = '';
-      for (const block of data.content || []) {
-        if (block.type === 'text') text += block.text;
-      }
-      text = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-      let results = [];
-      // Try parsing the full text as JSON
+      timer.current = setTimeout(tick, 10000);
+    };
+    tick();
+  };
+  const acompanhar = id => {
+    setFase('rodando');
+    const tick = async () => {
       try {
-        results = JSON.parse(text);
+        const r = await gh('/actions/runs/' + id);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const ru = await r.json();
+        if (ru.status !== 'completed') {
+          let passo = '';
+          try {
+            const j = await (await gh('/actions/runs/' + id + '/jobs')).json();
+            const st = (j.jobs && j.jobs[0] && j.jobs[0].steps || []).find(x => x.status === 'in_progress');
+            passo = st ? GH_PASSOS[st.name] || st.name : '';
+          } catch (e) {}
+          setRun({
+            ...ru,
+            passo
+          });
+          timer.current = setTimeout(tick, 8000);
+          return;
+        }
+        setRun(ru);
+        // Houve commit do results.json durante o run? Sem commit = a CBF não republicou nada novo.
+        const desde = Date.parse(ru.run_started_at || ru.created_at);
+        let commits = null;
+        try {
+          const c = await gh('/commits?path=results.json&per_page=1&since=' + encodeURIComponent(new Date(desde).toISOString()));
+          commits = c.ok ? await c.json() : null;
+        } catch (e) {}
+        if (Array.isArray(commits) && commits.length === 0) {
+          setFase('nada');
+          return;
+        }
+        esperarPages(desde, Array.isArray(commits)); // commit (ou não deu para saber) → espera o Pages
       } catch (e) {
-        // Try finding JSON array in text
-        const m = text.match(/\[[\s\S]*?\]/);
-        if (m) try {
-          results = JSON.parse(m[0]);
-        } catch (e2) {}
+        setFase('erro');
+        setMsg('Falha ao acompanhar o run: ' + e.message);
       }
-      if (!Array.isArray(results)) results = [];
-      if (results.length === 0 && text.length > 0) {
-        setErr('Nenhum resultado parseado. Resposta: ' + text.slice(0, 150));
-      } else {
-        setFound(results);
+    };
+    tick();
+  };
+  // Ao abrir o painel pela 1ª vez: mostra o último run; se estiver em andamento, acompanha.
+  useEffect(() => {
+    if (!ativo || carregou.current) return;
+    carregou.current = true;
+    ultimoRun().then(u => {
+      if (!u) return;
+      setRun(u);
+      if (u.status !== 'completed' && token) acompanhar(u.id);
+    }).catch(() => {});
+  }, [ativo]);
+  const disparar = async () => {
+    clearTimeout(timer.current);
+    setFase('disparando');
+    setMsg('');
+    setNovo(null);
+    try {
+      const ult = await ultimoRun();
+      if (ult && ult.status !== 'completed') {
+        // já tem um run na fila/rodando (o agendado, p.ex.): acompanha esse em vez de enfileirar outro
+        setRun(ult);
+        acompanhar(ult.id);
+        return;
       }
+      const prevId = ult ? ult.id : 0;
+      const r = await gh('/actions/workflows/' + GH_WF + '/dispatches', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(force ? {
+          ref: 'main',
+          inputs: {
+            force_refresh: 'true'
+          }
+        } : {
+          ref: 'main'
+        })
+      });
+      if (!r.ok) {
+        const t = await r.text().catch(() => '');
+        setFase('erro');
+        setMsg(r.status === 401 ? 'Token inválido ou expirado — troque o token.' : r.status === 403 || r.status === 404 ? 'O token não tem permissão de Actions (leitura e escrita) neste repositório.' : 'Erro ' + r.status + ': ' + t.slice(0, 120));
+        return;
+      }
+      // o run leva alguns segundos para aparecer na lista
+      const t0 = Date.now();
+      const achar = async () => {
+        try {
+          const rr = await gh('/actions/workflows/' + GH_WF + '/runs?per_page=5&event=workflow_dispatch');
+          const lista = rr.ok ? (await rr.json()).workflow_runs || [] : [];
+          const nv = lista.find(x => x.id > prevId);
+          if (nv) {
+            setRun(nv);
+            acompanhar(nv.id);
+            return;
+          }
+        } catch (e) {}
+        if (Date.now() - t0 > 60000) {
+          setFase('erro');
+          setMsg('A atualização foi disparada, mas o run não apareceu em 1 min — veja no GitHub.');
+          return;
+        }
+        timer.current = setTimeout(achar, 3000);
+      };
+      timer.current = setTimeout(achar, 2000);
     } catch (e) {
-      setErr('Erro de rede: ' + e.message);
-    }
-    setBusy(false);
-  };
-  const [applied, setApplied] = useState(false);
-  const aplicar = () => {
-    if (found && found.length > 0) {
-      onResults(found);
-      setApplied(true);
-      setTimeout(() => {
-        setFound(null);
-        setApplied(false);
-      }, 2000);
+      setFase('erro');
+      setMsg('Erro de rede: ' + e.message);
     }
   };
-  return /*#__PURE__*/React.createElement("div", {
-    className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-sm font-bold text-emerald-300 mb-2"
-  }, "\uD83D\uDD0D Buscar Resultados"), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-2 mb-2"
-  }, /*#__PURE__*/React.createElement("input", {
-    value: query,
-    onChange: e => setQuery(e.target.value),
-    className: "flex-1 bg-slate-700 text-white text-xs rounded-lg px-3 py-2 border border-slate-600",
-    onKeyDown: e => {
-      if (e.key === 'Enter') buscar();
-    }
-  }), /*#__PURE__*/React.createElement("button", {
-    onClick: buscar,
-    disabled: busy,
+  const salvarTok = () => {
+    const t = tokIn.trim();
+    if (!t) return;
+    try {
+      localStorage.setItem('simUni_ghToken', t);
+    } catch (e) {}
+    setToken(t);
+    setTokIn('');
+    setTrocaTok(false);
+  };
+  const esquecerTok = () => {
+    try {
+      localStorage.removeItem('simUni_ghToken');
+    } catch (e) {}
+    setToken('');
+    setTrocaTok(false);
+  };
+  const quando = iso => new Date(iso).toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  const mmss = ms => {
+    const s = Math.max(0, Math.round(ms / 1000));
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  };
+  const statusRun = u => u.status === 'queued' || u.status === 'waiting' || u.status === 'pending' ? '⏳ na fila' : u.status !== 'completed' ? '⚙️ rodando' : u.conclusion === 'success' ? '✅ ok' : u.conclusion === 'cancelled' ? '⏹ cancelada' : '❌ ' + (u.conclusion || 'falhou');
+  const link = (href, txt) => h("a", {
+    href,
+    target: '_blank',
+    rel: 'noopener noreferrer',
+    className: "text-sky-400 hover:text-sky-300 underline"
+  }, txt);
+  const ocupado = fase === 'disparando' || fase === 'rodando' || fase === 'publicando';
+  const harnessFalhou = run && run.status === 'completed' && run.conclusion === 'failure';
+  let painelFase = null;
+  if (fase === 'disparando') painelFase = h("p", {
+    className: "text-xs text-slate-300"
+  }, "⏳ Disparando a atualização…");else if (fase === 'rodando' && run) painelFase = h("p", {
+    className: "text-xs text-slate-300"
+  }, run.status === 'in_progress' ? '⚙️ Rodando' + (run.passo ? ' · ' + run.passo : '') + ' · ' + mmss(Date.now() - Date.parse(run.run_started_at || run.created_at)) : '⏳ Na fila do GitHub…', ' · ', link(run.html_url, 'log ↗'));else if (fase === 'publicando') painelFase = h("p", {
+    className: "text-xs text-slate-300"
+  }, "📤 Resultados novos commitados — aguardando o GitHub Pages publicar (≈1–2 min)…");else if (fase === 'pronto') painelFase = h("div", {
+    className: "space-y-2"
+  }, h("p", {
+    className: "text-xs text-emerald-300"
+  }, "✅ Publicado: +", novo && novo.total_new || 0, " novo(s) nesta atualização", novo && novo.corrigidos ? ' · ' + novo.corrigidos + ' placar(es) corrigido(s)' : '', "."), harnessFalhou && h("p", {
+    className: "text-[11px] text-amber-300"
+  }, "⚠️ Os harnesses de sanidade falharam neste run (os dados foram publicados mesmo assim) — ", link(run.html_url, 'ver log ↗')), h("button", {
+    onClick: () => window.location.reload(),
+    className: "w-full py-2 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500"
+  }, "🔄 Recarregar o app com os dados novos"));else if (fase === 'nada') painelFase = harnessFalhou ? h("p", {
+    className: "text-xs text-red-400"
+  }, "❌ O run falhou sem publicar nada — ", link(run.html_url, 'ver log ↗')) : h("p", {
+    className: "text-xs text-slate-300"
+  }, "Nenhum resultado novo: a CBF ainda não republicou as tabelas desde a última atualização.", run ? ' ' : '', run && link(run.html_url, 'log ↗'));else if (fase === 'erro') painelFase = h("p", {
+    className: "text-xs text-red-400"
+  }, msg, run && run.html_url ? ' ' : '', run && run.html_url && link(run.html_url, 'log ↗'));
+  return h("div", {
+    className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50 space-y-2"
+  }, h("div", {
+    className: "flex items-center justify-between gap-2 flex-wrap"
+  }, h("h3", {
+    className: "text-sm font-bold text-emerald-300"
+  }, "📡 Atualizar tabelas CBF"), h("span", {
+    className: "text-[11px]"
+  }, link(GH_WF_URL, 'Action no GitHub ↗'))), h("p", {
+    className: "text-[11px] text-slate-400"
+  }, "Dispara agora a mesma atualização que roda sozinha seg 11h e sex 6h: lê as Tabelas Detalhadas e a API de jogos da CBF e publica um results.json novo."), run && fase === 'idle' && h("p", {
+    className: "text-[11px] text-slate-400"
+  }, "Última execução: ", quando(run.created_at), " · ", run.event === 'schedule' ? 'agendada' : 'manual', " · ", statusRun(run), " · ", link(run.html_url, 'log ↗')), token && !trocaTok ? h(React.Fragment, null, h("div", {
+    className: "flex items-center gap-3 flex-wrap"
+  }, h("button", {
+    onClick: disparar,
+    disabled: ocupado,
     className: "px-4 py-2 bg-gradient-to-r from-emerald-600 to-emerald-500 rounded-lg font-semibold text-xs disabled:opacity-50 whitespace-nowrap"
-  }, busy ? 'Buscando...' : 'Buscar')), showKey && /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-2 mb-2"
-  }, /*#__PURE__*/React.createElement("input", {
-    value: apiKey,
-    onChange: e => setApiKey(e.target.value),
-    placeholder: "sk-ant-...",
+  }, ocupado ? 'Atualizando…' : '▶ Atualizar agora'), h("label", {
+    className: "flex items-center gap-1.5 text-[11px] text-slate-400 cursor-pointer"
+  }, h("input", {
+    type: "checkbox",
+    checked: force,
+    disabled: ocupado,
+    onChange: e => setForce(e.target.checked)
+  }), "Reextrair tudo (gasta créditos da API)")), painelFase, h("p", {
+    className: "text-[10px] text-slate-500"
+  }, h("button", {
+    onClick: () => setTrocaTok(true),
+    className: "underline hover:text-slate-300"
+  }, "trocar token"), " · ", h("button", {
+    onClick: esquecerTok,
+    className: "underline hover:text-slate-300"
+  }, "esquecer token"))) : h(React.Fragment, null, h("p", {
+    className: "text-[11px] text-slate-300"
+  }, "Para disparar daqui, cole um token do GitHub ", h("b", null, "fine-grained"), " restrito a ", h("code", {
+    className: "text-slate-200"
+  }, GH_REPO), " com a permissão ", h("b", null, "Actions: Read and write"), ". Fica salvo só neste navegador. ", link(GH_TOKEN_URL, 'Criar token ↗')), h("div", {
+    className: "flex gap-2"
+  }, h("input", {
+    value: tokIn,
+    onChange: e => setTokIn(e.target.value),
+    onKeyDown: e => {
+      if (e.key === 'Enter') salvarTok();
+    },
+    placeholder: "github_pat_...",
     type: "password",
-    className: "flex-1 bg-slate-700 text-white text-xs rounded-lg px-3 py-2 border border-amber-600/50"
-  }), /*#__PURE__*/React.createElement("button", {
-    onClick: buscar,
-    disabled: busy,
-    className: "px-3 py-2 bg-amber-600 rounded-lg text-xs font-bold"
-  }, "OK")), err && /*#__PURE__*/React.createElement("p", {
-    className: "text-xs text-red-400 mb-2"
-  }, err), found && found.length > 0 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
-    className: "text-xs text-emerald-400 mb-2"
-  }, found.length, " resultado(s) encontrado(s):"), /*#__PURE__*/React.createElement("div", {
-    className: "space-y-0.5 mb-2"
-  }, found.map((r, i) => /*#__PURE__*/React.createElement("div", {
-    key: i,
-    className: "flex items-center justify-between p-1.5 rounded text-xs bg-emerald-900/20 border-l-2 border-emerald-500"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-400 w-10 text-[10px]"
-  }, "S", r.serie, " R", r.rodada), /*#__PURE__*/React.createElement("span", {
-    className: "flex-1 text-right truncate pr-1 font-medium"
-  }, r.casa), /*#__PURE__*/React.createElement("span", {
-    className: "font-mono font-bold w-12 text-center text-emerald-300"
-  }, r.gc, " x ", r.gf), /*#__PURE__*/React.createElement("span", {
-    className: "flex-1 truncate pl-1 font-medium"
-  }, r.fora)))), /*#__PURE__*/React.createElement("button", {
-    onClick: aplicar,
-    disabled: applied,
-    className: `w-full py-2 rounded-lg text-xs font-bold ${applied ? 'bg-emerald-800 text-emerald-300' : 'bg-emerald-600 hover:bg-emerald-500'}`
-  }, applied ? '✅ Aplicado!' : '✅ Aplicar ' + found.length + ' resultado(s)')), found && found.length === 0 && /*#__PURE__*/React.createElement("p", {
-    className: "text-xs text-yellow-400"
-  }, "Nenhum resultado encontrado para esta busca."));
+    autoComplete: "off",
+    className: "flex-1 min-w-0 bg-slate-700 text-white text-xs rounded-lg px-3 py-2 border border-slate-600"
+  }), h("button", {
+    onClick: salvarTok,
+    className: "px-3 py-2 bg-emerald-600 rounded-lg text-xs font-bold"
+  }, "Salvar"), trocaTok && h("button", {
+    onClick: () => setTrocaTok(false),
+    className: "px-3 py-2 bg-slate-700 rounded-lg text-xs"
+  }, "Cancelar")), !token && h("p", {
+    className: "text-[11px] text-slate-500"
+  }, "Sem token: ", link(GH_WF_URL, 'abrir a Action'), " e clicar em “Run workflow”.")));
 }
 
 // ============================================================================
@@ -21750,22 +21917,13 @@ function SimuladorUnificado() {
   }, dashBusy ? `${dashStage} · ${Math.round(dashProgress * 100)}%` : '⚡ Simular Tudo')), /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowSearch(!showSearch),
     className: `px-4 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${showSearch ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'}`
-  }, "\uD83D\uDD0D Buscar"))), showSearch && /*#__PURE__*/React.createElement("div", {
-    className: "mb-4"
-  }, /*#__PURE__*/React.createElement(SearchPanel, {
-    onResults: handleSearchResults
-  }), fetchedRes.A.length + fetchedRes.B.length + fetchedRes.C.length > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "mt-2 flex items-center justify-between bg-emerald-900/20 rounded-lg p-2 border border-emerald-600/30"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs text-emerald-300"
-  }, fetchedRes.A.length + fetchedRes.B.length + fetchedRes.C.length, " resultado(s) buscado(s) (A:", fetchedRes.A.length, " B:", fetchedRes.B.length, " C:", fetchedRes.C.length, ")"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setFetchedRes({
-      A: [],
-      B: [],
-      C: []
-    }),
-    className: "text-xs text-red-400 hover:text-red-300"
-  }, "Limpar"))), dash && /*#__PURE__*/React.createElement("div", {
+  }, "\uD83D\uDCE1 Atualizar"))), /*#__PURE__*/React.createElement("div", {
+    // v4.89: montado sempre (só escondido) para o acompanhamento do run sobreviver a fechar o painel
+    className: "mb-4",
+    style: showSearch ? undefined : { display: 'none' }
+  }, /*#__PURE__*/React.createElement(AtualizarPanel, {
+    ativo: showSearch
+  })), dash && /*#__PURE__*/React.createElement("div", {
     className: "mb-4 bg-gradient-to-br from-slate-800/50 to-slate-900/40 backdrop-blur-sm rounded-2xl p-4 border border-amber-600/30 shadow-xl shadow-amber-900/10"
   }, /*#__PURE__*/React.createElement("div", {
     className: 'flex items-center justify-between gap-2' + (dashOpen ? ' mb-3' : '')
