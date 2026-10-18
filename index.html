@@ -31,7 +31,18 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.89
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.90
+// v4.90 (18/10/2026): COPA PAULISTA DECIDIDA. São José campeão (1×1 na ida; 0×0 na volta
+//        em 17/10 no Martins Pereira e 4×3 nos pênaltis sobre o União São João). Pelo regulamento o
+//        campeão opta entre Copa do Brasil e Série D; o São José declarou preferência pela Série D
+//        2027 (calendário mais longo, acesso à C) — a vaga da Copa do Brasil 2027 fica com o União
+//        São João. Efeitos: a linha pendente da fila de SP (EST_FILA_2027) vira São José-SP, e a
+//        copa em CB27_UF.SP passa a 'ok' com dono União São João (ordem [campeão, vice], como na
+//        Copa Rio). Nome com sufixo -SP porque o RNC tem dois "São José" (RS pos. 63, SP pos. 178)
+//        e rncOf casa por (nome, UF). Sem cascata: o União São João não estava na lista de ninguém.
+//        Copas regionais conferidas e inalteradas (Nordeste Vitória, Norte Paysandu, Centro-Oeste
+//        Anápolis, Sul-Sudeste Avaí — todas decididas até junho). Pendentes agora: Copa SC (29/11),
+//        Copa Paraná (28/11), Copa Paraíba (04/12), Copa MS (06/12), Fares Lopes (06/12), Copa FMF-MT.
 // v4.89 (12/10/2026): BOTÃO "ATUALIZAR" NO LUGAR DO "BUSCAR". O "🔍 Buscar" (Claude + web_search
 //        direto do navegador, com API key no cliente) estava sem uso desde que a GitHub Action passou
 //        a ler as Tabelas Detalhadas e a API de jogos da CBF. No lugar dele, "📡 Atualizar" abre o
@@ -261,7 +272,7 @@ const {
 //        o slot "em disputa", até uma rodada de pesquisa notar. APP_VERSION vira const
 //        colada neste cabeçalho — o rodapé já ficou preso duas vezes (v4.59, v4.73) por
 //        ser string solta.
-const APP_VERSION = 'v4.89';
+const APP_VERSION = 'v4.90';
 // v4.77 (19/08/2026): FILA DE SUCESSÃO nos 27 estados (antes 14 com fonte, 11 sem folga
 //        alguma sobre a cota) + coluna Copa do Brasil 2027 na aba Ranking CBF.
 //        A rodada de pesquisa corrigiu a ordem campeão/vice em SETE estados (AC, AP, MS,
@@ -13919,7 +13930,7 @@ const EST_FILA_2027 = {
   SP: [{ n: 'Portuguesa-SP', via: '5º do Paulistão', st: 'ok', src: 'C' },
        { n: 'Capivariano', via: '7º do Paulistão', st: 'ok', src: 'C' },
        { n: 'Primavera-SP', via: '12º do Paulistão', st: 'ok', src: 'C' },
-       { n: '', via: 'Copa Paulista — semifinais entre Noroeste, São José, Grêmio Prudente e União São João (voltas em 03/10); final em 18/10. O campeão opta entre Copa do Brasil e Série D; a não escolhida fica com o vice', st: 'pend', src: 'C', dt: '2026-10-18' },
+       { n: 'São José-SP', via: 'campeão da Copa Paulista 2026 (1×1 na ida, 0×0 e 4×3 nos pênaltis no Martins Pereira, 17/10); declarou preferir a Série D — o União São João (vice) fica com a Copa do Brasil', st: 'ok', src: 'C' },
        { n: 'Noroeste', via: '14º do Paulistão', st: 'ok', src: 'C' },
        { n: 'Velo Clube', via: '15º do Paulistão', st: 'ok', src: 'I' }],
   RJ: [{ n: 'Madureira', via: '4º do Carioca, semifinalista', st: 'ok', src: 'C' },
@@ -14226,7 +14237,7 @@ const CB27_UF = {
   RS: {"est":{"comp":"Campeonato Gaúcho 2026 - Série A","vagas":5,"src":"I","ordem":["Grêmio","Internacional","Juventude","Ypiranga","São Luiz-RS","Novo Hamburgo","Caxias","São José-RS","Monsoon","Guarany de Bagé","Avenida","Inter de Santa Maria"]},"copas":[]},
   SC: {"est":{"comp":"Campeonato Catarinense 2026 - Série A","vagas":3,"src":"I","ordem":["Barra","Chapecoense","Criciúma","Camboriú","Brusque","Avaí","Santa Catarina","Concórdia","Marcílio Dias","Carlos Renaux","Figueirense","Joinville"]},"copas":[{"nome":"Copa Santa Catarina 2026","vagas":1,"st":"pend","dono":null,"ordem":[],"dt":"2026-11-29","cand":["Marcílio Dias","Hercílio Luz","Joinville","Figueirense","Santa Catarina","Metropolitano","Barra","Blumenau","Nação"]}]},
   SE: {"est":{"comp":"Campeonato Sergipano 2026","vagas":3,"src":"C","ordem":["Sergipe","Confiança","Itabaiana","América de Propriá","Lagarto","Guarany-SE","Falcon","Atlético Gloriense","Dorense","Desportiva Aracaju"]},"copas":[]},
-  SP: {"est":{"comp":"Campeonato Paulista 2026 - Série A1","vagas":5,"src":"C","ordem":["Palmeiras","Novorizontino","São Paulo","Corinthians","Portuguesa-SP","Red Bull Bragantino","Capivariano","Santos","Guarani","Botafogo-SP","Mirassol","Primavera-SP","São Bernardo","Noroeste","Velo Clube","Ponte Preta"]},"copas":[{"nome":"Copa Paulista 2026","vagas":1,"st":"pend","dono":null,"ordem":[],"dt":"2026-10-18","cand":["Noroeste","São José","Grêmio Prudente","União São João"]}]},
+  SP: {"est":{"comp":"Campeonato Paulista 2026 - Série A1","vagas":5,"src":"C","ordem":["Palmeiras","Novorizontino","São Paulo","Corinthians","Portuguesa-SP","Red Bull Bragantino","Capivariano","Santos","Guarani","Botafogo-SP","Mirassol","Primavera-SP","São Bernardo","Noroeste","Velo Clube","Ponte Preta"]},"copas":[{"nome":"Copa Paulista 2026","vagas":1,"st":"ok","dono":"União São João","ordem":["São José-SP","União São João"],"dt":null,"cand":[]}]},
   TO: {"est":{"comp":"Campeonato Tocantinense 2026","vagas":3,"src":"I","ordem":["Tocantinópolis","União","Gurupi","Capital-TO","Araguaína","Bela Vista","Palmas","Guaraí"]},"copas":[]}
 };
 // v4.87: UF discreta no TN também para quem só aparece aqui (mesmo padrão da Série D → UF_MAP).
