@@ -179,6 +179,16 @@ Two findings from `eval/` change how the config should be read, so they belong h
   significant; B and C (0.583) are within noise. Before changing `pesoCasa`, check the
   observed split in `eval/out/curto.json`.
 
+**The last two bullets are under review since 14/11/2026: read `eval/REVISAO.md` before
+acting on them.** Both were measured on games up to 19/08. On the games played after that
+date the candidate config they motivated (`pesoCasa` 0.58, Série A seed shrunk to k=0.4)
+scored worse than the live one (`node eval/holdout.cjs`), and the Série A seed ranking
+flipped between the round-23 and round-34 horizons. A multi-season study decides; until
+then they are hypotheses. The first two bullets (inert `kElo`/`homeAdv`, `targetRatio`) are
+code facts and stand. Also since 14/11: `node eval/paridade.cjs` shows the prediction core
+is identical in every `index.html` version since 05/06, so for the league tables the replay
+the harness measures is what the app published.
+
 When `simMC` is called from a harness, pass the **parsed** fixture (`parseTab(SX_TAB, SX_NM,
 SX_DATES)`), not the raw `SX_TAB` strings — the raw form silently produces nonsense (100%
 title, 0 points) instead of failing.

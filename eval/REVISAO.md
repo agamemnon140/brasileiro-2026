@@ -1,0 +1,87 @@
+# Revisão de novembro de 2026
+
+Escrito em 14/11/2026, com o `results.json` de 13/11 (commit `ec62119`, v4.90). Séries C e D
+encerradas; a B fechou a fase de liga em 14/11; a A estava na rodada 34.
+
+O `REPORT.md` foi gerado com os jogos até 19/08. Esta nota registra o que o resto da
+temporada fez com as conclusões dele e o que foi decidido a partir disso. Ela não substitui
+o relatório: a seção de lições será reescrita quando o estudo multi-temporada fechar.
+
+## O que mudou de veredito
+
+**A config candidata perdeu no teste fora da amostra.** `node eval/holdout.cjs` pontua a
+candidata de setembro (`pesoCasa` 0,58 nas ligas e semente da Série A encolhida para k=0,4)
+só nos jogos disputados depois de 19/08.
+
+| Série A | Brier dentro (225 jogos) | Brier fora (114 jogos) | Viés de casa fora |
+|---|---|---|---|
+| vigente | 0,6572 | 0,5265 | −0,9 pp |
+| candidata | 0,6277 | 0,5462 | +8,3 pp |
+
+A diferença fora da amostra é +0,0197 (IC95 de −0,008 a +0,045): não é significativa, mas
+tem o sinal contrário ao ganho de −0,0295 medido dentro. O mandante venceu 45,3% dos
+primeiros 225 jogos e 55,3% dos 114 seguintes. Nas Séries B e C a candidata quase não difere
+da vigente, dentro ou fora.
+
+**A ordenação das sementes da Série A virou.** No horizonte da rodada 23 a semente feita à
+mão era a 5ª de 6 em RPS (0,1020, contra 0,0908 do RNC por posição). No horizonte da rodada
+34 é a 1ª: 0,0797, contra 0,0846 a 0,0872 das baseadas no RNC e 0,0913 de "todos iguais".
+Esses números vêm de uma execução de `node eval/run.cjs` interrompida depois da Série A
+(5 mil simulações, 5 sementes); a corrida completa fica para dezembro.
+
+**O histórico dá razão à candidata no mando, apesar do teste.** Na Série A, a fração de gols
+em casa ficou entre 0,570 e 0,590 em 2021–24 e em 0,576 em 2026. O `pesoCasa` configurado
+(0,652) está acima de toda temporada desde 2012. Na Série D, os gols por jogo da fase de
+grupos ficaram entre 2,24 e 2,49 em 2021–25 e em 2,34 em 2026, contra `total` de 2,65. Fonte:
+`campeonatobrasileirofull.csv` e `serie_d_2021_2025_jogos.csv`, que estão no projeto do
+Claude e ainda não neste repo.
+
+A leitura conjunta: 100 a 200 jogos não arbitram parâmetro em nenhuma direção. O z = −3 de
+agosto e a reversão de novembro cabem ambos no ruído de uma temporada.
+
+## O que se confirmou
+
+**O replay equivale ao publicado.** `node eval/paridade.cjs` mostra que `DEFAULT_CFG`,
+`calcL`, `updR`, `initLeague`, `applyDrift` e as sementes de A/B/C são idênticos nas 64
+versões do `index.html` desde 05/06, e que os motores de 05/06, de 19/08 e de hoje dão
+projeções idênticas para os mesmos resultados. A limitação "replay, não auditoria" do
+relatório vale só para janeiro a maio, para o mata-mata da D e para a Copa do Brasil.
+
+**O modelo bate a taxa-base com os ratings aquecidos.** Nos 284 jogos de A, B e C depois de
+19/08: Brier 0,5659 contra 0,6248 (IC95 da diferença de −0,086 a −0,029).
+
+**A projeção de tabela bate a tabela congelada.** RPS de 0,0797 contra 0,1407 na A (rodada
+34), 0,0898 contra 0,1395 na B (rodada 37) e 0,1267 contra 0,1947 na C (completa); o modelo
+vence em 28 de 29 cortes. Corrida compacta: 3 mil simulações, 1 semente.
+
+## O que foi decidido
+
+| Tema | Decisão |
+|---|---|
+| Escopo | Só aprender com o modelo atual; nenhum modelo novo agora |
+| Evidência | Multi-temporada: escolher em 2022–2025, confirmar em 2026 por série, assim que cada uma fecha |
+| Base | Séries A, B, C e D; coletar B e C e recoletar a D com rodada. Série A de 2012 a 2021 como checagem de robustez |
+| Régua | Eventos de zona, com os cortes reais de cada ano aplicados à fase de liga |
+| Semente | Só regras derivadas de resultado: tabela do ano anterior, rating herdado do modelo, classificação final do estadual do ano e força do estado. Semente à mão e RNC entram só como referência em 2026 |
+| Veredito | Lição confirmada se melhora o Brier de zona em pelo menos 12 de 16 células temporada×série (4 de 4 em lição de uma série só) e não piora em 2026 |
+| Varreduras | Todas as que o `eval/` já tem rodam na base histórica |
+| Lições | Seção reescrita à mão, cada lição com rótulo: confirmada multi-temporada, só 2026, revertida ou fato de código |
+
+## O que está em revisão no REPORT.md
+
+- **Recomendação 2** (`pesoCasa` único de 0,58): o histórico apoia, o teste de 2026 não.
+- **Recomendação 3** (amplitude da semente da Série A 2–3× larga demais): k=0,4 sozinho
+  piorou o Brier fora da amostra em +0,0123.
+- **Recomendação 8** (a semente neutra empata com a vigente): no horizonte da rodada 34 a
+  vigente ganha da neutra por 0,0797 a 0,0913.
+
+As recomendações 0, 4, 10 e 13 são fatos de código ou de desenho e não dependem da amostra.
+
+## O que falta
+
+1. Fonte de B, C e D com rodada. Candidatas: a API do site da CBF que a Action já usa (não
+   verificado se serve edições antigas) e o RSSSF Brasil.
+2. Coletores e dados em `eval/data/`, cada temporada validada contra a tabela final publicada.
+3. Carregador de temporadas passadas, candidatas de semente, zonas reais.
+4. Veredito pela regra de células e a seção de lições reescrita.
+5. A corrida completa de dezembro (`node eval/run.cjs --full`), depois do fim da Série A.
