@@ -8,6 +8,9 @@ Mede **quanto o modelo do app realmente acerta**, em dois estágios independente
 Existe porque nenhuma previsão de 2026 foi jamais medida contra a realidade, e nenhuma foi
 arquivada: o app recalcula tudo no navegador a cada carga e as probabilidades evaporam.
 
+`REVISAO.md` registra o que o resto da temporada fez com as conclusões do `REPORT.md` de
+setembro e o que foi decidido a partir disso. Leia-o antes de usar as recomendações.
+
 ## Rodar
 
 ```bash
@@ -59,6 +62,8 @@ Hoje o desvio é ~2e-16 (erro de arredondamento de ponto flutuante), nas três s
 | `rodar_curto.cjs` / `shortterm.cjs` | estágio de curto prazo |
 | `rodar_longo.cjs` / `lib/longterm.cjs` | estágio de longo prazo (MC, RPS) |
 | `relatorio.cjs` | JSON → `REPORT.md`; só formata |
+| `holdout.cjs` | teste fora da amostra da config candidata: pontua só os jogos posteriores a `data/holdout_ago19.json` |
+| `paridade.cjs` | confere, pelo histórico do git, se o replay equivale ao que o app publicou |
 | `lib/appdata.cjs` | reconstrói os resultados que o app enxerga (`mergeRes` + `results.json`) |
 | `lib/walkforward.cjs` | walk-forward com captura de λ + Dixon-Coles |
 | `lib/metrics.cjs` | Brier, logloss, calibração, ECE, bootstrap pareado |

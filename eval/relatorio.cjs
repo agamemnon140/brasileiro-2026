@@ -908,6 +908,13 @@ function gerar(curto, longo, extra = {}) {
   w('');
   w('Em ordem de confiança no achado que as sustenta.');
   w('');
+  w('> **Em revisão desde 14/11/2026.** As recomendações 2 (`pesoCasa`), 3 (amplitude da semente)');
+  w('> e 8 (semente neutra) foram escritas com os jogos até 19/08 e não atravessaram ilesas o');
+  w('> resto da temporada: a config candidata perdeu no teste fora da amostra');
+  w('> (`node eval/holdout.cjs`) e a ordenação das sementes da Série A virou entre o horizonte');
+  w('> da rodada 23 e o da 34. Trate-as como hipóteses até o estudo multi-temporada fechar.');
+  w('> Ver `eval/REVISAO.md`.');
+  w('');
   w('0. **Manter ATK/DEF como modo padrão — agora medido.** Δ +0,0268 a favor de ATK/DEF');
   w('   contra ELO PURO, z = 5,43: o maior efeito de todo o relatório, e em 4 das 5');
   w('   competições. A escolha estava certa e nunca tinha sido verificada. Corolário: os');
@@ -1001,6 +1008,10 @@ function gerar(curto, longo, extra = {}) {
   w('- **Replay, não auditoria.** Isto mede o modelo de hoje aplicado ao passado, não o que');
   w('  o app exibia na época — nada foi arquivado. Corrigir isso é requisito de nascença do');
   w('  repositório de 2027.');
+  w('  *Atualização de 14/11/2026:* para as tabelas das ligas a distinção não muda nada desde');
+  w('  05/06, porque o núcleo de previsão é idêntico em todas as versões do app');
+  w('  (`node eval/paridade.cjs`). Ela continua valendo para janeiro a maio, para o mata-mata');
+  w('  da Série D e para a Copa do Brasil.');
   w('');
   // Numeracao automatica das secoes. Numerar a mao dentro dos blocos condicionais produziu
   // um "10b" assim que uma secao foi inserida no meio — o numero tem de sair da ordem final,

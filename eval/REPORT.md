@@ -1017,6 +1017,13 @@ resultados tem. A comparação situa a ordem de grandeza; não é um ranking.
 
 Em ordem de confiança no achado que as sustenta.
 
+> **Em revisão desde 14/11/2026.** As recomendações 2 (`pesoCasa`), 3 (amplitude da semente)
+> e 8 (semente neutra) foram escritas com os jogos até 19/08 e não atravessaram ilesas o
+> resto da temporada: a config candidata perdeu no teste fora da amostra
+> (`node eval/holdout.cjs`) e a ordenação das sementes da Série A virou entre o horizonte
+> da rodada 23 e o da 34. Trate-as como hipóteses até o estudo multi-temporada fechar.
+> Ver `eval/REVISAO.md`.
+
 0. **Manter ATK/DEF como modo padrão — agora medido.** Δ +0,0268 a favor de ATK/DEF
    contra ELO PURO, z = 5,43: o maior efeito de todo o relatório, e em 4 das 5
    competições. A escolha estava certa e nunca tinha sido verificada. Corolário: os
@@ -1109,4 +1116,8 @@ Em ordem de confiança no achado que as sustenta.
 - **Replay, não auditoria.** Isto mede o modelo de hoje aplicado ao passado, não o que
   o app exibia na época — nada foi arquivado. Corrigir isso é requisito de nascença do
   repositório de 2027.
+  *Atualização de 14/11/2026:* para as tabelas das ligas a distinção não muda nada desde
+  05/06, porque o núcleo de previsão é idêntico em todas as versões do app
+  (`node eval/paridade.cjs`). Ela continua valendo para janeiro a maio, para o mata-mata
+  da Série D e para a Copa do Brasil.
 
