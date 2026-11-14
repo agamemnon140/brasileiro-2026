@@ -79,9 +79,13 @@ As recomendações 0, 4, 10 e 13 são fatos de código ou de desenho e não depe
 
 ## O que falta
 
-1. Fonte de B, C e D com rodada. Candidatas: a API do site da CBF que a Action já usa (não
-   verificado se serve edições antigas) e o RSSSF Brasil.
-2. Coletores e dados em `eval/data/`, cada temporada validada contra a tabela final publicada.
+1. Feito em 14/11: jogos das quatro séries em 2021–2025. A API do site da CBF serve as
+   edições de 2018 a 2026; `eval/data/hist/cbf_jogos_2021_2025.csv` tem os 7.428 jogos com
+   grupo, rodada, data, ids dos clubes e pênaltis. `eval/hist/coletar_cbf.browser.js` é o
+   coletor e `eval/hist/ingerir.cjs` normaliza e confere. As tabelas de A e B de 2025
+   reconstruídas dos jogos batem, campanha por campanha, com as classificações finais da
+   Wikipedia.
+2. Classificação final dos estaduais (cerca de 135 tabelas, 2022–2026) e a força do estado.
 3. Carregador de temporadas passadas, candidatas de semente, zonas reais.
 4. Veredito pela regra de células e a seção de lições reescrita.
 5. A corrida completa de dezembro (`node eval/run.cjs --full`), depois do fim da Série A.
