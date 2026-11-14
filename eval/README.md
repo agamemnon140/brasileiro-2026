@@ -64,6 +64,8 @@ Hoje o desvio é ~2e-16 (erro de arredondamento de ponto flutuante), nas três s
 | `relatorio.cjs` | JSON → `REPORT.md`; só formata |
 | `holdout.cjs` | teste fora da amostra da config candidata: pontua só os jogos posteriores a `data/holdout_ago19.json` |
 | `paridade.cjs` | confere, pelo histórico do git, se o replay equivale ao que o app publicou |
+| `hist/coletar_cbf.browser.js` | coletor dos jogos de 2021–2025 na API do site da CBF (rodou num navegador) |
+| `hist/ingerir.cjs` | normaliza, deduplica e confere a coleta; grava `data/hist/cbf_jogos_2021_2025.csv` |
 | `lib/appdata.cjs` | reconstrói os resultados que o app enxerga (`mergeRes` + `results.json`) |
 | `lib/walkforward.cjs` | walk-forward com captura de λ + Dixon-Coles |
 | `lib/metrics.cjs` | Brier, logloss, calibração, ECE, bootstrap pareado |
