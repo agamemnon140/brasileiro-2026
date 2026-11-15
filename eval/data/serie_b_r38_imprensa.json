@@ -1,0 +1,15 @@
+{
+  "o_que_e": "Sete placares da rodada 38 da Série B de 2026 (14/11/2026) que ainda não estavam no results.json de 13/11. Sobreposição usada só por eval/zonas2026.cjs, e só enquanto o results.json não trouxer o jogo: quando a Action ingerir a rodada, o placar oficial vale e este arquivo deixa de ser lido para aquele jogo.",
+  "fonte": "Lance, 14/11/2026; seis dos sete placares conferidos também no 365Scores",
+  "url": "https://www.lance.com.br/futebol-nacional/serie-b-veja-os-resultados-da-ultima-rodada-os-acessos-os-rebaixados-e-os-playoffs.html",
+  "rodada": 38,
+  "jogos": [
+    { "c": "América-MG", "gc": 0, "gf": 2, "f": "Avaí" },
+    { "c": "Atlético-GO", "gc": 1, "gf": 0, "f": "Cuiabá" },
+    { "c": "Fortaleza", "gc": 1, "gf": 0, "f": "Vila Nova" },
+    { "c": "Sport", "gc": 3, "gf": 0, "f": "Goiás" },
+    { "c": "Criciúma", "gc": 0, "gf": 1, "f": "Novorizontino" },
+    { "c": "Juventude", "gc": 2, "gf": 0, "f": "Botafogo-SP" },
+    { "c": "CRB", "gc": 1, "gf": 1, "f": "Ceará" }
+  ]
+}

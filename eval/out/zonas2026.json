@@ -1,0 +1,1903 @@
+{
+  "results_json": "2026-11-13T17:01:39.055Z",
+  "nSims": 5000,
+  "series": {
+    "A": {
+      "jogos": 339,
+      "H": 34,
+      "maxR": 38,
+      "completa": false,
+      "sobrepostos": 0,
+      "clubes": 20,
+      "porEvento": [
+        {
+          "evento": "título",
+          "vagas": 1,
+          "previsoes": 680,
+          "brier": 0.0276079874117647,
+          "brierTaxaBase": 0.047500000000000465,
+          "habilidade": 0.4187792123839068,
+          "brierDesdeR1": 0.027479295030303025,
+          "brierTabelaDoMomento": 0.07272727272727272,
+          "acertoMedio": 0.47058823529411764,
+          "acertoTabelaDoMomento": 0.2727272727272727,
+          "acertoModeloDesdeR1": 0.45454545454545453,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 1,
+              "tabela": null
+            },
+            {
+              "rodada": 9,
+              "modelo": 0,
+              "tabela": 0
+            },
+            {
+              "rodada": 17,
+              "modelo": 0,
+              "tabela": 0
+            },
+            {
+              "rodada": 26,
+              "modelo": 1,
+              "tabela": 1
+            }
+          ]
+        },
+        {
+          "evento": "G4",
+          "vagas": 4,
+          "previsoes": 680,
+          "brier": 0.061758199176470616,
+          "brierTaxaBase": 0.16000000000000178,
+          "habilidade": 0.6140112551470629,
+          "brierDesdeR1": 0.061614878424242465,
+          "brierTabelaDoMomento": 0.13636363636363635,
+          "acertoMedio": 0.7573529411764706,
+          "acertoTabelaDoMomento": 0.6590909090909091,
+          "acertoModeloDesdeR1": 0.7575757575757576,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0.75,
+              "tabela": null
+            },
+            {
+              "rodada": 9,
+              "modelo": 0.75,
+              "tabela": 0.75
+            },
+            {
+              "rodada": 17,
+              "modelo": 0.75,
+              "tabela": 0.75
+            },
+            {
+              "rodada": 26,
+              "modelo": 0.75,
+              "tabela": 0.75
+            }
+          ]
+        },
+        {
+          "evento": "G6",
+          "vagas": 6,
+          "previsoes": 680,
+          "brier": 0.08228343294117645,
+          "brierTaxaBase": 0.21000000000000152,
+          "habilidade": 0.6081741288515436,
+          "brierDesdeR1": 0.08075078339393935,
+          "brierTabelaDoMomento": 0.10303030303030303,
+          "acertoMedio": 0.7941176470588234,
+          "acertoTabelaDoMomento": 0.8282828282828282,
+          "acertoModeloDesdeR1": 0.7979797979797978,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0.6666666666666666,
+              "tabela": null
+            },
+            {
+              "rodada": 9,
+              "modelo": 0.6666666666666666,
+              "tabela": 0.8333333333333334
+            },
+            {
+              "rodada": 17,
+              "modelo": 0.8333333333333334,
+              "tabela": 0.8333333333333334
+            },
+            {
+              "rodada": 26,
+              "modelo": 1,
+              "tabela": 1
+            }
+          ]
+        },
+        {
+          "evento": "Z4",
+          "vagas": 4,
+          "previsoes": 680,
+          "brier": 0.09136080000000002,
+          "brierTaxaBase": 0.1600000000000018,
+          "habilidade": 0.42899500000000634,
+          "brierDesdeR1": 0.09031929042424243,
+          "brierTabelaDoMomento": 0.19090909090909092,
+          "acertoMedio": 0.6029411764705882,
+          "acertoTabelaDoMomento": 0.5227272727272727,
+          "acertoModeloDesdeR1": 0.6060606060606061,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0.5,
+              "tabela": null
+            },
+            {
+              "rodada": 9,
+              "modelo": 0.5,
+              "tabela": 0.5
+            },
+            {
+              "rodada": 17,
+              "modelo": 0.5,
+              "tabela": 0.5
+            },
+            {
+              "rodada": 26,
+              "modelo": 0.5,
+              "tabela": 0.5
+            }
+          ]
+        }
+      ],
+      "calibracao": {
+        "n": 2720,
+        "clubes": 20,
+        "ece": 0.02037397058823528,
+        "faixas": [
+          {
+            "faixa": "0%",
+            "n": 1016,
+            "casos": 60,
+            "previsto": 0.000603740157480315,
+            "observado": 0,
+            "diferenca": -0.000603740157480315,
+            "ic95": [
+              -0.0007101382488479263,
+              -0.0005039922103213242
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "0,5–10%",
+            "n": 637,
+            "casos": 62,
+            "previsto": 0.04120313971742544,
+            "observado": 0.03453689167974882,
+            "diferenca": -0.006666248037676618,
+            "ic95": [
+              -0.03594830132939439,
+              0.03550451388888889
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "10–20%",
+            "n": 295,
+            "casos": 42,
+            "previsto": 0.14536542372881356,
+            "observado": 0.17966101694915254,
+            "diferenca": 0.03429559322033898,
+            "ic95": [
+              -0.09429144736842107,
+              0.17630301003344484
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "20–30%",
+            "n": 175,
+            "casos": 32,
+            "previsto": 0.24583200000000002,
+            "observado": 0.2057142857142857,
+            "diferenca": -0.04011771428571431,
+            "ic95": [
+              -0.19639358974358975,
+              0.1403012048192771
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "30–40%",
+            "n": 113,
+            "casos": 28,
+            "previsto": 0.3548088495575221,
+            "observado": 0.2743362831858407,
+            "diferenca": -0.08047256637168143,
+            "ic95": [
+              -0.2829602941176471,
+              0.157744262295082
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "40–60%",
+            "n": 161,
+            "casos": 27,
+            "previsto": 0.495247204968944,
+            "observado": 0.453416149068323,
+            "diferenca": -0.04183105590062097,
+            "ic95": [
+              -0.35868224299065427,
+              0.19566373626373632
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "60–70%",
+            "n": 67,
+            "casos": 17,
+            "previsto": 0.6457731343283583,
+            "observado": 0.6567164179104478,
+            "diferenca": 0.010943283582089514,
+            "ic95": [
+              -0.2795389830508475,
+              0.24172063492063492
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "70–80%",
+            "n": 46,
+            "casos": 18,
+            "previsto": 0.7503000000000001,
+            "observado": 0.8913043478260869,
+            "diferenca": 0.14100434782608684,
+            "ic95": [
+              -0.051791304347826174,
+              0.23417777777777765
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "80–90%",
+            "n": 52,
+            "casos": 14,
+            "previsto": 0.8467576923076924,
+            "observado": 1,
+            "diferenca": 0.15324230769230762,
+            "ic95": [
+              0.14142448979591837,
+              0.16239512195121952
+            ],
+            "compativel": false
+          },
+          {
+            "faixa": "90–99,5%",
+            "n": 64,
+            "casos": 10,
+            "previsto": 0.963478125,
+            "observado": 1,
+            "diferenca": 0.03652187500000004,
+            "ic95": [
+              0.03270526315789462,
+              0.045859259259259225
+            ],
+            "compativel": false
+          },
+          {
+            "faixa": "100%",
+            "n": 94,
+            "casos": 11,
+            "previsto": 0.9992978723404257,
+            "observado": 1,
+            "diferenca": 0.0007021276595743364,
+            "ic95": [
+              0.0005999999999999508,
+              0.0008777777777777058
+            ],
+            "compativel": true
+          }
+        ]
+      },
+      "surpresas": [
+        {
+          "time": "Corinthians",
+          "evento": "Z4",
+          "rodada": 22,
+          "previsto": 0.0052,
+          "aconteceu": true,
+          "erro": 0.9948
+        },
+        {
+          "time": "Athletico-PR",
+          "evento": "G6",
+          "rodada": 0,
+          "previsto": 0.0278,
+          "aconteceu": true,
+          "erro": 0.9722
+        },
+        {
+          "time": "Cruzeiro",
+          "evento": "G4",
+          "rodada": 14,
+          "previsto": 0.07699999999999999,
+          "aconteceu": true,
+          "erro": 0.923
+        },
+        {
+          "time": "Grêmio",
+          "evento": "Z4",
+          "rodada": 4,
+          "previsto": 0.0816,
+          "aconteceu": true,
+          "erro": 0.9184
+        },
+        {
+          "time": "Flamengo",
+          "evento": "título",
+          "rodada": 2,
+          "previsto": 0.18079999999999996,
+          "aconteceu": true,
+          "erro": 0.8192
+        },
+        {
+          "time": "Fluminense",
+          "evento": "G4",
+          "rodada": 32,
+          "previsto": 0.19659999999999994,
+          "aconteceu": true,
+          "erro": 0.8034000000000001
+        }
+      ]
+    },
+    "B": {
+      "jogos": 380,
+      "H": 38,
+      "maxR": 38,
+      "completa": true,
+      "sobrepostos": 7,
+      "clubes": 20,
+      "porEvento": [
+        {
+          "evento": "1º",
+          "vagas": 1,
+          "previsoes": 760,
+          "brier": 0.04339850042105266,
+          "brierTaxaBase": 0.04750000000000023,
+          "habilidade": 0.08634735955679063,
+          "brierDesdeR1": 0.04324204994594595,
+          "brierTabelaDoMomento": 0.0891891891891892,
+          "acertoMedio": 0.15789473684210525,
+          "acertoTabelaDoMomento": 0.10810810810810811,
+          "acertoModeloDesdeR1": 0.16216216216216217,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0,
+              "tabela": null
+            },
+            {
+              "rodada": 10,
+              "modelo": 0,
+              "tabela": 0
+            },
+            {
+              "rodada": 19,
+              "modelo": 0,
+              "tabela": 0
+            },
+            {
+              "rodada": 29,
+              "modelo": 0,
+              "tabela": 0
+            }
+          ]
+        },
+        {
+          "evento": "acesso direto (top-2)",
+          "vagas": 2,
+          "previsoes": 760,
+          "brier": 0.06666046736842102,
+          "brierTaxaBase": 0.08999999999999987,
+          "habilidade": 0.2593281403508765,
+          "brierDesdeR1": 0.06597283156756753,
+          "brierTabelaDoMomento": 0.13243243243243244,
+          "acertoMedio": 0.39473684210526316,
+          "acertoTabelaDoMomento": 0.33783783783783783,
+          "acertoModeloDesdeR1": 0.40540540540540543,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0,
+              "tabela": null
+            },
+            {
+              "rodada": 10,
+              "modelo": 0,
+              "tabela": 0
+            },
+            {
+              "rodada": 19,
+              "modelo": 0.5,
+              "tabela": 0
+            },
+            {
+              "rodada": 29,
+              "modelo": 0.5,
+              "tabela": 0
+            }
+          ]
+        },
+        {
+          "evento": "G6",
+          "vagas": 6,
+          "previsoes": 760,
+          "brier": 0.11620078726315804,
+          "brierTaxaBase": 0.2100000000000019,
+          "habilidade": 0.4466629177944905,
+          "brierDesdeR1": 0.11380458605405416,
+          "brierTabelaDoMomento": 0.1891891891891892,
+          "acertoMedio": 0.6973684210526315,
+          "acertoTabelaDoMomento": 0.6846846846846847,
+          "acertoModeloDesdeR1": 0.7027027027027027,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0.5,
+              "tabela": null
+            },
+            {
+              "rodada": 10,
+              "modelo": 0.3333333333333333,
+              "tabela": 0.3333333333333333
+            },
+            {
+              "rodada": 19,
+              "modelo": 0.8333333333333334,
+              "tabela": 0.8333333333333334
+            },
+            {
+              "rodada": 29,
+              "modelo": 0.8333333333333334,
+              "tabela": 0.8333333333333334
+            }
+          ]
+        },
+        {
+          "evento": "Z4",
+          "vagas": 4,
+          "previsoes": 760,
+          "brier": 0.05798355052631588,
+          "brierTaxaBase": 0.16000000000000217,
+          "habilidade": 0.6376028092105306,
+          "brierDesdeR1": 0.05542177805405414,
+          "brierTabelaDoMomento": 0.07027027027027027,
+          "acertoMedio": 0.8157894736842105,
+          "acertoTabelaDoMomento": 0.8243243243243243,
+          "acertoModeloDesdeR1": 0.8243243243243243,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0.5,
+              "tabela": null
+            },
+            {
+              "rodada": 10,
+              "modelo": 1,
+              "tabela": 0.75
+            },
+            {
+              "rodada": 19,
+              "modelo": 0.75,
+              "tabela": 0.75
+            },
+            {
+              "rodada": 29,
+              "modelo": 1,
+              "tabela": 1
+            }
+          ]
+        }
+      ],
+      "calibracao": {
+        "n": 3040,
+        "clubes": 20,
+        "ece": 0.01984197368421053,
+        "faixas": [
+          {
+            "faixa": "0%",
+            "n": 825,
+            "casos": 63,
+            "previsto": 0.000556121212121212,
+            "observado": 0,
+            "diferenca": -0.000556121212121212,
+            "ic95": [
+              -0.0006862483311081442,
+              -0.0004300225733634312
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "0,5–10%",
+            "n": 948,
+            "casos": 70,
+            "previsto": 0.04245105485232067,
+            "observado": 0.035864978902953586,
+            "diferenca": -0.006586075949367082,
+            "ic95": [
+              -0.042913124999999996,
+              0.06125283893395134
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "10–20%",
+            "n": 425,
+            "casos": 62,
+            "previsto": 0.14456235294117648,
+            "observado": 0.11529411764705882,
+            "diferenca": -0.02926823529411765,
+            "ic95": [
+              -0.11938944954128441,
+              0.08812634032634031
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "20–30%",
+            "n": 309,
+            "casos": 52,
+            "previsto": 0.24648737864077672,
+            "observado": 0.22653721682847897,
+            "diferenca": -0.01995016181229775,
+            "ic95": [
+              -0.15371847133757968,
+              0.13459489361702134
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "30–40%",
+            "n": 157,
+            "casos": 37,
+            "previsto": 0.3430178343949044,
+            "observado": 0.31210191082802546,
+            "diferenca": -0.030915923566878944,
+            "ic95": [
+              -0.19579108280254776,
+              0.12540662983425419
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "40–60%",
+            "n": 157,
+            "casos": 29,
+            "previsto": 0.4957439490445859,
+            "observado": 0.5605095541401274,
+            "diferenca": 0.06476560509554147,
+            "ic95": [
+              -0.15315540540540531,
+              0.2545226666666666
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "60–70%",
+            "n": 57,
+            "casos": 18,
+            "previsto": 0.6449403508771929,
+            "observado": 0.7368421052631579,
+            "diferenca": 0.09190175438596493,
+            "ic95": [
+              -0.17367058823529416,
+              0.2658952380952381
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "70–80%",
+            "n": 31,
+            "casos": 12,
+            "previsto": 0.7521677419354839,
+            "observado": 1,
+            "diferenca": 0.24783225806451614,
+            "ic95": [
+              0.24345161290322584,
+              0.25308
+            ],
+            "compativel": false
+          },
+          {
+            "faixa": "80–90%",
+            "n": 34,
+            "casos": 12,
+            "previsto": 0.8527058823529413,
+            "observado": 1,
+            "diferenca": 0.1472941176470587,
+            "ic95": [
+              0.13999285714285709,
+              0.1564249999999999
+            ],
+            "compativel": false
+          },
+          {
+            "faixa": "90–99,5%",
+            "n": 41,
+            "casos": 10,
+            "previsto": 0.9505073170731707,
+            "observado": 1,
+            "diferenca": 0.04949268292682929,
+            "ic95": [
+              0.042591304347825994,
+              0.054524000000000114
+            ],
+            "compativel": false
+          },
+          {
+            "faixa": "100%",
+            "n": 56,
+            "casos": 9,
+            "previsto": 0.9994071428571428,
+            "observado": 1,
+            "diferenca": 0.0005928571428571727,
+            "ic95": [
+              0.00041739130434778013,
+              0.0007815384615386077
+            ],
+            "compativel": true
+          }
+        ]
+      },
+      "surpresas": [
+        {
+          "time": "Novorizontino",
+          "evento": "1º",
+          "rodada": 3,
+          "previsto": 0.0172,
+          "aconteceu": true,
+          "erro": 0.9828
+        },
+        {
+          "time": "Novorizontino",
+          "evento": "acesso direto (top-2)",
+          "rodada": 3,
+          "previsto": 0.044,
+          "aconteceu": true,
+          "erro": 0.956
+        },
+        {
+          "time": "Juventude",
+          "evento": "acesso direto (top-2)",
+          "rodada": 3,
+          "previsto": 0.05580000000000001,
+          "aconteceu": true,
+          "erro": 0.9442
+        },
+        {
+          "time": "Avaí",
+          "evento": "Z4",
+          "rodada": 3,
+          "previsto": 0.10119999999999998,
+          "aconteceu": true,
+          "erro": 0.8988
+        },
+        {
+          "time": "Atlético-GO",
+          "evento": "G6",
+          "rodada": 36,
+          "previsto": 0.1396,
+          "aconteceu": true,
+          "erro": 0.8604
+        },
+        {
+          "time": "Londrina",
+          "evento": "Z4",
+          "rodada": 1,
+          "previsto": 0.15039999999999998,
+          "aconteceu": true,
+          "erro": 0.8496
+        }
+      ]
+    },
+    "C": {
+      "jogos": 190,
+      "H": 19,
+      "maxR": 19,
+      "completa": true,
+      "sobrepostos": 0,
+      "clubes": 20,
+      "porEvento": [
+        {
+          "evento": "1º",
+          "vagas": 1,
+          "previsoes": 380,
+          "brier": 0.05212272968421051,
+          "brierTaxaBase": 0.04750000000000002,
+          "habilidade": -0.097320624930747,
+          "brierDesdeR1": 0.052336233999999995,
+          "brierTabelaDoMomento": 0.1,
+          "acertoMedio": 0,
+          "acertoTabelaDoMomento": 0,
+          "acertoModeloDesdeR1": 0,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0,
+              "tabela": null
+            },
+            {
+              "rodada": 5,
+              "modelo": 0,
+              "tabela": 0
+            },
+            {
+              "rodada": 10,
+              "modelo": 0,
+              "tabela": 0
+            },
+            {
+              "rodada": 14,
+              "modelo": 0,
+              "tabela": 0
+            }
+          ]
+        },
+        {
+          "evento": "G8",
+          "vagas": 8,
+          "previsoes": 380,
+          "brier": 0.2032206970526317,
+          "brierTaxaBase": 0.23999999999999852,
+          "habilidade": 0.15324709561402927,
+          "brierDesdeR1": 0.2010271840000001,
+          "brierTabelaDoMomento": 0.3,
+          "acertoMedio": 0.5986842105263158,
+          "acertoTabelaDoMomento": 0.625,
+          "acertoModeloDesdeR1": 0.6041666666666666,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0.5,
+              "tabela": null
+            },
+            {
+              "rodada": 5,
+              "modelo": 0.375,
+              "tabela": 0.5
+            },
+            {
+              "rodada": 10,
+              "modelo": 0.5,
+              "tabela": 0.5
+            },
+            {
+              "rodada": 14,
+              "modelo": 0.875,
+              "tabela": 0.875
+            }
+          ]
+        },
+        {
+          "evento": "Z2",
+          "vagas": 2,
+          "previsoes": 380,
+          "brier": 0.06500961557894738,
+          "brierTaxaBase": 0.09000000000000045,
+          "habilidade": 0.2776709380116994,
+          "brierDesdeR1": 0.06359379933333337,
+          "brierTabelaDoMomento": 0.1111111111111111,
+          "acertoMedio": 0.42105263157894735,
+          "acertoTabelaDoMomento": 0.4444444444444444,
+          "acertoModeloDesdeR1": 0.4444444444444444,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0,
+              "tabela": null
+            },
+            {
+              "rodada": 5,
+              "modelo": 0.5,
+              "tabela": 0.5
+            },
+            {
+              "rodada": 10,
+              "modelo": 0.5,
+              "tabela": 0.5
+            },
+            {
+              "rodada": 14,
+              "modelo": 0.5,
+              "tabela": 0.5
+            }
+          ]
+        }
+      ],
+      "calibracao": {
+        "n": 1140,
+        "clubes": 20,
+        "ece": 0.03265438596491229,
+        "faixas": [
+          {
+            "faixa": "0%",
+            "n": 276,
+            "casos": 39,
+            "previsto": 0.000832608695652174,
+            "observado": 0.018115942028985508,
+            "diferenca": 0.017283333333333335,
+            "ic95": [
+              -0.0009703703703703705,
+              0.05951566265060241
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "0,5–10%",
+            "n": 384,
+            "casos": 48,
+            "previsto": 0.04024427083333334,
+            "observado": 0.036458333333333336,
+            "diferenca": -0.003785937500000003,
+            "ic95": [
+              -0.04019423076923078,
+              0.0642750656167979
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "10–20%",
+            "n": 125,
+            "casos": 35,
+            "previsto": 0.1421648,
+            "observado": 0.144,
+            "diferenca": 0.0018351999999999813,
+            "ic95": [
+              -0.12757096774193552,
+              0.14522278481012657
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "20–30%",
+            "n": 88,
+            "casos": 29,
+            "previsto": 0.25057727272727276,
+            "observado": 0.29545454545454547,
+            "diferenca": 0.04487727272727271,
+            "ic95": [
+              -0.12872058823529411,
+              0.26815949367088604
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "30–40%",
+            "n": 65,
+            "casos": 25,
+            "previsto": 0.3494338461538461,
+            "observado": 0.47692307692307695,
+            "diferenca": 0.12748923076923085,
+            "ic95": [
+              -0.11557254901960794,
+              0.3514075
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "40–60%",
+            "n": 95,
+            "casos": 23,
+            "previsto": 0.49076421052631575,
+            "observado": 0.5052631578947369,
+            "diferenca": 0.014498947368421111,
+            "ic95": [
+              -0.2264054054054054,
+              0.26385599999999987
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "60–70%",
+            "n": 31,
+            "casos": 14,
+            "previsto": 0.6450516129032259,
+            "observado": 0.5161290322580645,
+            "diferenca": -0.12892258064516138,
+            "ic95": [
+              -0.4042999999999999,
+              0.1719631578947368
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "70–80%",
+            "n": 28,
+            "casos": 14,
+            "previsto": 0.7482571428571428,
+            "observado": 0.6428571428571429,
+            "diferenca": -0.10539999999999994,
+            "ic95": [
+              -0.3965483870967744,
+              0.14334285714285702
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "80–90%",
+            "n": 25,
+            "casos": 9,
+            "previsto": 0.851616,
+            "observado": 0.72,
+            "diferenca": -0.13161600000000007,
+            "ic95": [
+              -0.5004375,
+              0.15171666666666672
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "90–99,5%",
+            "n": 19,
+            "casos": 8,
+            "previsto": 0.9432105263157894,
+            "observado": 0.5789473684210527,
+            "diferenca": -0.36426315789473673,
+            "ic95": [
+              -0.7741888888888889,
+              0.05241333333333328
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "100%",
+            "n": 4,
+            "casos": 3,
+            "previsto": 1,
+            "observado": 1,
+            "diferenca": 0,
+            "ic95": [
+              0,
+              0
+            ],
+            "compativel": true
+          }
+        ]
+      },
+      "surpresas": [
+        {
+          "time": "Botafogo-PB",
+          "evento": "1º",
+          "rodada": 10,
+          "previsto": 0,
+          "aconteceu": true,
+          "erro": 1
+        },
+        {
+          "time": "Guarani",
+          "evento": "G8",
+          "rodada": 10,
+          "previsto": 0.9732,
+          "aconteceu": false,
+          "erro": 0.9732
+        },
+        {
+          "time": "Botafogo-PB",
+          "evento": "G8",
+          "rodada": 8,
+          "previsto": 0.0768,
+          "aconteceu": true,
+          "erro": 0.9232
+        },
+        {
+          "time": "Amazonas",
+          "evento": "G8",
+          "rodada": 4,
+          "previsto": 0.9096,
+          "aconteceu": false,
+          "erro": 0.9096
+        },
+        {
+          "time": "Anápolis",
+          "evento": "Z2",
+          "rodada": 14,
+          "previsto": 0.907,
+          "aconteceu": false,
+          "erro": 0.907
+        },
+        {
+          "time": "Confiança",
+          "evento": "Z2",
+          "rodada": 0,
+          "previsto": 0.094,
+          "aconteceu": true,
+          "erro": 0.906
+        }
+      ]
+    },
+    "D": {
+      "jogos": 480,
+      "H": 10,
+      "maxR": 10,
+      "completa": true,
+      "sobrepostos": 0,
+      "clubes": 96,
+      "porEvento": [
+        {
+          "evento": "1º do grupo",
+          "vagas": 1,
+          "previsoes": 960,
+          "brier": 0.08409908858333329,
+          "brierTaxaBase": 0.13888888888888629,
+          "habilidade": 0.394486562199989,
+          "brierDesdeR1": 0.07874523222222225,
+          "brierTabelaDoMomento": 0.12731481481481483,
+          "acertoMedio": 0.575,
+          "acertoTabelaDoMomento": 0.6180555555555556,
+          "acertoModeloDesdeR1": 0.6041666666666666,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0.3125,
+              "tabela": null
+            },
+            {
+              "rodada": 3,
+              "modelo": 0.3125,
+              "tabela": 0.3125
+            },
+            {
+              "rodada": 5,
+              "modelo": 0.625,
+              "tabela": 0.625
+            },
+            {
+              "rodada": 8,
+              "modelo": 0.8125,
+              "tabela": 0.875
+            }
+          ]
+        },
+        {
+          "evento": "top-4 do grupo",
+          "vagas": 4,
+          "previsoes": 960,
+          "brier": 0.13824375758333332,
+          "brierTaxaBase": 0.2222222222222254,
+          "habilidade": 0.37790309087500895,
+          "brierDesdeR1": 0.12975031759259262,
+          "brierTabelaDoMomento": 0.20601851851851852,
+          "acertoMedio": 0.834375,
+          "acertoTabelaDoMomento": 0.8454861111111112,
+          "acertoModeloDesdeR1": 0.8489583333333334,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0.703125,
+              "tabela": null
+            },
+            {
+              "rodada": 3,
+              "modelo": 0.828125,
+              "tabela": 0.828125
+            },
+            {
+              "rodada": 5,
+              "modelo": 0.84375,
+              "tabela": 0.859375
+            },
+            {
+              "rodada": 8,
+              "modelo": 0.875,
+              "tabela": 0.875
+            }
+          ]
+        }
+      ],
+      "calibracao": {
+        "n": 1920,
+        "clubes": 96,
+        "ece": 0.028212499999999977,
+        "faixas": [
+          {
+            "faixa": "0%",
+            "n": 232,
+            "casos": 82,
+            "previsto": 0.0005568965517241378,
+            "observado": 0,
+            "diferenca": -0.0005568965517241378,
+            "ic95": [
+              -0.0006564814814814815,
+              -0.0004499999999999998
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "0,5–10%",
+            "n": 278,
+            "casos": 93,
+            "previsto": 0.04490719424460429,
+            "observado": 0.017985611510791366,
+            "diferenca": -0.026921582733812927,
+            "ic95": [
+              -0.044615107913669044,
+              0.0010839826839826722
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "10–20%",
+            "n": 265,
+            "casos": 106,
+            "previsto": 0.15187924528301883,
+            "observado": 0.10566037735849057,
+            "diferenca": -0.046218867924528256,
+            "ic95": [
+              -0.10351929824561396,
+              0.02098223938223937
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "20–30%",
+            "n": 149,
+            "casos": 75,
+            "previsto": 0.24616778523489935,
+            "observado": 0.28859060402684567,
+            "diferenca": 0.042422818791946315,
+            "ic95": [
+              -0.07195974842767301,
+              0.16150379746835458
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "30–40%",
+            "n": 99,
+            "casos": 66,
+            "previsto": 0.343741414141414,
+            "observado": 0.3838383838383838,
+            "diferenca": 0.0400969696969698,
+            "ic95": [
+              -0.08299607843137242,
+              0.1727896907216495
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "40–60%",
+            "n": 220,
+            "casos": 92,
+            "previsto": 0.50937,
+            "observado": 0.5,
+            "diferenca": -0.00936999999999999,
+            "ic95": [
+              -0.12744976525821616,
+              0.10799904761904762
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "60–70%",
+            "n": 138,
+            "casos": 80,
+            "previsto": 0.653342028985507,
+            "observado": 0.6159420289855072,
+            "diferenca": -0.03739999999999977,
+            "ic95": [
+              -0.15857638888888875,
+              0.0870602739726024
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "70–80%",
+            "n": 159,
+            "casos": 78,
+            "previsto": 0.7513698113207546,
+            "observado": 0.8050314465408805,
+            "diferenca": 0.0536616352201259,
+            "ic95": [
+              -0.05080632911392396,
+              0.14396853932584247
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "80–90%",
+            "n": 125,
+            "casos": 67,
+            "previsto": 0.8535343999999998,
+            "observado": 0.912,
+            "diferenca": 0.05846560000000023,
+            "ic95": [
+              -0.022586666666666512,
+              0.12413587786259558
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "90–99,5%",
+            "n": 142,
+            "casos": 57,
+            "previsto": 0.9514352112676059,
+            "observado": 0.9577464788732394,
+            "diferenca": 0.006311267605633497,
+            "ic95": [
+              -0.07598271604938292,
+              0.050300719424460516
+            ],
+            "compativel": true
+          },
+          {
+            "faixa": "100%",
+            "n": 113,
+            "casos": 48,
+            "previsto": 0.9994973451327434,
+            "observado": 1,
+            "diferenca": 0.0005026548672566467,
+            "ic95": [
+              0.00029827586206894414,
+              0.0007261261261259062
+            ],
+            "compativel": true
+          }
+        ]
+      },
+      "surpresas": [
+        {
+          "time": "Joinville",
+          "evento": "top-4 do grupo",
+          "rodada": 4,
+          "previsto": 0.9706,
+          "aconteceu": false,
+          "erro": 0.9706
+        },
+        {
+          "time": "Trem",
+          "evento": "1º do grupo",
+          "rodada": 0,
+          "previsto": 0.0476,
+          "aconteceu": true,
+          "erro": 0.9524
+        },
+        {
+          "time": "Primavera",
+          "evento": "top-4 do grupo",
+          "rodada": 7,
+          "previsto": 0.9236,
+          "aconteceu": false,
+          "erro": 0.9236
+        },
+        {
+          "time": "Democrata GV",
+          "evento": "1º do grupo",
+          "rodada": 0,
+          "previsto": 0.0956,
+          "aconteceu": true,
+          "erro": 0.9044
+        },
+        {
+          "time": "Santa Catarina",
+          "evento": "1º do grupo",
+          "rodada": 4,
+          "previsto": 0.0998,
+          "aconteceu": true,
+          "erro": 0.9002
+        },
+        {
+          "time": "Brasil-RS",
+          "evento": "top-4 do grupo",
+          "rodada": 4,
+          "previsto": 0.8922000000000001,
+          "aconteceu": false,
+          "erro": 0.8922000000000001
+        }
+      ]
+    }
+  },
+  "geral": {
+    "calibracao": {
+      "n": 8820,
+      "clubes": 156,
+      "ece": 0.009800136054421777,
+      "faixas": [
+        {
+          "faixa": "0%",
+          "n": 2349,
+          "casos": 244,
+          "previsto": 0.0006092805449127285,
+          "observado": 0.0021285653469561515,
+          "diferenca": 0.001519284802043423,
+          "ic95": [
+            -0.0006617498854786989,
+            0.006918712273641851
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "0,5–10%",
+          "n": 2247,
+          "casos": 273,
+          "previsto": 0.04202403204272363,
+          "observado": 0.03337783711615487,
+          "diferenca": -0.008646194926568762,
+          "ic95": [
+            -0.03177001915708813,
+            0.024128618421052638
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "10–20%",
+          "n": 1110,
+          "casos": 245,
+          "previsto": 0.1462526126126125,
+          "observado": 0.13333333333333333,
+          "diferenca": -0.012919279279279161,
+          "ic95": [
+            -0.06725584905660376,
+            0.04987255574614067
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "20–30%",
+          "n": 721,
+          "casos": 188,
+          "previsto": 0.2467614424410541,
+          "observado": 0.24271844660194175,
+          "diferenca": -0.004042995839112357,
+          "ic95": [
+            -0.08089006134969325,
+            0.08072454212454211
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "30–40%",
+          "n": 434,
+          "casos": 156,
+          "previsto": 0.3472138248847928,
+          "observado": 0.3433179723502304,
+          "diferenca": -0.003895852534562372,
+          "ic95": [
+            -0.09632636815920388,
+            0.09288344370860921
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "40–60%",
+          "n": 633,
+          "casos": 171,
+          "previsto": 0.4996060031595575,
+          "observado": 0.5039494470774092,
+          "diferenca": 0.004343443917851686,
+          "ic95": [
+            -0.09789333333333325,
+            0.100316
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "60–70%",
+          "n": 293,
+          "casos": 129,
+          "previsto": 0.6490996587030718,
+          "observado": 0.6382252559726962,
+          "diferenca": -0.010874402730375654,
+          "ic95": [
+            -0.11932428571428559,
+            0.08482131661442013
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "70–80%",
+          "n": 264,
+          "casos": 122,
+          "previsto": 0.7509469696969701,
+          "observado": 0.8257575757575758,
+          "diferenca": 0.07481060606060574,
+          "ic95": [
+            -0.004533606557377287,
+            0.14337810218978086
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "80–90%",
+          "n": 236,
+          "casos": 102,
+          "previsto": 0.8517186440677964,
+          "observado": 0.923728813559322,
+          "diferenca": 0.07201016949152561,
+          "ic95": [
+            0.009776086956522202,
+            0.12074647887323928
+          ],
+          "compativel": false
+        },
+        {
+          "faixa": "90–99,5%",
+          "n": 266,
+          "casos": 85,
+          "previsto": 0.9536022556390976,
+          "observado": 0.9473684210526315,
+          "diferenca": -0.0062338345864660916,
+          "ic95": [
+            -0.07156978417266197,
+            0.041361389961390216
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "100%",
+          "n": 267,
+          "casos": 71,
+          "previsto": 0.9994157303370786,
+          "observado": 1,
+          "diferenca": 0.0005842696629213551,
+          "ic95": [
+            0.0004628787878786511,
+            0.0006892508143323539
+          ],
+          "compativel": true
+        }
+      ]
+    },
+    "calibracaoSemA": {
+      "n": 6100,
+      "clubes": 136,
+      "ece": 0.015591540983606555,
+      "faixas": [
+        {
+          "faixa": "0%",
+          "n": 1333,
+          "casos": 184,
+          "previsto": 0.0006135033758439611,
+          "observado": 0.0037509377344336083,
+          "diferenca": 0.0031374343585896473,
+          "ic95": [
+            -0.0006926829268292684,
+            0.012223043852106619
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "0,5–10%",
+          "n": 1610,
+          "casos": 211,
+          "previsto": 0.042348819875776385,
+          "observado": 0.03291925465838509,
+          "diferenca": -0.009429565217391293,
+          "ic95": [
+            -0.0370416062465142,
+            0.03541118881118884
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "10–20%",
+          "n": 815,
+          "casos": 203,
+          "previsto": 0.14657374233128836,
+          "observado": 0.1165644171779141,
+          "diferenca": -0.03000932515337426,
+          "ic95": [
+            -0.0874620689655172,
+            0.03890242038216565
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "20–30%",
+          "n": 546,
+          "casos": 156,
+          "previsto": 0.24705934065934065,
+          "observado": 0.25457875457875456,
+          "diferenca": 0.007519413919413909,
+          "ic95": [
+            -0.08659919839679354,
+            0.10946925795053003
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "30–40%",
+          "n": 321,
+          "casos": 128,
+          "previsto": 0.3445401869158879,
+          "observado": 0.367601246105919,
+          "diferenca": 0.023061059190031097,
+          "ic95": [
+            -0.0735591836734695,
+            0.13121010638297853
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "40–60%",
+          "n": 472,
+          "casos": 144,
+          "previsto": 0.5010927966101695,
+          "observado": 0.5211864406779662,
+          "diferenca": 0.02009364406779668,
+          "ic95": [
+            -0.07880299785867247,
+            0.11884990328820129
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "60–70%",
+          "n": 226,
+          "casos": 112,
+          "previsto": 0.6500858407079648,
+          "observado": 0.6327433628318584,
+          "diferenca": -0.017342477876106432,
+          "ic95": [
+            -0.1289563318777294,
+            0.08621900452488694
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "70–80%",
+          "n": 218,
+          "casos": 104,
+          "previsto": 0.751083486238532,
+          "observado": 0.8119266055045872,
+          "diferenca": 0.06084311926605512,
+          "ic95": [
+            -0.027403571428571638,
+            0.1358613065326631
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "80–90%",
+          "n": 184,
+          "casos": 88,
+          "previsto": 0.853120652173913,
+          "observado": 0.9021739130434783,
+          "diferenca": 0.049053260869565296,
+          "ic95": [
+            -0.027392222222222214,
+            0.11457500000000007
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "90–99,5%",
+          "n": 202,
+          "casos": 75,
+          "previsto": 0.9504732673267323,
+          "observado": 0.9306930693069307,
+          "diferenca": -0.019780198019801576,
+          "ic95": [
+            -0.10803867403314858,
+            0.04123883495145623
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "100%",
+          "n": 173,
+          "casos": 60,
+          "previsto": 0.9994797687861273,
+          "observado": 1,
+          "diferenca": 0.0005202312138726795,
+          "ic95": [
+            0.0003592814371257621,
+            0.0006840764331210994
+          ],
+          "compativel": true
+        }
+      ]
+    },
+    "primeiraMetade": {
+      "n": 4440,
+      "clubes": 156,
+      "ece": 0.011661081081081062,
+      "faixas": [
+        {
+          "faixa": "0%",
+          "n": 468,
+          "casos": 68,
+          "previsto": 0.0013132478632478632,
+          "observado": 0.00641025641025641,
+          "diferenca": 0.005097008547008547,
+          "ic95": [
+            -0.0015209302325581396,
+            0.022432978723404252
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "0,5–10%",
+          "n": 1462,
+          "casos": 215,
+          "previsto": 0.04553871409028728,
+          "observado": 0.03967168262653899,
+          "diferenca": -0.0058670314637482915,
+          "ic95": [
+            -0.03447523236741388,
+            0.03385432656132432
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "10–20%",
+          "n": 803,
+          "casos": 213,
+          "previsto": 0.14569140722291402,
+          "observado": 0.136986301369863,
+          "diferenca": -0.00870510585305101,
+          "ic95": [
+            -0.06561483146067405,
+            0.054141379310344795
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "20–30%",
+          "n": 526,
+          "casos": 159,
+          "previsto": 0.24575741444866922,
+          "observado": 0.2338403041825095,
+          "diferenca": -0.011917110266159714,
+          "ic95": [
+            -0.09198429752066117,
+            0.07681645338208413
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "30–40%",
+          "n": 265,
+          "casos": 116,
+          "previsto": 0.34736377358490556,
+          "observado": 0.3320754716981132,
+          "diferenca": -0.015288301886792366,
+          "ic95": [
+            -0.12731510204081609,
+            0.09631166077738504
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "40–60%",
+          "n": 376,
+          "casos": 129,
+          "previsto": 0.49923404255319176,
+          "observado": 0.5106382978723404,
+          "diferenca": 0.011404255319148626,
+          "ic95": [
+            -0.10312699386503071,
+            0.11935739348370923
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "60–70%",
+          "n": 172,
+          "casos": 97,
+          "previsto": 0.64798488372093,
+          "observado": 0.6511627906976745,
+          "diferenca": 0.003177906976744471,
+          "ic95": [
+            -0.12035789473684191,
+            0.11387411764705863
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "70–80%",
+          "n": 154,
+          "casos": 82,
+          "previsto": 0.7487532467532468,
+          "observado": 0.8311688311688312,
+          "diferenca": 0.08241558441558439,
+          "ic95": [
+            -0.00975629139072842,
+            0.16289811320754738
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "80–90%",
+          "n": 116,
+          "casos": 59,
+          "previsto": 0.8513689655172412,
+          "observado": 0.896551724137931,
+          "diferenca": 0.04518275862068988,
+          "ic95": [
+            -0.053720000000000406,
+            0.11648888888888911
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "90–99,5%",
+          "n": 93,
+          "casos": 35,
+          "previsto": 0.9492322580645159,
+          "observado": 0.956989247311828,
+          "diferenca": 0.007756989247312052,
+          "ic95": [
+            -0.06634252873563218,
+            0.04977924528301902
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "100%",
+          "n": 5,
+          "casos": 3,
+          "previsto": 0.9974000000000001,
+          "observado": 1,
+          "diferenca": 0.0025999999999999357,
+          "ic95": [
+            0.002066666666666587,
+            0.0039999999999998925
+          ],
+          "compativel": true
+        }
+      ]
+    },
+    "segundaMetade": {
+      "n": 4380,
+      "clubes": 156,
+      "ece": 0.011804383561643803,
+      "faixas": [
+        {
+          "faixa": "0%",
+          "n": 1881,
+          "casos": 244,
+          "previsto": 0.00043413078149920256,
+          "observado": 0.001063264221158958,
+          "diferenca": 0.0006291334396597555,
+          "ic95": [
+            -0.0004928057553956836,
+            0.0032164533820840946
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "0,5–10%",
+          "n": 785,
+          "casos": 201,
+          "previsto": 0.03547821656050955,
+          "observado": 0.02165605095541401,
+          "diferenca": -0.013822165605095537,
+          "ic95": [
+            -0.033824744897959176,
+            0.014850485436893194
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "10–20%",
+          "n": 307,
+          "casos": 128,
+          "previsto": 0.14772052117263845,
+          "observado": 0.1237785016286645,
+          "diferenca": -0.023942019543973958,
+          "ic95": [
+            -0.09017135135135136,
+            0.05912389937106916
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "20–30%",
+          "n": 195,
+          "casos": 94,
+          "previsto": 0.24946974358974353,
+          "observado": 0.26666666666666666,
+          "diferenca": 0.017196923076923137,
+          "ic95": [
+            -0.0930682242990655,
+            0.13441956521739132
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "30–40%",
+          "n": 169,
+          "casos": 84,
+          "previsto": 0.34697869822485206,
+          "observado": 0.3609467455621302,
+          "diferenca": 0.013968047337278133,
+          "ic95": [
+            -0.09935268817204289,
+            0.1385346405228759
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "40–60%",
+          "n": 257,
+          "casos": 110,
+          "previsto": 0.5001501945525291,
+          "observado": 0.49416342412451364,
+          "diferenca": -0.005986770428015431,
+          "ic95": [
+            -0.12413679999999999,
+            0.10716750902527071
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "60–70%",
+          "n": 121,
+          "casos": 68,
+          "previsto": 0.6506842975206611,
+          "observado": 0.6198347107438017,
+          "diferenca": -0.03084958677685945,
+          "ic95": [
+            -0.15695714285714285,
+            0.09389890109890105
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "70–80%",
+          "n": 110,
+          "casos": 70,
+          "previsto": 0.7540181818181818,
+          "observado": 0.8181818181818182,
+          "diferenca": 0.06416363636363642,
+          "ic95": [
+            -0.04248793103448242,
+            0.15049487179487178
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "80–90%",
+          "n": 120,
+          "casos": 68,
+          "previsto": 0.852056666666667,
+          "observado": 0.95,
+          "diferenca": 0.09794333333333294,
+          "ic95": [
+            0.03541587301587247,
+            0.142648
+          ],
+          "compativel": false
+        },
+        {
+          "faixa": "90–99,5%",
+          "n": 173,
+          "casos": 79,
+          "previsto": 0.9559514450867049,
+          "observado": 0.9421965317919075,
+          "diferenca": -0.013754913294797388,
+          "ic95": [
+            -0.0853064220183485,
+            0.039587428571428517
+          ],
+          "compativel": true
+        },
+        {
+          "faixa": "100%",
+          "n": 262,
+          "casos": 71,
+          "previsto": 0.9994541984732825,
+          "observado": 1,
+          "diferenca": 0.0005458015267174599,
+          "ic95": [
+            0.0004414062499998872,
+            0.0006505154639172916
+          ],
+          "compativel": true
+        }
+      ]
+    }
+  }
+}
