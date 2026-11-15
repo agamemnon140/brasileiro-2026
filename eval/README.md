@@ -66,6 +66,7 @@ Hoje o desvio é ~2e-16 (erro de arredondamento de ponto flutuante), nas três s
 | `paridade.cjs` | confere, pelo histórico do git, se o replay equivale ao que o app publicou |
 | `hist/coletar_cbf.browser.js` | coletor dos jogos de 2021–2025 na API do site da CBF (rodou num navegador) |
 | `hist/sementes.cjs` | testes multi-temporada de semente contra "todos iguais", por eventos de zona: tabela do ano anterior (sem flag), força do estado na Série D (`--uf`), rating herdado e via de classificação (`--herdado`) |
+| `hist/parametros.cjs` | mando, total de gols, preset e Dixon-Coles nas 16 células de 2022–2025: jogo a jogo (sem flag), eventos de zona (`--zona`) e a candidata do histórico em 2026 (`--2026`) |
 | `hist/estaduais.py` | classificação final dos estaduais a partir do wikitext da Wikipedia pt; grava `data/hist/estaduais_classificacao.json` |
 | `hist/ingerir.cjs` | normaliza, deduplica e confere a coleta; grava `data/hist/cbf_jogos_2021_2025.csv` |
 | `lib/appdata.cjs` | reconstrói os resultados que o app enxerga (`mergeRes` + `results.json`) |
