@@ -77,6 +77,29 @@ vence em 28 de 29 cortes. Corrida compacta: 3 mil simulações, 1 semente.
 
 As recomendações 0, 4, 10 e 13 são fatos de código ou de desenho e não dependem da amostra.
 
+## Primeiro resultado multi-temporada (14/11)
+
+`node eval/hist/sementes.cjs` roda o motor de hoje nas Séries A, B, C e D de 2022 a 2025 e
+compara a semente "tabela do ano anterior" com "todos iguais", pelo Brier dos eventos de
+zona em quatro cortes (pré-temporada, 25%, 50% e 75% das rodadas; 2 mil simulações por ponto).
+
+| Amplitude k | Células em que melhora (de 16) | A | B | C | D | Ganho médio | Só pré-temporada |
+|---|---|---|---|---|---|---|---|
+| 0,25 | 10 | 3 | 3 | 2 | 2 | +1,9% | 12 de 16, +3,7% |
+| 0,5 | 7 | 3 | 2 | 1 | 1 | 0,0% | 8 de 16, +1,6% |
+| 1,0 | 5 | 3 | 1 | 1 | 0 | −9,7% | 5 de 16, −8,3% |
+
+Pela regra fixada (pelo menos 12 de 16), **nenhuma amplitude passa**. Amplitude cheia piora
+em quase toda parte; a pequena ajuda um pouco na A e na B e não ajuda na C nem na D. Isso
+concorda com o relatório de setembro num ponto: a semente rende mais quando é tímida.
+
+Ressalvas: é uma só construção de semente (Elo linear no posto dentro da série); na D quase
+metade dos clubes não tem posto no ano anterior; a regra conta diferenças pequenas e grandes
+do mesmo jeito; faltam o rating herdado, os estaduais e a força do estado.
+
+A CBF troca o id do clube quando ele vira SAF. `sementes.cjs` religa 26 ids pelo nome; sem
+isso, Fortaleza (4º em 2024) e Atlético Mineiro (7º em 2022) entravam como "sem histórico".
+
 ## O que falta
 
 1. Feito em 14/11: jogos das quatro séries em 2021–2025. A API do site da CBF serve as
