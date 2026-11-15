@@ -325,6 +325,92 @@ adotá-lo é do dono do projeto.
 Ressalvas: 2022–2025 roda sem a nota à mão; o teste z do viés é aproximado, como no
 relatório; nada aqui mede o mata-mata nem a Copa do Brasil.
 
+## Zonas rodada a rodada em 2026: precisão e calibração (15/11)
+
+`node eval/zonas2026.cjs` responde a duas perguntas sobre o que o app dizia ao longo do ano
+de quem terminaria em cada zona: quanto acertou, e se um evento anunciado com 50%
+aconteceu em metade das vezes. Em cada rodada, da pré-temporada à penúltima, o Monte Carlo
+roda sabendo só os resultados até ali (5 mil simulações, config e semente do app) e a
+probabilidade de cada clube em cada zona é comparada com a tabela final da fase de liga.
+São 8.820 previsões de 156 clubes.
+
+**Calibração: sim, na média.** As quatro séries juntas:
+
+| Faixa anunciada | Previsões | Casos | Previsto | Aconteceu | Diferença (IC95, pp) |
+|---|---|---|---|---|---|
+| 0% | 2.349 | 244 | 0% | 0% | +0,2 [−0,1; +0,7] |
+| 0,5–10% | 2.247 | 273 | 4% | 3% | −0,9 [−3,2; +2,4] |
+| 10–20% | 1.110 | 245 | 15% | 13% | −1,3 [−6,7; +5,0] |
+| 20–30% | 721 | 188 | 25% | 24% | −0,4 [−8,1; +8,1] |
+| 30–40% | 434 | 156 | 35% | 34% | −0,4 [−9,6; +9,3] |
+| 40–60% | 633 | 171 | 50% | 50% | +0,4 [−9,8; +10,0] |
+| 60–70% | 293 | 129 | 65% | 64% | −1,1 [−11,9; +8,5] |
+| 70–80% | 264 | 122 | 75% | 83% | +7,5 [−0,5; +14,3] |
+| 80–90% | 236 | 102 | 85% | 92% | +7,2 [+1,0; +12,1] |
+| 90–99,5% | 266 | 85 | 95% | 95% | −0,6 [−7,2; +4,1] |
+| 100% | 267 | 71 | 100% | 100% | +0,1 [0,0; +0,1] |
+
+"Casos" são pares clube-zona distintos. As previsões de um clube ao longo das rodadas
+apontam para o mesmo desfecho, então o intervalo vem de um bootstrap que reamostra clubes
+inteiros. O erro médio de calibração é de 1,0 ponto. A única faixa em que o intervalo exclui
+zero é a de 80–90%, onde o modelo é tímido: o que ele dá com 70% a 90% acontece em 83% a 92%
+das vezes.
+
+Na faixa de 40–60%, por série: A 50% previsto e 45% ocorrido (27 casos), B 50% e 56% (29),
+C 49% e 51% (23), D 51% e 50% (92). No topo as séries divergem: de 70% a 99,5%, a A acertou
+97% contra 87% anunciados, a B 100% contra 86%, a D 89% contra 85% e a C só 65% contra 84%
+(72 previsões de poucos clubes: Guarani com 97% de G8 na rodada 10, Amazonas com 91% na
+rodada 4 e Anápolis com 91% de Z2 na rodada 14 não se confirmaram).
+
+**Precisão: varia muito por série e por zona.**
+
+| Série | Zona | Brier: modelo · taxa-base | Habilidade | Acerto dos apontados: modelo · tabela do momento · acaso | Na pré-temporada |
+|---|---|---|---|---|---|
+| A (prévia) | título | 0,028 · 0,048 | 42% | 45% · 27% · 5% | 100% |
+| A (prévia) | G4 | 0,062 · 0,160 | 61% | 76% · 66% · 20% | 75% |
+| A (prévia) | G6 | 0,082 · 0,210 | 61% | 80% · 83% · 30% | 67% |
+| A (prévia) | Z4 | 0,091 · 0,160 | 43% | 61% · 52% · 20% | 50% |
+| B | 1º | 0,043 · 0,048 | 9% | 16% · 11% · 5% | 0% |
+| B | acesso direto (top-2) | 0,067 · 0,090 | 26% | 41% · 34% · 10% | 0% |
+| B | G6 | 0,116 · 0,210 | 45% | 70% · 68% · 30% | 50% |
+| B | Z4 | 0,058 · 0,160 | 64% | 82% · 82% · 20% | 50% |
+| C | 1º | 0,052 · 0,048 | −10% | 0% · 0% · 5% | 0% |
+| C | G8 | 0,203 · 0,240 | 15% | 60% · 63% · 40% | 50% |
+| C | Z2 | 0,065 · 0,090 | 28% | 44% · 44% · 10% | 0% |
+| D | 1º do grupo | 0,084 · 0,139 | 39% | 60% · 62% · 17% | 31% |
+| D | top-4 do grupo | 0,138 · 0,222 | 38% | 85% · 85% · 67% | 70% |
+
+Habilidade é 1 menos a razão entre o Brier do modelo e o de dar a todos a mesma chance: 0%
+é não saber nada além do tamanho da zona, 100% é acertar tudo. "Acerto dos apontados": em
+cada rodada, dos k clubes que o modelo dava como mais prováveis na zona, a fração que
+terminou nela, na média das rodadas a partir da primeira; a tabela do momento aponta quem
+ocupava a zona naquela rodada.
+
+Leitura:
+
+1. **As probabilidades são honestas, com leve timidez entre 70% e 90%.** A afirmação do
+   relatório de setembro de que os quase impossíveis aconteciam com o dobro da frequência
+   anunciada não se repete com as zonas reais e a temporada completa: 4% previstos, 3%
+   ocorridos.
+2. **Para dizer quem está na zona, o modelo empata com a tabela do momento.** Ganha no
+   título, no G4 e no Z4 da A e no topo da B, e empata ou perde por pouco no resto. O que
+   ele acrescenta é a medida da incerteza: conforme a zona, o Brier da tabela congelada é de
+   1,3 a 2,7 vezes o dele.
+3. **A Série C é a mais fraca.** No 1º lugar o modelo perde para a taxa-base, e o clube que
+   terminou em 1º (Botafogo-PB) tinha menos de 0,5% na rodada 10. Turno único de 19 rodadas
+   e semente quase plana deixam pouco para o modelo aprender.
+4. **Campeão é o evento mais difícil.** Na B, o Novorizontino tinha 2% de título na rodada 3.
+5. **Antes da bola rolar o modelo sabe pouco fora da Série A.** Na pré-temporada acertou 3
+   dos 4 do G4 da A, mas nenhum dos dois de acesso direto da B, e na D ficou em 70% no top-4
+   dos grupos contra 67% do acaso.
+
+Ressalvas. A Série A é uma prévia: o desfecho é a tabela da rodada 34 e o Monte Carlo trata
+essa rodada como o fim, que não é o que o app mostrava (ele projetava a rodada 38); o número
+definitivo sai em dezembro. Na B, sete placares da rodada 38 vêm da imprensa
+(`eval/data/serie_b_r38_imprensa.json`) até o `results.json` trazê-los. Na D o replay usa o
+motor de hoje, e a paridade com o publicado só foi conferida para A, B e C desde 05/06. As
+zonas são as da fase de liga; playoff da B, quadrangular da C e mata-mata da D não entram.
+
 ## O que falta
 
 1. Feito em 14/11: jogos das quatro séries em 2021–2025. A API do site da CBF serve as
