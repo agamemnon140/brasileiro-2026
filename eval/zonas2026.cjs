@@ -22,16 +22,22 @@
 //
 // CALIBRACAO: as previsoes de um clube ao longo das rodadas apontam para o mesmo desfecho,
 // entao nao sao independentes. O intervalo de cada faixa sai de um bootstrap que reamostra
-// CLUBES inteiros, nao previsoes.
+// CLUBES inteiros, nao previsoes. Quando tudo na faixa aconteceu (ou nada aconteceu) o
+// bootstrap degenera, porque toda reamostra da o mesmo 100% ou 0%; ai o intervalo e o
+// binomial exato com um ensaio por clube da faixa: com 10 clubes e 10 acertos, o limite
+// inferior e 69%, e nao 100%.
 //
-//   node eval/zonas2026.cjs          # 4000 simulacoes por rodada, ~6 min
+//   node eval/zonas2026.cjs          # 4000 simulacoes por rodada, ~4 min
 //   node eval/zonas2026.cjs 10000
+//   node eval/zonas2026.cjs --drift 0 --nome drift0     # variante de config; grava zonas2026_drift0.json
+//   node eval/zonas2026.cjs --preset base --nome base
 const fs = require('fs');
 const path = require('path');
 const { loadEngine } = require('../scripts/engine.cjs');
 const L = require('./lib/longterm.cjs');
 
-const NSIMS = parseInt(process.argv.find(a => /^\d+$/.test(a))) || 4000;
+const arg = n => { const i = process.argv.indexOf('--' + n); return i > 0 ? process.argv[i + 1] : null; };
+const NSIMS = parseInt(process.argv.slice(2).find((a, i, v) => /^\d+$/.test(a) && !/^--/.test(v[i - 1] || ''))) || 4000;
 const FAIXAS = [0, 0.005, 0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9, 0.995, 1.0001];
 const ROTULO = ['0%', '0,5–10%', '10–20%', '20–30%', '30–40%', '40–60%', '60–70%', '70–80%', '80–90%', '90–99,5%', '100%'];
 
@@ -39,7 +45,7 @@ function prng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>
 
 // Uma "unidade" e uma tabela de pontos corridos: a serie inteira em A/B/C, um grupo na D.
 // Devolve registros {serie, unidade, evento, k, n, time, corte, H, p, o, cong}.
-function ligaABC(E, sk, dados, extraRes) {
+function ligaABC(E, sk, dados, extraRes, cfg, ak) {
   const g = n => E[`S${sk}_${n}`];
   const times = Object.keys(g('RANKING')), fixture = E.parseTab(g('TAB'), g('NM'), g('DATES'));
   const res = [...dados.merged[sk]];
@@ -58,7 +64,7 @@ function ligaABC(E, sk, dados, extraRes) {
   const real = {}; E.calcClassif(times, res.filter(x => x.r <= H)).forEach(c => real[c.time] = c.pos);
   const recs = [];
   for (let corte = 0; corte < H; corte++) {
-    const { dist } = L.preverEm(E, { times, ranking: g('RANKING'), fixture, res, cfg: E.DEFAULT_CFG, sk, H, corte, nSims: NSIMS, ak: E.DEFAULT_CFG.defaultAlpha, seed: 26000 + sk.charCodeAt(0) * 100 + corte });
+    const { dist } = L.preverEm(E, { times, ranking: g('RANKING'), fixture, res, cfg, sk, H, corte, nSims: NSIMS, ak, seed: 26000 + sk.charCodeAt(0) * 100 + corte });
     const cong = {}; if (corte > 0) E.calcClassif(times, res.filter(x => x.r <= corte)).forEach(c => cong[c.time] = c.pos);
     for (const [evento, de, ate] of eventos) for (const t of times) {
       recs.push({ serie: sk, unidade: sk, evento, k: ate - de + 1, n: N, time: t, corte, H, p: L.soma(dist[t], de - 1, ate),
@@ -70,14 +76,14 @@ function ligaABC(E, sk, dados, extraRes) {
   return { recs, info: { jogos: res.filter(x => x.r <= H).length, H, maxR, completa, sobrepostos, clubes: N } };
 }
 
-function ligaD(E) {
-  const cfg = E.DEFAULT_CFG, todos = E.SD_RES.slice();
+function ligaD(E, cfg, ak) {
+  const todos = E.SD_RES.slice();
   const H = todos.reduce((m, x) => Math.max(m, x.r), 0);
   const rodar = (corte, seed) => {
     const restaurar = L.semear(seed);
     try {
       E.SD_RES.length = 0; todos.filter(x => x.r <= corte).forEach(x => E.SD_RES.push(x));
-      const r = E.simMC_D(cfg, corte >= H ? 20 : NSIMS, cfg.defaultAlpha, false, [], { koMask: new Set() });
+      const r = E.simMC_D(cfg, corte >= H ? 20 : NSIMS, ak, false, [], { koMask: new Set() });
       const out = {}; r.probs.forEach(p => out[p.time] = p.posGr.map(x => x / 100)); return out;
     } finally { E.SD_RES.length = 0; todos.forEach(x => E.SD_RES.push(x)); restaurar(); }
   };
@@ -129,6 +135,7 @@ function calibrar(recs, B = 2000) {
   const S = clubes.map(c => { const s = ROTULO.map(() => [0, 0, 0]); porClube[c].forEach(r => { const i = faixaDe(r.p); s[i][0]++; s[i][1] += r.p; s[i][2] += r.o; }); return s; });
   const tot = ROTULO.map((_, i) => S.reduce((a, s) => [a[0] + s[i][0], a[1] + s[i][1], a[2] + s[i][2]], [0, 0, 0]));
   const casos = ROTULO.map((_, i) => { const set = new Set(); recs.forEach(r => { if (faixaDe(r.p) === i) set.add(r.serie + '|' + r.time + '|' + r.evento); }); return set.size; });
+  const clubesNaFaixa = ROTULO.map((_, i) => S.filter(s => s[i][0] > 0).length);
   const rnd = prng(20261115), difs = ROTULO.map(() => []);
   for (let b = 0; b < B; b++) {
     const a = ROTULO.map(() => [0, 0, 0]);
@@ -139,8 +146,14 @@ function calibrar(recs, B = 2000) {
   const faixas = ROTULO.map((rot, i) => {
     const [q, sp, so] = tot[i]; if (!q) return { faixa: rot, n: 0 };
     ece += q / n * Math.abs(so / q - sp / q);
-    const d = difs[i].sort((x, y) => x - y), lo = d[Math.floor(d.length * 0.025)], hi = d[Math.floor(d.length * 0.975)];
-    return { faixa: rot, n: q, casos: casos[i], previsto: sp / q, observado: so / q, diferenca: so / q - sp / q, ic95: [lo, hi], compativel: (lo <= 0 && hi >= 0) || Math.abs(so / q - sp / q) < 0.01 };
+    const d = difs[i].sort((x, y) => x - y);
+    let lo = d[Math.floor(d.length * 0.025)], hi = d[Math.floor(d.length * 0.975)], metodo = 'bootstrap por clube';
+    if (so === 0 || so === q) {
+      const lim = Math.pow(0.025, 1 / clubesNaFaixa[i]);
+      [lo, hi] = so === q ? [lim - sp / q, 1 - sp / q] : [0 - sp / q, 1 - lim - sp / q];
+      metodo = 'binomial exato por clube';
+    }
+    return { faixa: rot, n: q, casos: casos[i], clubes: clubesNaFaixa[i], previsto: sp / q, observado: so / q, diferenca: so / q - sp / q, ic95: [lo, hi], metodo, compativel: (lo <= 0 && hi >= 0) || Math.abs(so / q - sp / q) < 0.01 };
   });
   return { n, clubes: clubes.length, ece, faixas };
 }
@@ -153,7 +166,7 @@ function resumir(recs, info) {
     const rs = recs.filter(r => r.evento === ev), r1 = rs.filter(r => r.cong !== null), a = ac.filter(x => x.evento === ev);
     const brier = media(rs, r => (r.p - r.o) ** 2), base = media(rs, r => (r.k / r.n - r.o) ** 2);
     return {
-      evento: ev, vagas: rs[0].k, previsoes: rs.length, brier, brierTaxaBase: base, habilidade: 1 - brier / base,
+      evento: ev, vagas: rs[0].k, previsoes: rs.length, brier, brierTaxaBase: base, habilidade: 1 - brier / base, calibracao: calibrar(rs, 1000),
       brierDesdeR1: media(r1, r => (r.p - r.o) ** 2), brierTabelaDoMomento: media(r1, r => (r.cong - r.o) ** 2),
       acertoMedio: media(a, x => x.modelo), acertoTabelaDoMomento: media(a.filter(x => x.tabela !== null), x => x.tabela),
       acertoModeloDesdeR1: media(a.filter(x => x.tabela !== null), x => x.modelo),
@@ -167,30 +180,50 @@ function resumir(recs, info) {
   return { ...info, porEvento, calibracao: calibrar(recs), surpresas };
 }
 
-function rodar() {
+function coletar({ drift = null, preset = null } = {}) {
   const E = loadEngine(['DEFAULT_CFG', 'simMC', 'simMC_D', 'parseTab', 'calcClassif',
     'SA_TAB', 'SA_NM', 'SA_DATES', 'SA_RANKING', 'SA_META', 'SB_TAB', 'SB_NM', 'SB_DATES', 'SB_RANKING', 'SB_META',
     'SC_TAB', 'SC_NM', 'SC_DATES', 'SC_RANKING', 'SC_META', 'SD_RES', 'SD_TIMES', 'SD_INFO', 'SD_GRUPOS']);
+  const cfg = structuredClone(E.DEFAULT_CFG); if (drift !== null) cfg.drift = drift;
+  const ak = preset || cfg.defaultAlpha;
   const dados = require('./lib/appdata.cjs').load();
   const r38 = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'serie_b_r38_imprensa.json'), 'utf8'));
-  const out = { results_json: dados.updated_at, nSims: NSIMS, series: {}, geral: null };
+  const porSerie = {};
+  for (const sk of ['A', 'B', 'C', 'D']) porSerie[sk] = sk === 'D' ? ligaD(E, cfg, ak) : ligaABC(E, sk, dados, sk === 'B' ? r38.jogos.map(j => ({ ...j, r: r38.rodada })) : null, cfg, ak);
+  return { porSerie, results_json: dados.updated_at, drift: cfg.drift, preset: ak };
+}
+
+// Trajetoria de cada clube em cada zona: a probabilidade rodada a rodada e o desfecho.
+function trajetorias(recs) {
+  const t = {};
+  for (const r of recs) { const k = r.time + '|' + r.evento; (t[k] = t[k] || { time: r.time, evento: r.evento, o: r.o, p: [] }).p[r.corte] = +r.p.toFixed(4); }
+  return Object.values(t);
+}
+
+function rodar(opts) {
+  const c = coletar(opts);
+  const out = { results_json: c.results_json, nSims: NSIMS, drift: c.drift, preset: c.preset, series: {}, geral: null };
+  const traj = {};
   let todos = [];
   for (const sk of ['A', 'B', 'C', 'D']) {
-    const { recs, info } = sk === 'D' ? ligaD(E) : ligaABC(E, sk, dados, sk === 'B' ? r38.jogos.map(j => ({ ...j, r: r38.rodada })) : null);
+    const { recs, info } = c.porSerie[sk];
     out.series[sk] = resumir(recs, info);
+    traj[sk] = trajetorias(recs);
     todos = todos.concat(recs);
   }
-  out.geral = { calibracao: calibrar(todos), calibracaoSemA: calibrar(todos.filter(r => r.serie !== 'A')) };
+  out.geral = { brier: media(todos, r => (r.p - r.o) ** 2), calibracao: calibrar(todos), calibracaoSemA: calibrar(todos.filter(r => r.serie !== 'A')) };
   // meio da temporada em diante x primeira metade
   out.geral.primeiraMetade = calibrar(todos.filter(r => r.corte < r.H / 2));
   out.geral.segundaMetade = calibrar(todos.filter(r => r.corte >= r.H / 2));
-  return out;
+  return { out, traj };
 }
 
-module.exports = { rodar, calibrar };
+module.exports = { rodar, coletar, calibrar, trajetorias, FAIXAS, ROTULO };
 
 if (require.main === module) {
-  const out = rodar();
+  const nome = arg('nome');
+  const { out, traj } = rodar({ drift: arg('drift') === null ? null : Number(arg('drift')), preset: arg('preset') });
+  if (nome) console.log(`VARIANTE ${nome}: drift ${out.drift}, preset ${out.preset} | Brier geral ${out.geral.brier.toFixed(4)}`);
   const pc = x => (x * 100).toFixed(0) + '%', pp = x => (x >= 0 ? '+' : '') + (x * 100).toFixed(1);
   const tabela = (titulo, c) => {
     console.log(`\n${titulo}: ${c.n} previsões de ${c.clubes} clubes | erro médio de calibração ${(c.ece * 100).toFixed(1)} pp`);
@@ -208,6 +241,8 @@ if (require.main === module) {
   tabela('Calibração, B + C + D (temporadas encerradas)', out.geral.calibracaoSemA);
   tabela('Calibração, primeira metade de cada campeonato', out.geral.primeiraMetade);
   tabela('Calibração, segunda metade', out.geral.segundaMetade);
-  fs.writeFileSync(path.join(__dirname, 'out', 'zonas2026.json'), JSON.stringify(out, null, 2) + '\n');
-  console.log('\n-> eval/out/zonas2026.json');
+  const arq = nome ? `zonas2026_${nome}.json` : 'zonas2026.json';
+  fs.writeFileSync(path.join(__dirname, 'out', arq), JSON.stringify(out, null, 2) + '\n');
+  if (!nome) fs.writeFileSync(path.join(__dirname, 'out', 'zonas2026_trajetorias.json'), JSON.stringify({ results_json: out.results_json, nSims: NSIMS, series: traj }) + '\n');
+  console.log('\n-> eval/out/' + arq);
 }

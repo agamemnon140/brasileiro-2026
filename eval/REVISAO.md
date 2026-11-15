@@ -411,6 +411,105 @@ definitivo sai em dezembro. Na B, sete placares da rodada 38 vêm da imprensa
 motor de hoje, e a paridade com o publicado só foi conferida para A, B e C desde 05/06. As
 zonas são as da fase de liga; playoff da B, quadrangular da C e mata-mata da D não entram.
 
+## Fases finais das Séries C e D em 2026 (15/11)
+
+`node eval/matamata2026.cjs` estende a medida de zonas para depois da fase de liga: acesso,
+final e título na Série C; cada fase do mata-mata, acesso e título na Série D. O eixo do
+tempo começa na pré-temporada e continua pelas rodadas dos quadrangulares e pelas fases do
+mata-mata, com a mesma máscara de fases da aba Evolução. Só entram previsões em aberto
+(chance maior que zero e menor que 100%), e a referência divide as vagas que restam
+igualmente entre os clubes ainda na disputa.
+
+| Série | Evento | Vagas | Previsões abertas | Brier: modelo · referência | Habilidade |
+|---|---|---|---|---|---|
+| C | acesso à Série B | 4 | 408 | 0,172 · 0,175 | 2% |
+| C | chegar à final | 2 | 405 | 0,107 · 0,105 | −2% |
+| C | campeão | 1 | 408 | 0,067 · 0,059 | −13% |
+| D | passar da 2ª fase | 32 | 704 | 0,233 · 0,250 | 7% |
+| D | chegar às oitavas | 16 | 736 | 0,164 · 0,190 | 14% |
+| D | chegar às quartas | 8 | 752 | 0,107 · 0,116 | 7% |
+| D | chegar à semifinal | 4 | 760 | 0,059 · 0,065 | 10% |
+| D | chegar à final | 2 | 764 | 0,040 · 0,036 | −11% |
+| D | acesso à Série C | 6 | 764 | 0,089 · 0,093 | 5% |
+| D | campeão | 1 | 757 | 0,022 · 0,020 | −11% |
+
+**Calibradas, mas quase sem habilidade.** Juntando C e D (6.458 previsões abertas de 84
+clubes), o erro médio de calibração é de 2,0 pontos e a faixa de 40–60% deu 49% previstos
+e 50% ocorridos (596 previsões, 117 casos). Nenhuma faixa sai da margem no conjunto. Mas
+nos quadrangulares da C o modelo não sabe mais do que o número de vagas, e na D ganha de 5%
+a 14% para dizer quem passa de fase e perde para a referência em final e título. Os dois
+campeões saíram de onde o modelo menos esperava: o Uberlândia venceu o grupo com 18 pontos
+e, encerrada a fase de grupos, tinha 0,26% de título, seis vezes menos que o 1 em 64 do
+acaso, porque a semente por estado punha o grupo dele entre os mais fracos.
+
+**Erro encontrado no app: a final da Série C não é reconhecida.** A API da CBF entregou a
+final como "GRUPO D", e o `results.json` guarda as duas partidas com `fase: "Q"` e
+`grupo: "D"`. `applyQuadCAuto` só trata como final as linhas com `fase: "FINAL"`, então o
+motor simula a final já disputada: com o `results.json` de 13/11, o app dá 64% de título à
+Ferroviária e 36% ao Maringá, que foi o campeão (1×1 e 2×1). O comentário em
+`scripts/fetch_tables.mjs` previa o grupo com o nome "FINAL", formato "ainda não visto".
+Efeitos: o cartão da Série C não fecha como decidido, e a vaga de campeão da C na Copa do
+Brasil 2027 segue como incerta. `matamata2026.cjs` renomeia as duas linhas antes de medir.
+A correção é no app ou no coletor e fica fora deste PR.
+
+## Os desfechos mais improváveis de 2026 (15/11)
+
+Para cada clube e evento, o momento em que o modelo dava a menor chance ao que aconteceu
+(ou a maior ao que não aconteceu). Com 5 mil simulações, o piso é 0,02%.
+
+| Série | Clube | Evento | Quando | Chance dada | O que houve |
+|---|---|---|---|---|---|
+| C | Botafogo-PB | 1º da fase de liga | após a rodada 10 | menos de 0,02% | aconteceu |
+| D | Uberlândia | campeão | grupos encerrados | 0,26% | aconteceu |
+| A (prévia) | Corinthians | Z4 | após a rodada 22 | 0,52% | aconteceu |
+| D | Uberlândia | chegar à final | grupos encerrados | 0,68% | aconteceu |
+| C | Maringá | campeão | após a rodada 6 | 1,5% | aconteceu |
+| B | Novorizontino | 1º | após a rodada 3 | 1,7% | aconteceu |
+| D | ASA | chegar à final | após a rodada 5 | 2,1% | aconteceu |
+| C | Guarani | G8 | após a rodada 10 | 97,3% | não aconteceu |
+| A (prévia) | Athletico-PR | G6 | pré-temporada | 2,8% | aconteceu |
+| D | Joinville | top-4 do grupo | após a rodada 4 | 97,1% | não aconteceu |
+| D | Nacional-AM | acesso à Série C | após a rodada 7 | 3,5% | aconteceu |
+| D | CSA | acesso à Série C | depois das oitavas | 91,0% | não aconteceu |
+
+Num conjunto de 15 mil previsões, alguns eventos de 1% têm de acontecer: na faixa abaixo de
+0,5% o modelo fez 2.349 previsões de zona na fase de liga e 0,2% delas se confirmaram. A
+lista não acusa descalibração; mostra onde a informação faltou (viradas na C, semente por
+estado na D).
+
+## Drift e calibração em 2022–2025 (15/11)
+
+A medida de 2026 mostrou timidez entre 70% e 90%. `node eval/hist/calibracao.cjs` repete a
+medida nas 16 células de 2022 a 2025 (22.368 previsões de zona, semente "todos iguais") e
+testa o parâmetro que controla a largura da projeção, o drift.
+
+| Base | Drift | Brier | Erro médio de calibração | Anunciado 70–80%: aconteceu | Anunciado 80–90%: aconteceu | Anunciado 100%: aconteceu |
+|---|---|---|---|---|---|---|
+| 2022–2025 | 0 | 0,0929 | 1,10 pp | 70,8% | 79,1% (fora da margem) | 98,6% |
+| 2022–2025 | 15 (app) | 0,0929 | 1,08 pp | 76,5% | 86,8% | 99,8% |
+| 2022–2025 | 30 | 0,0944 | 2,02 pp | 80,6% | 90,6% (fora) | 100% |
+| 2026, semente do app | 0 | 0,0843 | 1,70 pp | 75,3% | 80,9% | 100% |
+| 2026, semente do app | 15 (app) | 0,0828 | 0,98 pp | 82,6% | 92,4% (fora) | 100% |
+| 2026, semente do app | 30 | 0,0853 | 2,20 pp | 85,0% (fora) | 91,6% | 100% |
+
+1. **A timidez de 2026 não se repete.** Com o drift do app, 2022–2025 fica dentro da margem
+   do 10% ao 100%, e nas quatro séries: a C, que em 2026 pareceu confiante demais no topo,
+   deu 91% para 85% anunciados e 97% para 96%.
+2. **O drift está no lugar.** Sem ele o modelo fica confiante demais (85% anunciados viram
+   79%, e o que ele dava como certo falhou em 1,4% das vezes); com o dobro fica tímido e o
+   Brier piora. Em 2026 o drift de 15 também tem o menor Brier e
+   o menor erro de calibração dos três.
+3. **O único desvio que se repete é pequeno:** o que o modelo dá com 0,5% a 10% acontece
+   menos do que ele diz (4,3% anunciados e 2,6% ocorridos em 2022–2025; 4,2% e 3,3% em 2026).
+
+Nenhum ajuste de parâmetro sai da calibração. O intervalo de uma faixa em que tudo (ou
+nada) aconteceu passou a ser o binomial exato com um ensaio por clube, porque o bootstrap
+degenera nesse caso e acusava "fora da margem" faixas com 10 clubes e 10 acertos.
+
+O painel interativo com as curvas por série e zona está em
+<https://claude.ai/artifact/W9pUszM6skfX2FkxqMNbC1>; `eval/painel/` guarda a página e o
+script que monta os dados dela.
+
 ## O que falta
 
 1. Feito em 14/11: jogos das quatro séries em 2021–2025. A API do site da CBF serve as
@@ -427,5 +526,6 @@ zonas são as da fase de liga; playoff da B, quadrangular da C e mata-mata da D 
 4. Veredito pela regra de células: nenhuma semente passou. Mando e gols passam jogo a jogo
    e são neutros na tabela (seção de 15/11). Falta decidir o rótulo desse caso e reescrever
    a seção de lições.
-5. Não medido: drift, que só existe no longo prazo, e o mando no mata-mata.
-6. A corrida completa de dezembro (`node eval/run.cjs --full`), depois do fim da Série A.
+5. Drift: medido em 15/11, fica como está. Não medido: o mando no mata-mata.
+6. Corrigir no app o reconhecimento da final da Série C (seção de 15/11), em PR separado.
+7. A corrida completa de dezembro (`node eval/run.cjs --full`), depois do fim da Série A.

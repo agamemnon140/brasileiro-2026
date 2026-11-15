@@ -1,0 +1,4208 @@
+{
+  "results_json": "2026-11-13T17:01:39.055Z",
+  "nSims": 3000,
+  "drift": 30,
+  "preset": "conservador",
+  "series": {
+    "A": {
+      "jogos": 339,
+      "H": 34,
+      "maxR": 38,
+      "completa": false,
+      "sobrepostos": 0,
+      "clubes": 20,
+      "porEvento": [
+        {
+          "evento": "título",
+          "vagas": 1,
+          "previsoes": 680,
+          "brier": 0.029134962091503267,
+          "brierTaxaBase": 0.047500000000000465,
+          "habilidade": 0.38663237702098985,
+          "calibracao": {
+            "n": 680,
+            "clubes": 20,
+            "ece": 0.028138235294117648,
+            "faixas": [
+              {
+                "faixa": "0%",
+                "n": 370,
+                "casos": 19,
+                "clubes": 19,
+                "previsto": 0.0007891891891891893,
+                "observado": 0,
+                "diferenca": -0.0007891891891891893,
+                "ic95": [
+                  -0.0007891891891891893,
+                  0.1756777226177762
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "0,5–10%",
+                "n": 231,
+                "casos": 17,
+                "clubes": 17,
+                "previsto": 0.02765367965367965,
+                "observado": 0,
+                "diferenca": -0.02765367965367965,
+                "ic95": [
+                  -0.02765367965367965,
+                  0.1674106433154135
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "10–20%",
+                "n": 20,
+                "casos": 5,
+                "clubes": 5,
+                "previsto": 0.12294999999999998,
+                "observado": 0.25,
+                "diferenca": 0.12705000000000002,
+                "ic95": [
+                  -0.13393333333333332,
+                  0.5907380952380953
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "20–30%",
+                "n": 15,
+                "casos": 2,
+                "clubes": 2,
+                "previsto": 0.24426666666666666,
+                "observado": 0.5333333333333333,
+                "diferenca": 0.2890666666666667,
+                "ic95": [
+                  -0.24238095238095236,
+                  0.7540833333333333
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "30–40%",
+                "n": 18,
+                "casos": 2,
+                "clubes": 2,
+                "previsto": 0.35783333333333334,
+                "observado": 0.4444444444444444,
+                "diferenca": 0.08661111111111108,
+                "ic95": [
+                  -0.3602666666666667,
+                  0.6452083333333334
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "40–60%",
+                "n": 16,
+                "casos": 2,
+                "clubes": 2,
+                "previsto": 0.49293750000000003,
+                "observado": 0.3125,
+                "diferenca": -0.18043750000000003,
+                "ic95": [
+                  -0.4984545454545455,
+                  0.5192
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "60–70%",
+                "n": 8,
+                "casos": 2,
+                "clubes": 2,
+                "previsto": 0.6434583333333334,
+                "observado": 0.75,
+                "diferenca": 0.10654166666666665,
+                "ic95": [
+                  -0.6493333333333333,
+                  0.3585
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "70–80%",
+                "n": 1,
+                "casos": 1,
+                "clubes": 1,
+                "previsto": 0.7213333333333334,
+                "observado": 1,
+                "diferenca": 0.2786666666666666,
+                "ic95": [
+                  -0.6963333333333334,
+                  0.2786666666666666
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "80–90%",
+                "n": 0
+              },
+              {
+                "faixa": "90–99,5%",
+                "n": 0
+              },
+              {
+                "faixa": "100%",
+                "n": 1,
+                "casos": 1,
+                "clubes": 1,
+                "previsto": 1,
+                "observado": 1,
+                "diferenca": 0,
+                "ic95": [
+                  -0.975,
+                  0
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              }
+            ]
+          },
+          "brierDesdeR1": 0.028812238383838392,
+          "brierTabelaDoMomento": 0.07272727272727272,
+          "acertoMedio": 0.4411764705882353,
+          "acertoTabelaDoMomento": 0.2727272727272727,
+          "acertoModeloDesdeR1": 0.42424242424242425,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 1,
+              "tabela": null
+            },
+            {
+              "rodada": 9,
+              "modelo": 0,
+              "tabela": 0
+            },
+            {
+              "rodada": 17,
+              "modelo": 0,
+              "tabela": 0
+            },
+            {
+              "rodada": 26,
+              "modelo": 1,
+              "tabela": 1
+            }
+          ]
+        },
+        {
+          "evento": "G4",
+          "vagas": 4,
+          "previsoes": 680,
+          "brier": 0.07208086209150326,
+          "brierTaxaBase": 0.16000000000000178,
+          "habilidade": 0.5494946119281097,
+          "calibracao": {
+            "n": 680,
+            "clubes": 20,
+            "ece": 0.04795588235294117,
+            "faixas": [
+              {
+                "faixa": "0%",
+                "n": 147,
+                "casos": 14,
+                "clubes": 14,
+                "previsto": 0.000507936507936508,
+                "observado": 0,
+                "diferenca": -0.000507936507936508,
+                "ic95": [
+                  -0.000507936507936508,
+                  0.23112782514218005
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "0,5–10%",
+                "n": 201,
+                "casos": 17,
+                "clubes": 17,
+                "previsto": 0.0542023217247098,
+                "observado": 0.01990049751243781,
+                "diferenca": -0.034301824212271986,
+                "ic95": [
+                  -0.05940033500837521,
+                  0.015968627450980398
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "10–20%",
+                "n": 128,
+                "casos": 15,
+                "clubes": 15,
+                "previsto": 0.13652083333333334,
+                "observado": 0.0859375,
+                "diferenca": -0.05058333333333334,
+                "ic95": [
+                  -0.1408305084745763,
+                  0.1408305084745763
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "20–30%",
+                "n": 44,
+                "casos": 10,
+                "clubes": 10,
+                "previsto": 0.2468409090909091,
+                "observado": 0.18181818181818182,
+                "diferenca": -0.06502272727272729,
+                "ic95": [
+                  -0.25372727272727275,
+                  0.2983974358974359
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "30–40%",
+                "n": 45,
+                "casos": 7,
+                "clubes": 7,
+                "previsto": 0.3437481481481482,
+                "observado": 0.4,
+                "diferenca": 0.05625185185185183,
+                "ic95": [
+                  -0.34167796610169493,
+                  0.5092698412698413
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "40–60%",
+                "n": 48,
+                "casos": 7,
+                "clubes": 7,
+                "previsto": 0.47261805555555564,
+                "observado": 0.7083333333333334,
+                "diferenca": 0.23571527777777773,
+                "ic95": [
+                  -0.32111428571428563,
+                  0.522462962962963
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "60–70%",
+                "n": 11,
+                "casos": 4,
+                "clubes": 4,
+                "previsto": 0.6321818181818183,
+                "observado": 0.6363636363636364,
+                "diferenca": 0.004181818181818064,
+                "ic95": [
+                  -0.566607843137255,
+                  0.3955
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "70–80%",
+                "n": 8,
+                "casos": 5,
+                "clubes": 5,
+                "previsto": 0.7462500000000001,
+                "observado": 0.75,
+                "diferenca": 0.00374999999999992,
+                "ic95": [
+                  -0.5028333333333334,
+                  0.276095238095238
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "80–90%",
+                "n": 12,
+                "casos": 4,
+                "clubes": 4,
+                "previsto": 0.8548333333333332,
+                "observado": 1,
+                "diferenca": 0.14516666666666678,
+                "ic95": [
+                  -0.4571979689498079,
+                  0.14516666666666678
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "90–99,5%",
+                "n": 16,
+                "casos": 2,
+                "clubes": 2,
+                "previsto": 0.9608541666666667,
+                "observado": 1,
+                "diferenca": 0.039145833333333324,
+                "ic95": [
+                  -0.8027402836582477,
+                  0.039145833333333324
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "100%",
+                "n": 20,
+                "casos": 3,
+                "clubes": 3,
+                "previsto": 0.99925,
+                "observado": 1,
+                "diferenca": 0.0007500000000000284,
+                "ic95": [
+                  -0.7068482261787133,
+                  0.0007500000000000284
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              }
+            ]
+          },
+          "brierDesdeR1": 0.07121263838383837,
+          "brierTabelaDoMomento": 0.13636363636363635,
+          "acertoMedio": 0.7426470588235294,
+          "acertoTabelaDoMomento": 0.6590909090909091,
+          "acertoModeloDesdeR1": 0.7424242424242424,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0.75,
+              "tabela": null
+            },
+            {
+              "rodada": 9,
+              "modelo": 0.75,
+              "tabela": 0.75
+            },
+            {
+              "rodada": 17,
+              "modelo": 0.75,
+              "tabela": 0.75
+            },
+            {
+              "rodada": 26,
+              "modelo": 0.75,
+              "tabela": 0.75
+            }
+          ]
+        },
+        {
+          "evento": "G6",
+          "vagas": 6,
+          "previsoes": 680,
+          "brier": 0.08812650228758168,
+          "brierTaxaBase": 0.21000000000000152,
+          "habilidade": 0.580349989106757,
+          "calibracao": {
+            "n": 680,
+            "clubes": 20,
+            "ece": 0.05568137254901961,
+            "faixas": [
+              {
+                "faixa": "0%",
+                "n": 103,
+                "casos": 13,
+                "clubes": 13,
+                "previsto": 0.000576051779935275,
+                "observado": 0,
+                "diferenca": -0.000576051779935275,
+                "ic95": [
+                  -0.000576051779935275,
+                  0.24647658622053567
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "0,5–10%",
+                "n": 101,
+                "casos": 13,
+                "clubes": 13,
+                "previsto": 0.039574257425742575,
+                "observado": 0,
+                "diferenca": -0.039574257425742575,
+                "ic95": [
+                  -0.039574257425742575,
+                  0.20747838057472837
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "10–20%",
+                "n": 138,
+                "casos": 15,
+                "clubes": 15,
+                "previsto": 0.1551425120772947,
+                "observado": 0.057971014492753624,
+                "diferenca": -0.09717149758454108,
+                "ic95": [
+                  -0.15794545454545453,
+                  0.037918128654970726
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "20–30%",
+                "n": 97,
+                "casos": 15,
+                "clubes": 15,
+                "previsto": 0.23829896907216494,
+                "observado": 0.2268041237113402,
+                "diferenca": -0.011494845360824735,
+                "ic95": [
+                  -0.23622222222222222,
+                  0.24852713178294575
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "30–40%",
+                "n": 41,
+                "casos": 11,
+                "clubes": 11,
+                "previsto": 0.3500162601626016,
+                "observado": 0.34146341463414637,
+                "diferenca": -0.008552845528455255,
+                "ic95": [
+                  -0.3420000000000001,
+                  0.3599803921568628
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "40–60%",
+                "n": 83,
+                "casos": 11,
+                "clubes": 11,
+                "previsto": 0.4956987951807228,
+                "observado": 0.5421686746987951,
+                "diferenca": 0.046469879518072355,
+                "ic95": [
+                  -0.3730476190476189,
+                  0.39646969696969697
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "60–70%",
+                "n": 26,
+                "casos": 7,
+                "clubes": 7,
+                "previsto": 0.6322435897435897,
+                "observado": 0.9230769230769231,
+                "diferenca": 0.2908333333333334,
+                "ic95": [
+                  -0.03506666666666671,
+                  0.3724552845528456
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "70–80%",
+                "n": 17,
+                "casos": 6,
+                "clubes": 6,
+                "previsto": 0.750235294117647,
+                "observado": 1,
+                "diferenca": 0.249764705882353,
+                "ic95": [
+                  -0.2094934205575475,
+                  0.249764705882353
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "80–90%",
+                "n": 14,
+                "casos": 6,
+                "clubes": 6,
+                "previsto": 0.8521190476190476,
+                "observado": 1,
+                "diferenca": 0.14788095238095245,
+                "ic95": [
+                  -0.31137717405894805,
+                  0.14788095238095245
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "90–99,5%",
+                "n": 30,
+                "casos": 5,
+                "clubes": 5,
+                "previsto": 0.9606555555555556,
+                "observado": 1,
+                "diferenca": 0.039344444444444404,
+                "ic95": [
+                  -0.4824793056605371,
+                  0.039344444444444404
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "100%",
+                "n": 30,
+                "casos": 5,
+                "clubes": 5,
+                "previsto": 0.9994555555555557,
+                "observado": 1,
+                "diferenca": 0.0005444444444443475,
+                "ic95": [
+                  -0.5212793056605372,
+                  0.0005444444444443475
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              }
+            ]
+          },
+          "brierDesdeR1": 0.0861246922558922,
+          "brierTabelaDoMomento": 0.10303030303030303,
+          "acertoMedio": 0.784313725490196,
+          "acertoTabelaDoMomento": 0.8282828282828282,
+          "acertoModeloDesdeR1": 0.7878787878787877,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0.6666666666666666,
+              "tabela": null
+            },
+            {
+              "rodada": 9,
+              "modelo": 0.6666666666666666,
+              "tabela": 0.8333333333333334
+            },
+            {
+              "rodada": 17,
+              "modelo": 0.6666666666666666,
+              "tabela": 0.8333333333333334
+            },
+            {
+              "rodada": 26,
+              "modelo": 1,
+              "tabela": 1
+            }
+          ]
+        },
+        {
+          "evento": "Z4",
+          "vagas": 4,
+          "previsoes": 680,
+          "brier": 0.09410371993464056,
+          "brierTaxaBase": 0.1600000000000018,
+          "habilidade": 0.4118517504085031,
+          "calibracao": {
+            "n": 680,
+            "clubes": 20,
+            "ece": 0.04038235294117649,
+            "faixas": [
+              {
+                "faixa": "0%",
+                "n": 136,
+                "casos": 14,
+                "clubes": 14,
+                "previsto": 0.0004362745098039216,
+                "observado": 0,
+                "diferenca": -0.0004362745098039216,
+                "ic95": [
+                  -0.0004362745098039216,
+                  0.23119948714031266
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "0,5–10%",
+                "n": 169,
+                "casos": 16,
+                "clubes": 16,
+                "previsto": 0.039968441814595655,
+                "observado": 0.047337278106508875,
+                "diferenca": 0.007368836291913219,
+                "ic95": [
+                  -0.04541163310961969,
+                  0.13521851851851854
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "10–20%",
+                "n": 125,
+                "casos": 15,
+                "clubes": 15,
+                "previsto": 0.15253066666666662,
+                "observado": 0.192,
+                "diferenca": 0.039469333333333384,
+                "ic95": [
+                  -0.15297720797720799,
+                  0.2885144032921811
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "20–30%",
+                "n": 114,
+                "casos": 12,
+                "clubes": 12,
+                "previsto": 0.2454327485380117,
+                "observado": 0.19298245614035087,
+                "diferenca": -0.05245029239766083,
+                "ic95": [
+                  -0.24841584158415844,
+                  0.23416931216931217
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "30–40%",
+                "n": 36,
+                "casos": 11,
+                "clubes": 11,
+                "previsto": 0.3476666666666668,
+                "observado": 0.1388888888888889,
+                "diferenca": -0.2087777777777779,
+                "ic95": [
+                  -0.34026666666666666,
+                  0.07005263157894734
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "40–60%",
+                "n": 36,
+                "casos": 9,
+                "clubes": 9,
+                "previsto": 0.4770925925925926,
+                "observado": 0.4722222222222222,
+                "diferenca": -0.004870370370370414,
+                "ic95": [
+                  -0.39198809523809525,
+                  0.3406666666666667
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "60–70%",
+                "n": 22,
+                "casos": 5,
+                "clubes": 5,
+                "previsto": 0.6456969696969697,
+                "observado": 0.8181818181818182,
+                "diferenca": 0.17248484848484857,
+                "ic95": [
+                  -0.6298888888888889,
+                  0.35387500000000005
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "70–80%",
+                "n": 10,
+                "casos": 4,
+                "clubes": 4,
+                "previsto": 0.7445,
+                "observado": 1,
+                "diferenca": 0.25549999999999995,
+                "ic95": [
+                  -0.34686463561647474,
+                  0.25549999999999995
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "80–90%",
+                "n": 6,
+                "casos": 4,
+                "clubes": 4,
+                "previsto": 0.8624999999999999,
+                "observado": 1,
+                "diferenca": 0.13750000000000007,
+                "ic95": [
+                  -0.4648646356164746,
+                  0.13750000000000007
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "90–99,5%",
+                "n": 13,
+                "casos": 2,
+                "clubes": 2,
+                "previsto": 0.9714615384615386,
+                "observado": 1,
+                "diferenca": 0.0285384615384614,
+                "ic95": [
+                  -0.8133476554531196,
+                  0.0285384615384614
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "100%",
+                "n": 13,
+                "casos": 2,
+                "clubes": 2,
+                "previsto": 0.9995897435897436,
+                "observado": 1,
+                "diferenca": 0.00041025641025638215,
+                "ic95": [
+                  -0.8414758605813246,
+                  0.00041025641025638215
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              }
+            ]
+          },
+          "brierDesdeR1": 0.09309316430976433,
+          "brierTabelaDoMomento": 0.19090909090909092,
+          "acertoMedio": 0.5955882352941176,
+          "acertoTabelaDoMomento": 0.5227272727272727,
+          "acertoModeloDesdeR1": 0.5984848484848485,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0.5,
+              "tabela": null
+            },
+            {
+              "rodada": 9,
+              "modelo": 0.75,
+              "tabela": 0.5
+            },
+            {
+              "rodada": 17,
+              "modelo": 0.5,
+              "tabela": 0.5
+            },
+            {
+              "rodada": 26,
+              "modelo": 0.5,
+              "tabela": 0.5
+            }
+          ]
+        }
+      ],
+      "calibracao": {
+        "n": 2720,
+        "clubes": 20,
+        "ece": 0.028180147058823515,
+        "faixas": [
+          {
+            "faixa": "0%",
+            "n": 756,
+            "casos": 60,
+            "clubes": 20,
+            "previsto": 0.0006419753086419755,
+            "observado": 0,
+            "diferenca": -0.0006419753086419755,
+            "ic95": [
+              -0.0006419753086419755,
+              0.1677914956744434
+            ],
+            "metodo": "binomial exato por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "0,5–10%",
+            "n": 702,
+            "casos": 63,
+            "clubes": 20,
+            "previsto": 0.039934947768281104,
+            "observado": 0.017094017094017096,
+            "diferenca": -0.022840930674264008,
+            "ic95": [
+              -0.04089855072463767,
+              0.007069403714565008
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "10–20%",
+            "n": 411,
+            "casos": 50,
+            "clubes": 19,
+            "previsto": 0.14698215733982156,
+            "observado": 0.11678832116788321,
+            "diferenca": -0.030193836171938354,
+            "ic95": [
+              -0.11713841807909604,
+              0.07186070853462159
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "20–30%",
+            "n": 270,
+            "casos": 39,
+            "clubes": 18,
+            "previsto": 0.2430345679012345,
+            "observado": 0.2222222222222222,
+            "diferenca": -0.0208123456790123,
+            "ic95": [
+              -0.16647378832838772,
+              0.14814695340501796
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "30–40%",
+            "n": 140,
+            "casos": 31,
+            "clubes": 19,
+            "previsto": 0.34840238095238096,
+            "observado": 0.32142857142857145,
+            "diferenca": -0.02697380952380951,
+            "ic95": [
+              -0.2533663366336634,
+              0.2125446009389671
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "40–60%",
+            "n": 183,
+            "casos": 29,
+            "clubes": 19,
+            "previsto": 0.48574316939890716,
+            "observado": 0.5519125683060109,
+            "diferenca": 0.06616939890710372,
+            "ic95": [
+              -0.21037827715355806,
+              0.29259544159544154
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "60–70%",
+            "n": 67,
+            "casos": 18,
+            "clubes": 12,
+            "previsto": 0.6379900497512438,
+            "observado": 0.8208955223880597,
+            "diferenca": 0.1829054726368159,
+            "ic95": [
+              -0.08443678160919532,
+              0.31771
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "70–80%",
+            "n": 36,
+            "casos": 16,
+            "clubes": 10,
+            "previsto": 0.7469537037037038,
+            "observado": 0.9444444444444444,
+            "diferenca": 0.19749074074074058,
+            "ic95": [
+              0.054507936507936554,
+              0.26622807017543854
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": false
+          },
+          {
+            "faixa": "80–90%",
+            "n": 32,
+            "casos": 14,
+            "clubes": 10,
+            "previsto": 0.8550833333333333,
+            "observado": 1,
+            "diferenca": 0.1449166666666667,
+            "ic95": [
+              -0.16358044115209414,
+              0.1449166666666667
+            ],
+            "metodo": "binomial exato por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "90–99,5%",
+            "n": 59,
+            "casos": 9,
+            "clubes": 7,
+            "previsto": 0.963090395480226,
+            "observado": 1,
+            "diferenca": 0.036909604519773986,
+            "ic95": [
+              -0.37270679270522944,
+              0.036909604519773986
+            ],
+            "metodo": "binomial exato por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "100%",
+            "n": 64,
+            "casos": 11,
+            "clubes": 7,
+            "previsto": 0.9994270833333333,
+            "observado": 1,
+            "diferenca": 0.0005729166666667007,
+            "ic95": [
+              -0.4090434805583367,
+              0.0005729166666667007
+            ],
+            "metodo": "binomial exato por clube",
+            "compativel": true
+          }
+        ]
+      },
+      "surpresas": [
+        {
+          "time": "Corinthians",
+          "evento": "Z4",
+          "rodada": 22,
+          "previsto": 0.013000000000000001,
+          "aconteceu": true,
+          "erro": 0.987
+        },
+        {
+          "time": "Cruzeiro",
+          "evento": "G4",
+          "rodada": 14,
+          "previsto": 0.09166666666666667,
+          "aconteceu": true,
+          "erro": 0.9083333333333333
+        },
+        {
+          "time": "Athletico-PR",
+          "evento": "G6",
+          "rodada": 0,
+          "previsto": 0.10666666666666667,
+          "aconteceu": true,
+          "erro": 0.8933333333333333
+        },
+        {
+          "time": "Flamengo",
+          "evento": "título",
+          "rodada": 2,
+          "previsto": 0.111,
+          "aconteceu": true,
+          "erro": 0.889
+        },
+        {
+          "time": "Grêmio",
+          "evento": "Z4",
+          "rodada": 4,
+          "previsto": 0.12833333333333333,
+          "aconteceu": true,
+          "erro": 0.8716666666666667
+        },
+        {
+          "time": "Cruzeiro",
+          "evento": "G6",
+          "rodada": 8,
+          "previsto": 0.19833333333333333,
+          "aconteceu": true,
+          "erro": 0.8016666666666666
+        }
+      ]
+    },
+    "B": {
+      "jogos": 380,
+      "H": 38,
+      "maxR": 38,
+      "completa": true,
+      "sobrepostos": 7,
+      "clubes": 20,
+      "porEvento": [
+        {
+          "evento": "1º",
+          "vagas": 1,
+          "previsoes": 760,
+          "brier": 0.04194208011695905,
+          "brierTaxaBase": 0.04750000000000023,
+          "habilidade": 0.1170088396429716,
+          "calibracao": {
+            "n": 760,
+            "clubes": 20,
+            "ece": 0.013591228070175434,
+            "faixas": [
+              {
+                "faixa": "0%",
+                "n": 244,
+                "casos": 18,
+                "clubes": 18,
+                "previsto": 0.0006557377049180327,
+                "observado": 0,
+                "diferenca": -0.0006557377049180327,
+                "ic95": [
+                  -0.0006557377049180327,
+                  0.18464623043293424
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "0,5–10%",
+                "n": 397,
+                "casos": 20,
+                "clubes": 20,
+                "previsto": 0.03970109151973132,
+                "observado": 0.04785894206549118,
+                "diferenca": 0.008157850545759862,
+                "ic95": [
+                  -0.043774561403508765,
+                  0.11130920464700625
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "10–20%",
+                "n": 84,
+                "casos": 10,
+                "clubes": 10,
+                "previsto": 0.13255555555555554,
+                "observado": 0.10714285714285714,
+                "diferenca": -0.0254126984126984,
+                "ic95": [
+                  -0.13755102040816328,
+                  0.23788425925925927
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "20–30%",
+                "n": 22,
+                "casos": 5,
+                "clubes": 5,
+                "previsto": 0.25369696969696975,
+                "observado": 0.3181818181818182,
+                "diferenca": 0.06448484848484842,
+                "ic95": [
+                  -0.26841666666666675,
+                  0.6124791666666667
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "30–40%",
+                "n": 9,
+                "casos": 3,
+                "clubes": 3,
+                "previsto": 0.3188888888888889,
+                "observado": 0,
+                "diferenca": -0.3188888888888889,
+                "ic95": [
+                  -0.3188888888888889,
+                  0.3887093372898245
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "40–60%",
+                "n": 2,
+                "casos": 2,
+                "clubes": 2,
+                "previsto": 0.48050000000000004,
+                "observado": 0.5,
+                "diferenca": 0.019499999999999962,
+                "ic95": [
+                  -0.4296666666666667,
+                  0.46866666666666656
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "60–70%",
+                "n": 0
+              },
+              {
+                "faixa": "70–80%",
+                "n": 1,
+                "casos": 1,
+                "clubes": 1,
+                "previsto": 0.7223333333333334,
+                "observado": 1,
+                "diferenca": 0.2776666666666666,
+                "ic95": [
+                  -0.6973333333333334,
+                  0.2776666666666666
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "80–90%",
+                "n": 1,
+                "casos": 1,
+                "clubes": 1,
+                "previsto": 0.8093333333333333,
+                "observado": 1,
+                "diferenca": 0.19066666666666665,
+                "ic95": [
+                  -0.7843333333333333,
+                  0.19066666666666665
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "90–99,5%",
+                "n": 0
+              },
+              {
+                "faixa": "100%",
+                "n": 0
+              }
+            ]
+          },
+          "brierDesdeR1": 0.041754918918918915,
+          "brierTabelaDoMomento": 0.0891891891891892,
+          "acertoMedio": 0.18421052631578946,
+          "acertoTabelaDoMomento": 0.10810810810810811,
+          "acertoModeloDesdeR1": 0.1891891891891892,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0,
+              "tabela": null
+            },
+            {
+              "rodada": 10,
+              "modelo": 0,
+              "tabela": 0
+            },
+            {
+              "rodada": 19,
+              "modelo": 0,
+              "tabela": 0
+            },
+            {
+              "rodada": 29,
+              "modelo": 0,
+              "tabela": 0
+            }
+          ]
+        },
+        {
+          "evento": "acesso direto (top-2)",
+          "vagas": 2,
+          "previsoes": 760,
+          "brier": 0.06775902807017548,
+          "brierTaxaBase": 0.08999999999999987,
+          "habilidade": 0.24712191033138253,
+          "calibracao": {
+            "n": 760,
+            "clubes": 20,
+            "ece": 0.016136842105263147,
+            "faixas": [
+              {
+                "faixa": "0%",
+                "n": 191,
+                "casos": 17,
+                "clubes": 17,
+                "previsto": 0.0004938917975567191,
+                "observado": 0,
+                "diferenca": -0.0004938917975567191,
+                "ic95": [
+                  -0.0004938917975567191,
+                  0.19457043117153644
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "0,5–10%",
+                "n": 309,
+                "casos": 20,
+                "clubes": 20,
+                "previsto": 0.05342718446601942,
+                "observado": 0.05501618122977346,
+                "diferenca": 0.0015889967637540414,
+                "ic95": [
+                  -0.05392078189300412,
+                  0.09385952380952381
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "10–20%",
+                "n": 148,
+                "casos": 18,
+                "clubes": 18,
+                "previsto": 0.13723648648648648,
+                "observado": 0.12162162162162163,
+                "diferenca": -0.015614864864864852,
+                "ic95": [
+                  -0.1402712643678161,
+                  0.1564954954954955
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "20–30%",
+                "n": 62,
+                "casos": 9,
+                "clubes": 9,
+                "previsto": 0.23752688172043007,
+                "observado": 0.1774193548387097,
+                "diferenca": -0.060107526881720386,
+                "ic95": [
+                  -0.2401074074074074,
+                  0.2909603174603175
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "30–40%",
+                "n": 17,
+                "casos": 5,
+                "clubes": 5,
+                "previsto": 0.3488627450980392,
+                "observado": 0.35294117647058826,
+                "diferenca": 0.004078431372549041,
+                "ic95": [
+                  -0.353,
+                  0.6475555555555554
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "40–60%",
+                "n": 25,
+                "casos": 5,
+                "clubes": 5,
+                "previsto": 0.48264,
+                "observado": 0.68,
+                "diferenca": 0.19736000000000004,
+                "ic95": [
+                  -0.4773333333333334,
+                  0.5113086419753087
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "60–70%",
+                "n": 3,
+                "casos": 2,
+                "clubes": 2,
+                "previsto": 0.6601111111111111,
+                "observado": 0.6666666666666666,
+                "diferenca": 0.006555555555555537,
+                "ic95": [
+                  -0.6076666666666666,
+                  0.31366666666666665
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "70–80%",
+                "n": 1,
+                "casos": 1,
+                "clubes": 1,
+                "previsto": 0.753,
+                "observado": 1,
+                "diferenca": 0.247,
+                "ic95": [
+                  -0.728,
+                  0.247
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "80–90%",
+                "n": 2,
+                "casos": 2,
+                "clubes": 2,
+                "previsto": 0.8495,
+                "observado": 1,
+                "diferenca": 0.15049999999999997,
+                "ic95": [
+                  -0.691386116991581,
+                  0.15049999999999997
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "90–99,5%",
+                "n": 1,
+                "casos": 1,
+                "clubes": 1,
+                "previsto": 0.93,
+                "observado": 1,
+                "diferenca": 0.06999999999999995,
+                "ic95": [
+                  -0.905,
+                  0.06999999999999995
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "100%",
+                "n": 1,
+                "casos": 1,
+                "clubes": 1,
+                "previsto": 1,
+                "observado": 1,
+                "diferenca": 0,
+                "ic95": [
+                  -0.975,
+                  0
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              }
+            ]
+          },
+          "brierDesdeR1": 0.06708881051051055,
+          "brierTabelaDoMomento": 0.13243243243243244,
+          "acertoMedio": 0.39473684210526316,
+          "acertoTabelaDoMomento": 0.33783783783783783,
+          "acertoModeloDesdeR1": 0.40540540540540543,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0,
+              "tabela": null
+            },
+            {
+              "rodada": 10,
+              "modelo": 0,
+              "tabela": 0
+            },
+            {
+              "rodada": 19,
+              "modelo": 0,
+              "tabela": 0
+            },
+            {
+              "rodada": 29,
+              "modelo": 0.5,
+              "tabela": 0
+            }
+          ]
+        },
+        {
+          "evento": "G6",
+          "vagas": 6,
+          "previsoes": 760,
+          "brier": 0.12055392397660819,
+          "brierTaxaBase": 0.2100000000000019,
+          "habilidade": 0.42593369534949,
+          "calibracao": {
+            "n": 760,
+            "clubes": 20,
+            "ece": 0.05089298245614035,
+            "faixas": [
+              {
+                "faixa": "0%",
+                "n": 107,
+                "casos": 12,
+                "clubes": 12,
+                "previsto": 0.0003769470404984424,
+                "observado": 0,
+                "diferenca": -0.0003769470404984424,
+                "ic95": [
+                  -0.0003769470404984424,
+                  0.26427152235655277
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "0,5–10%",
+                "n": 83,
+                "casos": 12,
+                "clubes": 12,
+                "previsto": 0.04505220883534136,
+                "observado": 0,
+                "diferenca": -0.04505220883534136,
+                "ic95": [
+                  -0.04505220883534136,
+                  0.21959626056170986
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "10–20%",
+                "n": 93,
+                "casos": 15,
+                "clubes": 15,
+                "previsto": 0.15126881720430108,
+                "observado": 0.043010752688172046,
+                "diferenca": -0.10825806451612903,
+                "ic95": [
+                  -0.15587096774193546,
+                  0.030215686274509795
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "20–30%",
+                "n": 158,
+                "casos": 19,
+                "clubes": 19,
+                "previsto": 0.25694725738396623,
+                "observado": 0.25316455696202533,
+                "diferenca": -0.003782700421940899,
+                "ic95": [
+                  -0.20787577639751545,
+                  0.2592452830188679
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "30–40%",
+                "n": 119,
+                "casos": 18,
+                "clubes": 18,
+                "previsto": 0.34364705882352936,
+                "observado": 0.3025210084033613,
+                "diferenca": -0.04112605042016804,
+                "ic95": [
+                  -0.24592875318066154,
+                  0.19663478260869566
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "40–60%",
+                "n": 112,
+                "casos": 13,
+                "clubes": 13,
+                "previsto": 0.49417857142857147,
+                "observado": 0.5803571428571429,
+                "diferenca": 0.08617857142857144,
+                "ic95": [
+                  -0.25477581120943954,
+                  0.33522101449275354
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "60–70%",
+                "n": 18,
+                "casos": 8,
+                "clubes": 8,
+                "previsto": 0.6444074074074073,
+                "observado": 0.7222222222222222,
+                "diferenca": 0.07781481481481489,
+                "ic95": [
+                  -0.30017460317460315,
+                  0.353590909090909
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "70–80%",
+                "n": 18,
+                "casos": 5,
+                "clubes": 5,
+                "previsto": 0.7489259259259259,
+                "observado": 1,
+                "diferenca": 0.2510740740740741,
+                "ic95": [
+                  -0.2707496760309074,
+                  0.2510740740740741
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "80–90%",
+                "n": 22,
+                "casos": 5,
+                "clubes": 5,
+                "previsto": 0.8481060606060605,
+                "observado": 1,
+                "diferenca": 0.15189393939393947,
+                "ic95": [
+                  -0.36992981071104203,
+                  0.15189393939393947
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "90–99,5%",
+                "n": 12,
+                "casos": 5,
+                "clubes": 5,
+                "previsto": 0.9653333333333335,
+                "observado": 1,
+                "diferenca": 0.03466666666666651,
+                "ic95": [
+                  -0.487157083438315,
+                  0.03466666666666651
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "100%",
+                "n": 18,
+                "casos": 5,
+                "clubes": 5,
+                "previsto": 0.9994629629629629,
+                "observado": 1,
+                "diferenca": 0.0005370370370371136,
+                "ic95": [
+                  -0.5212867130679444,
+                  0.0005370370370371136
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              }
+            ]
+          },
+          "brierDesdeR1": 0.11817559849849847,
+          "brierTabelaDoMomento": 0.1891891891891892,
+          "acertoMedio": 0.6973684210526315,
+          "acertoTabelaDoMomento": 0.6846846846846847,
+          "acertoModeloDesdeR1": 0.7072072072072071,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0.3333333333333333,
+              "tabela": null
+            },
+            {
+              "rodada": 10,
+              "modelo": 0.5,
+              "tabela": 0.3333333333333333
+            },
+            {
+              "rodada": 19,
+              "modelo": 0.8333333333333334,
+              "tabela": 0.8333333333333334
+            },
+            {
+              "rodada": 29,
+              "modelo": 0.8333333333333334,
+              "tabela": 0.8333333333333334
+            }
+          ]
+        },
+        {
+          "evento": "Z4",
+          "vagas": 4,
+          "previsoes": 760,
+          "brier": 0.06441280877192994,
+          "brierTaxaBase": 0.16000000000000217,
+          "habilidade": 0.5974199451754434,
+          "calibracao": {
+            "n": 760,
+            "clubes": 20,
+            "ece": 0.0720061403508772,
+            "faixas": [
+              {
+                "faixa": "0%",
+                "n": 160,
+                "casos": 15,
+                "clubes": 15,
+                "previsto": 0.00037916666666666665,
+                "observado": 0,
+                "diferenca": -0.00037916666666666665,
+                "ic95": [
+                  -0.00037916666666666665,
+                  0.2176401942438674
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "0,5–10%",
+                "n": 181,
+                "casos": 16,
+                "clubes": 16,
+                "previsto": 0.04505524861878454,
+                "observado": 0,
+                "diferenca": -0.04505524861878454,
+                "ic95": [
+                  -0.04505524861878454,
+                  0.16085196558903822
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "10–20%",
+                "n": 170,
+                "casos": 18,
+                "clubes": 18,
+                "previsto": 0.151921568627451,
+                "observado": 0.041176470588235294,
+                "diferenca": -0.1107450980392157,
+                "ic95": [
+                  -0.15371929824561403,
+                  -0.026973684210526327
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": false
+              },
+              {
+                "faixa": "20–30%",
+                "n": 111,
+                "casos": 18,
+                "clubes": 18,
+                "previsto": 0.2371171171171171,
+                "observado": 0.23423423423423423,
+                "diferenca": -0.002882882882882881,
+                "ic95": [
+                  -0.18072533333333338,
+                  0.23993703703703706
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "30–40%",
+                "n": 35,
+                "casos": 8,
+                "clubes": 8,
+                "previsto": 0.3488666666666667,
+                "observado": 0.5714285714285714,
+                "diferenca": 0.22256190476190468,
+                "ic95": [
+                  -0.24301515151515155,
+                  0.5862424242424242
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "40–60%",
+                "n": 27,
+                "casos": 6,
+                "clubes": 6,
+                "previsto": 0.46162962962962956,
+                "observado": 0.8518518518518519,
+                "diferenca": 0.3902222222222223,
+                "ic95": [
+                  -0.049800000000000025,
+                  0.5370987654320989
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "60–70%",
+                "n": 12,
+                "casos": 4,
+                "clubes": 4,
+                "previsto": 0.6449444444444444,
+                "observado": 1,
+                "diferenca": 0.35505555555555557,
+                "ic95": [
+                  -0.24730908006091912,
+                  0.35505555555555557
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "70–80%",
+                "n": 11,
+                "casos": 4,
+                "clubes": 4,
+                "previsto": 0.7513333333333333,
+                "observado": 1,
+                "diferenca": 0.2486666666666667,
+                "ic95": [
+                  -0.353697968949808,
+                  0.2486666666666667
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "80–90%",
+                "n": 11,
+                "casos": 4,
+                "clubes": 4,
+                "previsto": 0.8532727272727272,
+                "observado": 1,
+                "diferenca": 0.14672727272727282,
+                "ic95": [
+                  -0.45563736288920187,
+                  0.14672727272727282
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "90–99,5%",
+                "n": 13,
+                "casos": 4,
+                "clubes": 4,
+                "previsto": 0.9684871794871796,
+                "observado": 1,
+                "diferenca": 0.03151282051282045,
+                "ic95": [
+                  -0.5708518151036542,
+                  0.03151282051282045
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "100%",
+                "n": 29,
+                "casos": 3,
+                "clubes": 3,
+                "previsto": 0.9994137931034482,
+                "observado": 1,
+                "diferenca": 0.0005862068965517553,
+                "ic95": [
+                  -0.7070120192821616,
+                  0.0005862068965517553
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              }
+            ]
+          },
+          "brierDesdeR1": 0.06192260030030044,
+          "brierTabelaDoMomento": 0.07027027027027027,
+          "acertoMedio": 0.8223684210526315,
+          "acertoTabelaDoMomento": 0.8243243243243243,
+          "acertoModeloDesdeR1": 0.8378378378378378,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0.25,
+              "tabela": null
+            },
+            {
+              "rodada": 10,
+              "modelo": 1,
+              "tabela": 0.75
+            },
+            {
+              "rodada": 19,
+              "modelo": 0.75,
+              "tabela": 0.75
+            },
+            {
+              "rodada": 29,
+              "modelo": 1,
+              "tabela": 1
+            }
+          ]
+        }
+      ],
+      "calibracao": {
+        "n": 3040,
+        "clubes": 20,
+        "ece": 0.029661842105263153,
+        "faixas": [
+          {
+            "faixa": "0%",
+            "n": 702,
+            "casos": 62,
+            "clubes": 20,
+            "previsto": 0.0005061728395061728,
+            "observado": 0,
+            "diferenca": -0.0005061728395061728,
+            "ic95": [
+              -0.0005061728395061728,
+              0.16792729814357918
+            ],
+            "metodo": "binomial exato por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "0,5–10%",
+            "n": 970,
+            "casos": 68,
+            "clubes": 20,
+            "previsto": 0.04553058419243986,
+            "observado": 0.03711340206185567,
+            "diferenca": -0.008417182130584192,
+            "ic95": [
+              -0.04587244897959184,
+              0.05876334913112165
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "10–20%",
+            "n": 495,
+            "casos": 61,
+            "clubes": 20,
+            "previsto": 0.14412188552188548,
+            "observado": 0.07676767676767676,
+            "diferenca": -0.06735420875420872,
+            "ic95": [
+              -0.13337458416500328,
+              0.026128922815945702
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "20–30%",
+            "n": 353,
+            "casos": 51,
+            "clubes": 20,
+            "previsto": 0.24709820585457984,
+            "observado": 0.23796033994334279,
+            "diferenca": -0.009137865911237053,
+            "ic95": [
+              -0.14514991624790616,
+              0.1393896848137536
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "30–40%",
+            "n": 180,
+            "casos": 34,
+            "clubes": 20,
+            "previsto": 0.34391666666666665,
+            "observado": 0.34444444444444444,
+            "diferenca": 0.0005277777777777937,
+            "ic95": [
+              -0.1676483333333333,
+              0.1746397306397307
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "40–60%",
+            "n": 166,
+            "casos": 26,
+            "clubes": 17,
+            "previsto": 0.4869819277108435,
+            "observado": 0.6385542168674698,
+            "diferenca": 0.15157228915662635,
+            "ic95": [
+              -0.0920588235294118,
+              0.3372048417132217
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "60–70%",
+            "n": 33,
+            "casos": 14,
+            "clubes": 12,
+            "previsto": 0.6460303030303031,
+            "observado": 0.8181818181818182,
+            "diferenca": 0.17215151515151517,
+            "ic95": [
+              -0.07104504504504507,
+              0.3476458333333333
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "70–80%",
+            "n": 31,
+            "casos": 11,
+            "clubes": 9,
+            "previsto": 0.7490537634408602,
+            "observado": 1,
+            "diferenca": 0.25094623655913983,
+            "ic95": [
+              -0.08532088032080298,
+              0.25094623655913983
+            ],
+            "metodo": "binomial exato por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "80–90%",
+            "n": 36,
+            "casos": 12,
+            "clubes": 9,
+            "previsto": 0.8486851851851853,
+            "observado": 1,
+            "diferenca": 0.15131481481481468,
+            "ic95": [
+              -0.18495230206512814,
+              0.15131481481481468
+            ],
+            "metodo": "binomial exato por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "90–99,5%",
+            "n": 26,
+            "casos": 10,
+            "clubes": 9,
+            "previsto": 0.9655512820512819,
+            "observado": 1,
+            "diferenca": 0.034448717948718066,
+            "ic95": [
+              -0.30181839893122475,
+              0.034448717948718066
+            ],
+            "metodo": "binomial exato por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "100%",
+            "n": 48,
+            "casos": 9,
+            "clubes": 8,
+            "previsto": 0.9994444444444445,
+            "observado": 1,
+            "diferenca": 0.0005555555555555314,
+            "ic95": [
+              -0.3688610919972638,
+              0.0005555555555555314
+            ],
+            "metodo": "binomial exato por clube",
+            "compativel": true
+          }
+        ]
+      },
+      "surpresas": [
+        {
+          "time": "Novorizontino",
+          "evento": "1º",
+          "rodada": 3,
+          "previsto": 0.022333333333333334,
+          "aconteceu": true,
+          "erro": 0.9776666666666667
+        },
+        {
+          "time": "Juventude",
+          "evento": "acesso direto (top-2)",
+          "rodada": 3,
+          "previsto": 0.06000000000000001,
+          "aconteceu": true,
+          "erro": 0.94
+        },
+        {
+          "time": "Novorizontino",
+          "evento": "acesso direto (top-2)",
+          "rodada": 3,
+          "previsto": 0.06233333333333334,
+          "aconteceu": true,
+          "erro": 0.9376666666666666
+        },
+        {
+          "time": "Avaí",
+          "evento": "Z4",
+          "rodada": 3,
+          "previsto": 0.12266666666666667,
+          "aconteceu": true,
+          "erro": 0.8773333333333333
+        },
+        {
+          "time": "Atlético-GO",
+          "evento": "G6",
+          "rodada": 36,
+          "previsto": 0.13,
+          "aconteceu": true,
+          "erro": 0.87
+        },
+        {
+          "time": "Londrina",
+          "evento": "Z4",
+          "rodada": 1,
+          "previsto": 0.16466666666666668,
+          "aconteceu": true,
+          "erro": 0.8353333333333333
+        }
+      ]
+    },
+    "C": {
+      "jogos": 190,
+      "H": 19,
+      "maxR": 19,
+      "completa": true,
+      "sobrepostos": 0,
+      "clubes": 20,
+      "porEvento": [
+        {
+          "evento": "1º",
+          "vagas": 1,
+          "previsoes": 380,
+          "brier": 0.051105159649122836,
+          "brierTaxaBase": 0.04750000000000002,
+          "habilidade": -0.07589809787626978,
+          "calibracao": {
+            "n": 380,
+            "clubes": 20,
+            "ece": 0.02955614035087719,
+            "faixas": [
+              {
+                "faixa": "0%",
+                "n": 104,
+                "casos": 16,
+                "clubes": 16,
+                "previsto": 0.0008461538461538462,
+                "observado": 0.04807692307692308,
+                "diferenca": 0.047230769230769236,
+                "ic95": [
+                  -0.0009159663865546218,
+                  0.18420987654320986
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "0,5–10%",
+                "n": 223,
+                "casos": 20,
+                "clubes": 20,
+                "previsto": 0.037203288490284016,
+                "observado": 0.04035874439461883,
+                "diferenca": 0.003155455904334817,
+                "ic95": [
+                  -0.04065860215053763,
+                  0.09825779967159279
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "10–20%",
+                "n": 33,
+                "casos": 11,
+                "clubes": 11,
+                "previsto": 0.14162626262626263,
+                "observado": 0.12121212121212122,
+                "diferenca": -0.020414141414141412,
+                "ic95": [
+                  -0.14527083333333335,
+                  0.2583833333333333
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "20–30%",
+                "n": 13,
+                "casos": 4,
+                "clubes": 4,
+                "previsto": 0.2432051282051282,
+                "observado": 0,
+                "diferenca": -0.2432051282051282,
+                "ic95": [
+                  -0.2432051282051282,
+                  0.3591595074113465
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "30–40%",
+                "n": 5,
+                "casos": 3,
+                "clubes": 3,
+                "previsto": 0.35573333333333335,
+                "observado": 0.2,
+                "diferenca": -0.15573333333333333,
+                "ic95": [
+                  -0.379,
+                  0.647
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "40–60%",
+                "n": 2,
+                "casos": 2,
+                "clubes": 2,
+                "previsto": 0.5008333333333334,
+                "observado": 0,
+                "diferenca": -0.5008333333333334,
+                "ic95": [
+                  -0.5008333333333334,
+                  0.34105278365824765
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "60–70%",
+                "n": 0
+              },
+              {
+                "faixa": "70–80%",
+                "n": 0
+              },
+              {
+                "faixa": "80–90%",
+                "n": 0
+              },
+              {
+                "faixa": "90–99,5%",
+                "n": 0
+              },
+              {
+                "faixa": "100%",
+                "n": 0
+              }
+            ]
+          },
+          "brierDesdeR1": 0.05129152222222223,
+          "brierTabelaDoMomento": 0.1,
+          "acertoMedio": 0,
+          "acertoTabelaDoMomento": 0,
+          "acertoModeloDesdeR1": 0,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0,
+              "tabela": null
+            },
+            {
+              "rodada": 5,
+              "modelo": 0,
+              "tabela": 0
+            },
+            {
+              "rodada": 10,
+              "modelo": 0,
+              "tabela": 0
+            },
+            {
+              "rodada": 14,
+              "modelo": 0,
+              "tabela": 0
+            }
+          ]
+        },
+        {
+          "evento": "G8",
+          "vagas": 8,
+          "previsoes": 380,
+          "brier": 0.19639027953216362,
+          "brierTaxaBase": 0.23999999999999852,
+          "habilidade": 0.1817071686159799,
+          "calibracao": {
+            "n": 380,
+            "clubes": 20,
+            "ece": 0.06651052631578944,
+            "faixas": [
+              {
+                "faixa": "0%",
+                "n": 21,
+                "casos": 7,
+                "clubes": 7,
+                "previsto": 0.0002222222222222222,
+                "observado": 0,
+                "diferenca": -0.0002222222222222222,
+                "ic95": [
+                  -0.0002222222222222222,
+                  0.4093941750027812
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "0,5–10%",
+                "n": 31,
+                "casos": 7,
+                "clubes": 7,
+                "previsto": 0.042677419354838715,
+                "observado": 0,
+                "diferenca": -0.042677419354838715,
+                "ic95": [
+                  -0.042677419354838715,
+                  0.3669389778701647
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "10–20%",
+                "n": 39,
+                "casos": 12,
+                "clubes": 12,
+                "previsto": 0.1506239316239316,
+                "observado": 0.1282051282051282,
+                "diferenca": -0.022418803418803396,
+                "ic95": [
+                  -0.15753488372093025,
+                  0.2257837837837838
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "20–30%",
+                "n": 47,
+                "casos": 16,
+                "clubes": 16,
+                "previsto": 0.25663120567375886,
+                "observado": 0.3191489361702128,
+                "diferenca": 0.06251773049645393,
+                "ic95": [
+                  -0.15526368159203977,
+                  0.3628930817610063
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "30–40%",
+                "n": 68,
+                "casos": 17,
+                "clubes": 17,
+                "previsto": 0.35200000000000004,
+                "observado": 0.39705882352941174,
+                "diferenca": 0.04505882352941171,
+                "ic95": [
+                  -0.203093567251462,
+                  0.300926406926407
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "40–60%",
+                "n": 92,
+                "casos": 16,
+                "clubes": 16,
+                "previsto": 0.48932246376811606,
+                "observado": 0.5543478260869565,
+                "diferenca": 0.06502536231884049,
+                "ic95": [
+                  -0.23854609929078013,
+                  0.34181481481481485
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "60–70%",
+                "n": 26,
+                "casos": 11,
+                "clubes": 11,
+                "previsto": 0.6508974358974359,
+                "observado": 0.5384615384615384,
+                "diferenca": -0.11243589743589744,
+                "ic95": [
+                  -0.46003703703703713,
+                  0.21442528735632174
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "70–80%",
+                "n": 22,
+                "casos": 9,
+                "clubes": 9,
+                "previsto": 0.7430757575757575,
+                "observado": 0.7727272727272727,
+                "diferenca": 0.029651515151515206,
+                "ic95": [
+                  -0.3966000000000001,
+                  0.2249090909090908
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "80–90%",
+                "n": 18,
+                "casos": 7,
+                "clubes": 7,
+                "previsto": 0.8510185185185184,
+                "observado": 0.6111111111111112,
+                "diferenca": -0.23990740740740724,
+                "ic95": [
+                  -0.6566888888888887,
+                  0.1513529411764706
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "90–99,5%",
+                "n": 13,
+                "casos": 5,
+                "clubes": 5,
+                "previsto": 0.9379487179487178,
+                "observado": 0.6923076923076923,
+                "diferenca": -0.24564102564102552,
+                "ic95": [
+                  -0.7344666666666666,
+                  0.06576190476190481
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "100%",
+                "n": 3,
+                "casos": 2,
+                "clubes": 2,
+                "previsto": 1,
+                "observado": 1,
+                "diferenca": 0,
+                "ic95": [
+                  -0.841886116991581,
+                  0
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              }
+            ]
+          },
+          "brierDesdeR1": 0.1940479104938272,
+          "brierTabelaDoMomento": 0.3,
+          "acertoMedio": 0.6118421052631579,
+          "acertoTabelaDoMomento": 0.625,
+          "acertoModeloDesdeR1": 0.6180555555555556,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0.5,
+              "tabela": null
+            },
+            {
+              "rodada": 5,
+              "modelo": 0.375,
+              "tabela": 0.5
+            },
+            {
+              "rodada": 10,
+              "modelo": 0.5,
+              "tabela": 0.5
+            },
+            {
+              "rodada": 14,
+              "modelo": 0.875,
+              "tabela": 0.875
+            }
+          ]
+        },
+        {
+          "evento": "Z2",
+          "vagas": 2,
+          "previsoes": 380,
+          "brier": 0.06454071695906438,
+          "brierTaxaBase": 0.09000000000000045,
+          "habilidade": 0.2828809226770661,
+          "calibracao": {
+            "n": 380,
+            "clubes": 20,
+            "ece": 0.050592982456140335,
+            "faixas": [
+              {
+                "faixa": "0%",
+                "n": 112,
+                "casos": 16,
+                "clubes": 16,
+                "previsto": 0.0007351190476190476,
+                "observado": 0,
+                "diferenca": -0.0007351190476190476,
+                "ic95": [
+                  -0.0007351190476190476,
+                  0.2051720951602037
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "0,5–10%",
+                "n": 147,
+                "casos": 17,
+                "clubes": 17,
+                "previsto": 0.04571655328798186,
+                "observado": 0,
+                "diferenca": -0.04571655328798186,
+                "ic95": [
+                  -0.04571655328798186,
+                  0.1493477696811113
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "10–20%",
+                "n": 68,
+                "casos": 15,
+                "clubes": 15,
+                "previsto": 0.1343921568627451,
+                "observado": 0.19117647058823528,
+                "diferenca": 0.05678431372549017,
+                "ic95": [
+                  -0.13396527777777775,
+                  0.33262790697674416
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "20–30%",
+                "n": 23,
+                "casos": 8,
+                "clubes": 8,
+                "previsto": 0.245536231884058,
+                "observado": 0.391304347826087,
+                "diferenca": 0.145768115942029,
+                "ic95": [
+                  -0.24395238095238092,
+                  0.5070392156862745
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "30–40%",
+                "n": 8,
+                "casos": 4,
+                "clubes": 4,
+                "previsto": 0.3477083333333334,
+                "observado": 0.625,
+                "diferenca": 0.2772916666666666,
+                "ic95": [
+                  -0.33616666666666667,
+                  0.6426666666666666
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "40–60%",
+                "n": 11,
+                "casos": 4,
+                "clubes": 4,
+                "previsto": 0.47060606060606053,
+                "observado": 0.36363636363636365,
+                "diferenca": -0.10696969696969688,
+                "ic95": [
+                  -0.4790555555555555,
+                  0.5363333333333333
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "60–70%",
+                "n": 3,
+                "casos": 3,
+                "clubes": 3,
+                "previsto": 0.6310000000000001,
+                "observado": 0.6666666666666666,
+                "diferenca": 0.03566666666666651,
+                "ic95": [
+                  -0.6163333333333334,
+                  0.3896666666666666
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "70–80%",
+                "n": 4,
+                "casos": 3,
+                "clubes": 3,
+                "previsto": 0.7314999999999999,
+                "observado": 0.5,
+                "diferenca": -0.23149999999999993,
+                "ic95": [
+                  -0.7235,
+                  0.2763333333333333
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "80–90%",
+                "n": 2,
+                "casos": 2,
+                "clubes": 2,
+                "previsto": 0.8536666666666667,
+                "observado": 0.5,
+                "diferenca": -0.3536666666666667,
+                "ic95": [
+                  -0.872,
+                  0.16466666666666663
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "90–99,5%",
+                "n": 1,
+                "casos": 1,
+                "clubes": 1,
+                "previsto": 0.9266666666666667,
+                "observado": 1,
+                "diferenca": 0.07333333333333325,
+                "ic95": [
+                  -0.9016666666666667,
+                  0.07333333333333325
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "100%",
+                "n": 1,
+                "casos": 1,
+                "clubes": 1,
+                "previsto": 1,
+                "observado": 1,
+                "diferenca": 0,
+                "ic95": [
+                  -0.975,
+                  0
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              }
+            ]
+          },
+          "brierDesdeR1": 0.06316351358024692,
+          "brierTabelaDoMomento": 0.1111111111111111,
+          "acertoMedio": 0.42105263157894735,
+          "acertoTabelaDoMomento": 0.4444444444444444,
+          "acertoModeloDesdeR1": 0.4444444444444444,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0,
+              "tabela": null
+            },
+            {
+              "rodada": 5,
+              "modelo": 0.5,
+              "tabela": 0.5
+            },
+            {
+              "rodada": 10,
+              "modelo": 0.5,
+              "tabela": 0.5
+            },
+            {
+              "rodada": 14,
+              "modelo": 0.5,
+              "tabela": 0.5
+            }
+          ]
+        }
+      ],
+      "calibracao": {
+        "n": 1140,
+        "clubes": 20,
+        "ece": 0.032588304093567236,
+        "faixas": [
+          {
+            "faixa": "0%",
+            "n": 237,
+            "casos": 39,
+            "clubes": 20,
+            "previsto": 0.0007383966244725737,
+            "observado": 0.02109704641350211,
+            "diferenca": 0.020358649789029536,
+            "ic95": [
+              -0.0008045007032348803,
+              0.06827956989247312
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "0,5–10%",
+            "n": 401,
+            "casos": 44,
+            "clubes": 20,
+            "previsto": 0.040747298420615134,
+            "observado": 0.022443890274314215,
+            "diferenca": -0.01830340814630092,
+            "ic95": [
+              -0.042544,
+              0.03447486033519553
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "10–20%",
+            "n": 140,
+            "casos": 38,
+            "clubes": 20,
+            "previsto": 0.14061904761904762,
+            "observado": 0.15714285714285714,
+            "diferenca": 0.016523809523809524,
+            "ic95": [
+              -0.12842559523809524,
+              0.1709354838709677
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "20–30%",
+            "n": 83,
+            "casos": 28,
+            "clubes": 18,
+            "previsto": 0.2514538152610442,
+            "observado": 0.2891566265060241,
+            "diferenca": 0.03770281124497987,
+            "ic95": [
+              -0.13230392156862744,
+              0.25620125786163517
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "30–40%",
+            "n": 81,
+            "casos": 24,
+            "clubes": 19,
+            "previsto": 0.35180658436213996,
+            "observado": 0.4074074074074074,
+            "diferenca": 0.05560082304526742,
+            "ic95": [
+              -0.15631944444444454,
+              0.29232067510548515
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "40–60%",
+            "n": 105,
+            "casos": 22,
+            "clubes": 19,
+            "previsto": 0.48758095238095245,
+            "observado": 0.5238095238095238,
+            "diferenca": 0.03622857142857139,
+            "ic95": [
+              -0.21720634920634924,
+              0.29227843137254905
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "60–70%",
+            "n": 29,
+            "casos": 14,
+            "clubes": 14,
+            "previsto": 0.6488390804597701,
+            "observado": 0.5517241379310345,
+            "diferenca": -0.09711494252873565,
+            "ic95": [
+              -0.40429333333333345,
+              0.21289393939393933
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "70–80%",
+            "n": 26,
+            "casos": 12,
+            "clubes": 12,
+            "previsto": 0.7412948717948716,
+            "observado": 0.7307692307692307,
+            "diferenca": -0.010525641025640908,
+            "ic95": [
+              -0.3602083333333333,
+              0.1948823529411764
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "80–90%",
+            "n": 20,
+            "casos": 9,
+            "clubes": 9,
+            "previsto": 0.8512833333333333,
+            "observado": 0.6,
+            "diferenca": -0.2512833333333333,
+            "ic95": [
+              -0.6446666666666667,
+              0.1469242424242424
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "90–99,5%",
+            "n": 14,
+            "casos": 6,
+            "clubes": 6,
+            "previsto": 0.9371428571428569,
+            "observado": 0.7142857142857143,
+            "diferenca": -0.22285714285714264,
+            "ic95": [
+              -0.6792916666666666,
+              0.06771794871794867
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "100%",
+            "n": 4,
+            "casos": 3,
+            "clubes": 3,
+            "previsto": 1,
+            "observado": 1,
+            "diferenca": 0,
+            "ic95": [
+              -0.7075982261787134,
+              0
+            ],
+            "metodo": "binomial exato por clube",
+            "compativel": true
+          }
+        ]
+      },
+      "surpresas": [
+        {
+          "time": "Botafogo-PB",
+          "evento": "1º",
+          "rodada": 10,
+          "previsto": 0.0003333333333333333,
+          "aconteceu": true,
+          "erro": 0.9996666666666667
+        },
+        {
+          "time": "Guarani",
+          "evento": "G8",
+          "rodada": 15,
+          "previsto": 0.9416666666666667,
+          "aconteceu": false,
+          "erro": 0.9416666666666667
+        },
+        {
+          "time": "Confiança",
+          "evento": "Z2",
+          "rodada": 0,
+          "previsto": 0.10033333333333336,
+          "aconteceu": true,
+          "erro": 0.8996666666666666
+        },
+        {
+          "time": "Itabaiana",
+          "evento": "Z2",
+          "rodada": 0,
+          "previsto": 0.10933333333333334,
+          "aconteceu": true,
+          "erro": 0.8906666666666667
+        },
+        {
+          "time": "Floresta",
+          "evento": "G8",
+          "rodada": 16,
+          "previsto": 0.11166666666666666,
+          "aconteceu": true,
+          "erro": 0.8883333333333333
+        },
+        {
+          "time": "Botafogo-PB",
+          "evento": "G8",
+          "rodada": 8,
+          "previsto": 0.11833333333333335,
+          "aconteceu": true,
+          "erro": 0.8816666666666666
+        }
+      ]
+    },
+    "D": {
+      "jogos": 480,
+      "H": 10,
+      "maxR": 10,
+      "completa": true,
+      "sobrepostos": 0,
+      "clubes": 96,
+      "porEvento": [
+        {
+          "evento": "1º do grupo",
+          "vagas": 1,
+          "previsoes": 960,
+          "brier": 0.08583694166666667,
+          "brierTaxaBase": 0.13888888888888629,
+          "habilidade": 0.38197401999998837,
+          "calibracao": {
+            "n": 960,
+            "clubes": 96,
+            "ece": 0.040229861111111126,
+            "faixas": [
+              {
+                "faixa": "0%",
+                "n": 193,
+                "casos": 70,
+                "clubes": 70,
+                "previsto": 0.0005250431778929189,
+                "observado": 0,
+                "diferenca": -0.0005250431778929189,
+                "ic95": [
+                  -0.0005250431778929189,
+                  0.05080875397313079
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "0,5–10%",
+                "n": 234,
+                "casos": 75,
+                "clubes": 75,
+                "previsto": 0.045727920227920237,
+                "observado": 0.01282051282051282,
+                "diferenca": -0.03290740740740741,
+                "ic95": [
+                  -0.04682426778242677,
+                  -0.010751344086021509
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": false
+              },
+              {
+                "faixa": "10–20%",
+                "n": 261,
+                "casos": 90,
+                "clubes": 90,
+                "previsto": 0.15137420178799496,
+                "observado": 0.10727969348659004,
+                "diferenca": -0.04409450830140492,
+                "ic95": [
+                  -0.10354320987654322,
+                  0.029535055350553525
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "20–30%",
+                "n": 127,
+                "casos": 58,
+                "clubes": 58,
+                "previsto": 0.24334383202099744,
+                "observado": 0.2992125984251969,
+                "diferenca": 0.05586876640419944,
+                "ic95": [
+                  -0.07471666666666668,
+                  0.1888496240601503
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "30–40%",
+                "n": 49,
+                "casos": 32,
+                "clubes": 32,
+                "previsto": 0.3483945578231292,
+                "observado": 0.40816326530612246,
+                "diferenca": 0.05976870748299323,
+                "ic95": [
+                  -0.11313475177304959,
+                  0.24911111111111114
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "40–60%",
+                "n": 54,
+                "casos": 25,
+                "clubes": 25,
+                "previsto": 0.49117901234567907,
+                "observado": 0.5740740740740741,
+                "diferenca": 0.082895061728395,
+                "ic95": [
+                  -0.12802500000000006,
+                  0.3035617283950617
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "60–70%",
+                "n": 9,
+                "casos": 8,
+                "clubes": 8,
+                "previsto": 0.6659629629629629,
+                "observado": 0.8888888888888888,
+                "diferenca": 0.22292592592592597,
+                "ic95": [
+                  -0.06030000000000006,
+                  0.35200000000000004
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "70–80%",
+                "n": 8,
+                "casos": 7,
+                "clubes": 7,
+                "previsto": 0.7621666666666667,
+                "observado": 0.875,
+                "diferenca": 0.11283333333333334,
+                "ic95": [
+                  -0.24005555555555555,
+                  0.24457142857142866
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "80–90%",
+                "n": 10,
+                "casos": 7,
+                "clubes": 7,
+                "previsto": 0.8436333333333333,
+                "observado": 1,
+                "diferenca": 0.15636666666666665,
+                "ic95": [
+                  -0.25324973055833677,
+                  0.15636666666666665
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "90–99,5%",
+                "n": 6,
+                "casos": 5,
+                "clubes": 5,
+                "previsto": 0.9438333333333332,
+                "observado": 1,
+                "diferenca": 0.05616666666666681,
+                "ic95": [
+                  -0.4656570834383147,
+                  0.05616666666666681
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "100%",
+                "n": 9,
+                "casos": 8,
+                "clubes": 8,
+                "previsto": 0.9999629629629629,
+                "observado": 1,
+                "diferenca": 0.00003703703703705763,
+                "ic95": [
+                  -0.3693796105157823,
+                  0.00003703703703705763
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              }
+            ]
+          },
+          "brierDesdeR1": 0.0804559290123456,
+          "brierTabelaDoMomento": 0.12731481481481483,
+          "acertoMedio": 0.59375,
+          "acertoTabelaDoMomento": 0.6180555555555556,
+          "acertoModeloDesdeR1": 0.625,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0.3125,
+              "tabela": null
+            },
+            {
+              "rodada": 3,
+              "modelo": 0.375,
+              "tabela": 0.3125
+            },
+            {
+              "rodada": 5,
+              "modelo": 0.625,
+              "tabela": 0.625
+            },
+            {
+              "rodada": 8,
+              "modelo": 0.8125,
+              "tabela": 0.875
+            }
+          ]
+        },
+        {
+          "evento": "top-4 do grupo",
+          "vagas": 4,
+          "previsoes": 960,
+          "brier": 0.13990847199074075,
+          "brierTaxaBase": 0.2222222222222254,
+          "habilidade": 0.3704118760416757,
+          "calibracao": {
+            "n": 960,
+            "clubes": 96,
+            "ece": 0.04127847222222215,
+            "faixas": [
+              {
+                "faixa": "0%",
+                "n": 22,
+                "casos": 12,
+                "clubes": 12,
+                "previsto": 0.0003333333333333334,
+                "observado": 0,
+                "diferenca": -0.0003333333333333334,
+                "ic95": [
+                  -0.0003333333333333334,
+                  0.26431513606371787
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "0,5–10%",
+                "n": 28,
+                "casos": 15,
+                "clubes": 15,
+                "previsto": 0.049095238095238095,
+                "observado": 0,
+                "diferenca": -0.049095238095238095,
+                "ic95": [
+                  -0.049095238095238095,
+                  0.168924122815296
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "10–20%",
+                "n": 28,
+                "casos": 19,
+                "clubes": 19,
+                "previsto": 0.16080952380952382,
+                "observado": 0.10714285714285714,
+                "diferenca": -0.05366666666666668,
+                "ic95": [
+                  -0.16349523809523808,
+                  0.1114949494949495
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "20–30%",
+                "n": 34,
+                "casos": 25,
+                "clubes": 25,
+                "previsto": 0.25197058823529417,
+                "observado": 0.29411764705882354,
+                "diferenca": 0.04214705882352937,
+                "ic95": [
+                  -0.16359090909090915,
+                  0.24419999999999997
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "30–40%",
+                "n": 48,
+                "casos": 33,
+                "clubes": 33,
+                "previsto": 0.3514513888888889,
+                "observado": 0.3125,
+                "diferenca": -0.03895138888888888,
+                "ic95": [
+                  -0.23738095238095233,
+                  0.13382692307692307
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "40–60%",
+                "n": 158,
+                "casos": 60,
+                "clubes": 60,
+                "previsto": 0.5222489451476793,
+                "observado": 0.47468354430379744,
+                "diferenca": -0.04756540084388183,
+                "ic95": [
+                  -0.19353039832285104,
+                  0.09050200803212864
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "60–70%",
+                "n": 158,
+                "casos": 83,
+                "clubes": 83,
+                "previsto": 0.6553417721518985,
+                "observado": 0.6075949367088608,
+                "diferenca": -0.047746835443037705,
+                "ic95": [
+                  -0.1672505307855626,
+                  0.07781544256120532
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "70–80%",
+                "n": 153,
+                "casos": 68,
+                "clubes": 68,
+                "previsto": 0.7484226579520699,
+                "observado": 0.8169934640522876,
+                "diferenca": 0.06857080610021771,
+                "ic95": [
+                  -0.03894942528735651,
+                  0.1557951807228916
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "80–90%",
+                "n": 117,
+                "casos": 59,
+                "clubes": 59,
+                "previsto": 0.8520199430199432,
+                "observado": 0.9145299145299145,
+                "diferenca": 0.06250997150997128,
+                "ic95": [
+                  -0.02219642857142823,
+                  0.13076060606060597
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "90–99,5%",
+                "n": 117,
+                "casos": 50,
+                "clubes": 50,
+                "previsto": 0.9527521367521367,
+                "observado": 0.9572649572649573,
+                "diferenca": 0.004512820512820648,
+                "ic95": [
+                  -0.07544949494949484,
+                  0.048617424242424274
+                ],
+                "metodo": "bootstrap por clube",
+                "compativel": true
+              },
+              {
+                "faixa": "100%",
+                "n": 97,
+                "casos": 40,
+                "clubes": 40,
+                "previsto": 0.999508591065292,
+                "observado": 1,
+                "diferenca": 0.0004914089347080042,
+                "ic95": [
+                  -0.08760589394409435,
+                  0.0004914089347080042
+                ],
+                "metodo": "binomial exato por clube",
+                "compativel": true
+              }
+            ]
+          },
+          "brierDesdeR1": 0.13144848688271604,
+          "brierTabelaDoMomento": 0.20601851851851852,
+          "acertoMedio": 0.83125,
+          "acertoTabelaDoMomento": 0.8454861111111112,
+          "acertoModeloDesdeR1": 0.8489583333333334,
+          "acertoPorMarco": [
+            {
+              "rodada": 0,
+              "modelo": 0.671875,
+              "tabela": null
+            },
+            {
+              "rodada": 3,
+              "modelo": 0.828125,
+              "tabela": 0.828125
+            },
+            {
+              "rodada": 5,
+              "modelo": 0.84375,
+              "tabela": 0.859375
+            },
+            {
+              "rodada": 8,
+              "modelo": 0.875,
+              "tabela": 0.875
+            }
+          ]
+        }
+      ],
+      "calibracao": {
+        "n": 1920,
+        "clubes": 96,
+        "ece": 0.0320538194444444,
+        "faixas": [
+          {
+            "faixa": "0%",
+            "n": 215,
+            "casos": 82,
+            "clubes": 70,
+            "previsto": 0.0005054263565891472,
+            "observado": 0,
+            "diferenca": -0.0005054263565891472,
+            "ic95": [
+              -0.0005054263565891472,
+              0.05082837079443456
+            ],
+            "metodo": "binomial exato por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "0,5–10%",
+            "n": 262,
+            "casos": 90,
+            "clubes": 75,
+            "previsto": 0.04608778625954199,
+            "observado": 0.011450381679389313,
+            "diferenca": -0.03463740458015268,
+            "ic95": [
+              -0.047167281672816724,
+              -0.01494651741293533
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": false
+          },
+          {
+            "faixa": "10–20%",
+            "n": 289,
+            "casos": 109,
+            "clubes": 90,
+            "previsto": 0.15228835063437143,
+            "observado": 0.10726643598615918,
+            "diferenca": -0.04502191464821226,
+            "ic95": [
+              -0.10122556390977444,
+              0.022052162849872728
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "20–30%",
+            "n": 161,
+            "casos": 83,
+            "clubes": 80,
+            "previsto": 0.24516563146997927,
+            "observado": 0.2981366459627329,
+            "diferenca": 0.052971014492753654,
+            "ic95": [
+              -0.06425882352941176,
+              0.17052708333333336
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "30–40%",
+            "n": 97,
+            "casos": 65,
+            "clubes": 64,
+            "previsto": 0.3499072164948454,
+            "observado": 0.36082474226804123,
+            "diferenca": 0.010917525773195824,
+            "ic95": [
+              -0.1193839662447258,
+              0.1373490566037735
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "40–60%",
+            "n": 212,
+            "casos": 85,
+            "clubes": 82,
+            "previsto": 0.5143349056603773,
+            "observado": 0.5,
+            "diferenca": -0.014334905660377317,
+            "ic95": [
+              -0.1383096446700507,
+              0.10533333333333328
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "60–70%",
+            "n": 167,
+            "casos": 91,
+            "clubes": 85,
+            "previsto": 0.6559141716566863,
+            "observado": 0.6227544910179641,
+            "diferenca": -0.03315968063872221,
+            "ic95": [
+              -0.1475515873015869,
+              0.08898850574712665
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "70–80%",
+            "n": 161,
+            "casos": 75,
+            "clubes": 69,
+            "previsto": 0.749105590062112,
+            "observado": 0.8198757763975155,
+            "diferenca": 0.07077018633540355,
+            "ic95": [
+              -0.031105747126436697,
+              0.15770743405275792
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "80–90%",
+            "n": 127,
+            "casos": 66,
+            "clubes": 59,
+            "previsto": 0.8513595800524936,
+            "observado": 0.9212598425196851,
+            "diferenca": 0.0699002624671915,
+            "ic95": [
+              -0.008827338129496022,
+              0.13269291338582692
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "90–99,5%",
+            "n": 123,
+            "casos": 55,
+            "clubes": 50,
+            "previsto": 0.9523170731707316,
+            "observado": 0.959349593495935,
+            "diferenca": 0.007032520325203406,
+            "ic95": [
+              -0.07017333333333355,
+              0.04950381679389334
+            ],
+            "metodo": "bootstrap por clube",
+            "compativel": true
+          },
+          {
+            "faixa": "100%",
+            "n": 106,
+            "casos": 48,
+            "clubes": 40,
+            "previsto": 0.9995471698113207,
+            "observado": 1,
+            "diferenca": 0.00045283018867925406,
+            "ic95": [
+              -0.0876444726901231,
+              0.00045283018867925406
+            ],
+            "metodo": "binomial exato por clube",
+            "compativel": true
+          }
+        ]
+      },
+      "surpresas": [
+        {
+          "time": "Joinville",
+          "evento": "top-4 do grupo",
+          "rodada": 5,
+          "previsto": 0.9573333333333334,
+          "aconteceu": false,
+          "erro": 0.9573333333333334
+        },
+        {
+          "time": "Trem",
+          "evento": "1º do grupo",
+          "rodada": 2,
+          "previsto": 0.075,
+          "aconteceu": true,
+          "erro": 0.925
+        },
+        {
+          "time": "Primavera",
+          "evento": "top-4 do grupo",
+          "rodada": 7,
+          "previsto": 0.9173333333333333,
+          "aconteceu": false,
+          "erro": 0.9173333333333333
+        },
+        {
+          "time": "Santa Catarina",
+          "evento": "1º do grupo",
+          "rodada": 4,
+          "previsto": 0.09966666666666667,
+          "aconteceu": true,
+          "erro": 0.9003333333333333
+        },
+        {
+          "time": "Democrata GV",
+          "evento": "1º do grupo",
+          "rodada": 3,
+          "previsto": 0.12533333333333332,
+          "aconteceu": true,
+          "erro": 0.8746666666666667
+        },
+        {
+          "time": "Brasil-RS",
+          "evento": "top-4 do grupo",
+          "rodada": 4,
+          "previsto": 0.8736666666666668,
+          "aconteceu": false,
+          "erro": 0.8736666666666668
+        }
+      ]
+    }
+  },
+  "geral": {
+    "brier": 0.08525852688334595,
+    "calibracao": {
+      "n": 8820,
+      "clubes": 156,
+      "ece": 0.02200944822373395,
+      "faixas": [
+        {
+          "faixa": "0%",
+          "n": 1910,
+          "casos": 243,
+          "clubes": 130,
+          "previsto": 0.0005886561954624784,
+          "observado": 0.002617801047120419,
+          "diferenca": 0.0020291448516579404,
+          "ic95": [
+            -0.0006336182336182339,
+            0.008622291021671826
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "0,5–10%",
+          "n": 2335,
+          "casos": 265,
+          "clubes": 135,
+          "previsto": 0.043089364739471794,
+          "observado": 0.02569593147751606,
+          "diferenca": -0.017393433261955735,
+          "ic95": [
+            -0.037654469854469866,
+            0.012526991936586043
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "10–20%",
+          "n": 1335,
+          "casos": 258,
+          "clubes": 149,
+          "previsto": 0.14640299625468167,
+          "observado": 0.10411985018726591,
+          "diferenca": -0.04228314606741576,
+          "ic95": [
+            -0.08497688395746646,
+            0.008141759406465358
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "20–30%",
+          "n": 867,
+          "casos": 201,
+          "clubes": 136,
+          "previsto": 0.24589081122645137,
+          "observado": 0.2491349480968858,
+          "diferenca": 0.0032441368704344276,
+          "ic95": [
+            -0.07488633615477634,
+            0.0864404466501242
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "30–40%",
+          "n": 498,
+          "casos": 154,
+          "clubes": 122,
+          "previsto": 0.34762784471218205,
+          "observado": 0.3514056224899598,
+          "diferenca": 0.003777777777777769,
+          "ic95": [
+            -0.09242230818826562,
+            0.10693380062305294
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "40–60%",
+          "n": 666,
+          "casos": 162,
+          "clubes": 137,
+          "previsto": 0.4954429429429427,
+          "observado": 0.5525525525525525,
+          "diferenca": 0.05710960960960981,
+          "ic95": [
+            -0.054127921279212794,
+            0.1562292358803985
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "60–70%",
+          "n": 296,
+          "casos": 137,
+          "clubes": 123,
+          "previsto": 0.6500619369369371,
+          "observado": 0.6824324324324325,
+          "diferenca": 0.03237049549549531,
+          "ic95": [
+            -0.06899669966996683,
+            0.12369547325102866
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "70–80%",
+          "n": 254,
+          "casos": 114,
+          "clubes": 100,
+          "previsto": 0.7479947506561682,
+          "observado": 0.8503937007874016,
+          "diferenca": 0.10239895013123346,
+          "ic95": [
+            0.027412878787878445,
+            0.16920588235294112
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": false
+        },
+        {
+          "faixa": "80–90%",
+          "n": 215,
+          "casos": 101,
+          "clubes": 87,
+          "previsto": 0.8514589147286822,
+          "observado": 0.9162790697674419,
+          "diferenca": 0.06482015503875971,
+          "ic95": [
+            -0.0040724637681160275,
+            0.11813725490196073
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "90–99,5%",
+          "n": 222,
+          "casos": 80,
+          "clubes": 72,
+          "previsto": 0.9557732732732734,
+          "observado": 0.9594594594594594,
+          "diferenca": 0.0036861861861859913,
+          "ic95": [
+            -0.0528131868131871,
+            0.04338715277777775
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "100%",
+          "n": 222,
+          "casos": 71,
+          "clubes": 58,
+          "previsto": 0.9994984984984983,
+          "observado": 1,
+          "diferenca": 0.0005015015015017443,
+          "ic95": [
+            -0.061119507402418116,
+            0.0005015015015017443
+          ],
+          "metodo": "binomial exato por clube",
+          "compativel": true
+        }
+      ]
+    },
+    "calibracaoSemA": {
+      "n": 6100,
+      "clubes": 136,
+      "ece": 0.02381967213114751,
+      "faixas": [
+        {
+          "faixa": "0%",
+          "n": 1154,
+          "casos": 183,
+          "clubes": 110,
+          "previsto": 0.0005537261698440208,
+          "observado": 0.004332755632582322,
+          "diferenca": 0.0037790294627383014,
+          "ic95": [
+            -0.0006060917180013691,
+            0.014009043927648578
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "0,5–10%",
+          "n": 1633,
+          "casos": 202,
+          "clubes": 115,
+          "previsto": 0.044445397019799944,
+          "observado": 0.029393753827311696,
+          "diferenca": -0.015051643192488248,
+          "ic95": [
+            -0.04237903970452445,
+            0.028573085382923406
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "10–20%",
+          "n": 924,
+          "casos": 208,
+          "clubes": 130,
+          "previsto": 0.14614538239538238,
+          "observado": 0.09848484848484848,
+          "diferenca": -0.0476605339105339,
+          "ic95": [
+            -0.09518288197927112,
+            0.011221083455344052
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "20–30%",
+          "n": 597,
+          "casos": 162,
+          "clubes": 118,
+          "previsto": 0.247182579564489,
+          "observado": 0.2613065326633166,
+          "diferenca": 0.014123953098827607,
+          "ic95": [
+            -0.0798737373737374,
+            0.11602680412371139
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "30–40%",
+          "n": 358,
+          "casos": 123,
+          "clubes": 103,
+          "previsto": 0.3473249534450652,
+          "observado": 0.36312849162011174,
+          "diferenca": 0.01580353817504654,
+          "ic95": [
+            -0.08489223744292243,
+            0.12368431983385261
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "40–60%",
+          "n": 483,
+          "casos": 133,
+          "clubes": 118,
+          "previsto": 0.49911801242236054,
+          "observado": 0.5527950310559007,
+          "diferenca": 0.05367701863354013,
+          "ic95": [
+            -0.05399513381995136,
+            0.16094666666666652
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "60–70%",
+          "n": 229,
+          "casos": 119,
+          "clubes": 111,
+          "previsto": 0.6535938864628819,
+          "observado": 0.6419213973799127,
+          "diferenca": -0.01167248908296914,
+          "ic95": [
+            -0.11518401206636465,
+            0.08720395738203945
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "70–80%",
+          "n": 218,
+          "casos": 98,
+          "clubes": 90,
+          "previsto": 0.7481666666666666,
+          "observado": 0.8348623853211009,
+          "diferenca": 0.08669571865443426,
+          "ic95": [
+            0.0011100323624598342,
+            0.158004716981132
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": false
+        },
+        {
+          "faixa": "80–90%",
+          "n": 183,
+          "casos": 87,
+          "clubes": 77,
+          "previsto": 0.8508251366120216,
+          "observado": 0.9016393442622951,
+          "diferenca": 0.050814207650273446,
+          "ic95": [
+            -0.03231958762886589,
+            0.11736850152905197
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "90–99,5%",
+          "n": 163,
+          "casos": 71,
+          "clubes": 65,
+          "previsto": 0.9531247443762779,
+          "observado": 0.9447852760736196,
+          "diferenca": -0.008339468302658304,
+          "ic95": [
+            -0.08471006944444485,
+            0.0454202898550725
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "100%",
+          "n": 158,
+          "casos": 60,
+          "clubes": 51,
+          "previsto": 0.9995274261603379,
+          "observado": 1,
+          "diferenca": 0.0004725738396621493,
+          "ic95": [
+            -0.06930445690987652,
+            0.0004725738396621493
+          ],
+          "metodo": "binomial exato por clube",
+          "compativel": true
+        }
+      ]
+    },
+    "primeiraMetade": {
+      "n": 4440,
+      "clubes": 156,
+      "ece": 0.03033213213213216,
+      "faixas": [
+        {
+          "faixa": "0%",
+          "n": 215,
+          "casos": 46,
+          "clubes": 38,
+          "previsto": 0.0019023255813953488,
+          "observado": 0.013953488372093023,
+          "diferenca": 0.012051162790697675,
+          "ic95": [
+            -0.0022170940170940165,
+            0.052132530120481926
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "0,5–10%",
+          "n": 1440,
+          "casos": 189,
+          "clubes": 110,
+          "previsto": 0.04722939814814814,
+          "observado": 0.03125,
+          "diferenca": -0.01597939814814814,
+          "ic95": [
+            -0.04259067796610171,
+            0.02343866666666665
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "10–20%",
+          "n": 995,
+          "casos": 225,
+          "clubes": 147,
+          "previsto": 0.14589983249581243,
+          "observado": 0.10552763819095477,
+          "diferenca": -0.04037219430485765,
+          "ic95": [
+            -0.0853711090964038,
+            0.009205152371976109
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "20–30%",
+          "n": 630,
+          "casos": 164,
+          "clubes": 115,
+          "previsto": 0.24425185185185183,
+          "observado": 0.2492063492063492,
+          "diferenca": 0.004954497354497378,
+          "ic95": [
+            -0.0797682491066871,
+            0.09562123793299264
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "30–40%",
+          "n": 312,
+          "casos": 112,
+          "clubes": 98,
+          "previsto": 0.3466559829059831,
+          "observado": 0.3333333333333333,
+          "diferenca": -0.01332264957264978,
+          "ic95": [
+            -0.11904539007092199,
+            0.10410360360360356
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "40–60%",
+          "n": 387,
+          "casos": 119,
+          "clubes": 110,
+          "previsto": 0.4936391042204997,
+          "observado": 0.5813953488372093,
+          "diferenca": 0.08775624461670961,
+          "ic95": [
+            -0.03715491731940818,
+            0.20208029878618128
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "60–70%",
+          "n": 177,
+          "casos": 98,
+          "clubes": 95,
+          "previsto": 0.6495969868173257,
+          "observado": 0.6949152542372882,
+          "diferenca": 0.04531826741996248,
+          "ic95": [
+            -0.06798124999999962,
+            0.1424642126789365
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "70–80%",
+          "n": 144,
+          "casos": 77,
+          "clubes": 75,
+          "previsto": 0.7446944444444443,
+          "observado": 0.8402777777777778,
+          "diferenca": 0.09558333333333346,
+          "ic95": [
+            -0.002464852607709597,
+            0.17710457516339828
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "80–90%",
+          "n": 95,
+          "casos": 54,
+          "clubes": 52,
+          "previsto": 0.8504666666666666,
+          "observado": 0.8947368421052632,
+          "diferenca": 0.04427017543859657,
+          "ic95": [
+            -0.05347435897435888,
+            0.11809748427672953
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "90–99,5%",
+          "n": 44,
+          "casos": 22,
+          "clubes": 21,
+          "previsto": 0.9393636363636362,
+          "observado": 0.9772727272727273,
+          "diferenca": 0.037909090909091114,
+          "ic95": [
+            -0.030474074074074053,
+            0.0645447154471546
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "100%",
+          "n": 1,
+          "casos": 1,
+          "clubes": 1,
+          "previsto": 0.9956666666666667,
+          "observado": 1,
+          "diferenca": 0.0043333333333333,
+          "ic95": [
+            -0.9706666666666667,
+            0.0043333333333333
+          ],
+          "metodo": "binomial exato por clube",
+          "compativel": true
+        }
+      ]
+    },
+    "segundaMetade": {
+      "n": 4380,
+      "clubes": 156,
+      "ece": 0.015999695585996957,
+      "faixas": [
+        {
+          "faixa": "0%",
+          "n": 1695,
+          "casos": 243,
+          "clubes": 130,
+          "previsto": 0.0004220255653883974,
+          "observado": 0.0011799410029498525,
+          "diferenca": 0.000757915437561455,
+          "ic95": [
+            -0.00047922252010723865,
+            0.0036165873555404483
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "0,5–10%",
+          "n": 895,
+          "casos": 214,
+          "clubes": 126,
+          "previsto": 0.036428305400372445,
+          "observado": 0.01675977653631285,
+          "diferenca": -0.019668528864059596,
+          "ic95": [
+            -0.03605692007797271,
+            0.004247083775185573
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "10–20%",
+          "n": 340,
+          "casos": 133,
+          "clubes": 98,
+          "previsto": 0.14787549019607843,
+          "observado": 0.1,
+          "diferenca": -0.047875490196078424,
+          "ic95": [
+            -0.10453484466834595,
+            0.025113939393939404
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "20–30%",
+          "n": 237,
+          "casos": 110,
+          "clubes": 92,
+          "previsto": 0.2502475386779184,
+          "observado": 0.2489451476793249,
+          "diferenca": -0.0013023909985934723,
+          "ic95": [
+            -0.0994449339207048,
+            0.1040172143974961
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "30–40%",
+          "n": 186,
+          "casos": 84,
+          "clubes": 76,
+          "previsto": 0.34925806451612906,
+          "observado": 0.3817204301075269,
+          "diferenca": 0.03246236559139781,
+          "ic95": [
+            -0.0896352530541013,
+            0.16410578842315374
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "40–60%",
+          "n": 279,
+          "casos": 112,
+          "clubes": 100,
+          "previsto": 0.4979450418160093,
+          "observado": 0.5125448028673835,
+          "diferenca": 0.014599761051374172,
+          "ic95": [
+            -0.10902419354838708,
+            0.1291834625322997
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "60–70%",
+          "n": 119,
+          "casos": 67,
+          "clubes": 62,
+          "previsto": 0.6507535014005603,
+          "observado": 0.6638655462184874,
+          "diferenca": 0.013112044817927049,
+          "ic95": [
+            -0.11266666666666676,
+            0.125550595238095
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "70–80%",
+          "n": 110,
+          "casos": 68,
+          "clubes": 63,
+          "previsto": 0.7523151515151514,
+          "observado": 0.8636363636363636,
+          "diferenca": 0.11132121212121227,
+          "ic95": [
+            0.015622489959839446,
+            0.1895847457627116
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": false
+        },
+        {
+          "faixa": "80–90%",
+          "n": 120,
+          "casos": 70,
+          "clubes": 63,
+          "previsto": 0.8522444444444445,
+          "observado": 0.9333333333333333,
+          "diferenca": 0.08108888888888888,
+          "ic95": [
+            -0.0019348958333331723,
+            0.13733903133903164
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "90–99,5%",
+          "n": 178,
+          "casos": 78,
+          "clubes": 71,
+          "previsto": 0.9598295880149808,
+          "observado": 0.9550561797752809,
+          "diferenca": -0.00477340823969985,
+          "ic95": [
+            -0.06511507936507922,
+            0.03882973621103119
+          ],
+          "metodo": "bootstrap por clube",
+          "compativel": true
+        },
+        {
+          "faixa": "100%",
+          "n": 221,
+          "casos": 71,
+          "clubes": 58,
+          "previsto": 0.9995158371040721,
+          "observado": 1,
+          "diferenca": 0.00048416289592789763,
+          "ic95": [
+            -0.06113684600799196,
+            0.00048416289592789763
+          ],
+          "metodo": "binomial exato por clube",
+          "compativel": true
+        }
+      ]
+    }
+  }
+}
