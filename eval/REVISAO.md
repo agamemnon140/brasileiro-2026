@@ -100,6 +100,22 @@ do mesmo jeito; faltam o rating herdado, os estaduais e a força do estado.
 A CBF troca o id do clube quando ele vira SAF. `sementes.cjs` religa 26 ids pelo nome; sem
 isso, Fortaleza (4º em 2024) e Atlético Mineiro (7º em 2022) entravam como "sem histórico".
 
+## Estaduais: o que a Wikipedia entrega (14/11)
+
+`eval/hist/estaduais.py` lê as seções "Classificação geral/final" das páginas dos estaduais
+na Wikipedia pt e grava `eval/data/hist/estaduais_classificacao.json` (clubes em ordem de
+colocação). Cobertura na janela 2022–2025: **58 de 108** tabelas.
+
+- Completos (4 anos): AM, BA, GO, PA, PE, RJ, RN, RR, RS, SC, SP.
+- Parciais: MG (3), CE, DF, PR, SE (2), AP, MS, PB (1). Ou a página não tem a seção, ou a
+  tabela é irregular (CE 2024–26, MG 2023).
+- Sem nada: AC, AL, ES, MA, MT, PI, RO, TO. A Wikipedia pt não tem página da primeira
+  divisão desses estados para 2022–2025 (conferido por prefixo de título e por busca).
+
+Os oito estados sem cobertura são justamente os de clubes quase só de Série D, onde este
+input mais pesa. Faltam também a UF de cada clube (a API da CBF não traz) e o casamento dos
+nomes da Wikipedia com os ids da CBF. As tabelas são os nomes como a Wikipedia os escreve.
+
 ## O que falta
 
 1. Feito em 14/11: jogos das quatro séries em 2021–2025. A API do site da CBF serve as
