@@ -1,0 +1,441 @@
+{
+  "nSims": 2000,
+  "celulas": [
+    {
+      "ano": 2022,
+      "serie": "A",
+      "degrau": 100.9,
+      "amplitudeBruta": 207,
+      "semHistorico": 0,
+      "brier": {
+        "iguais": 0.08504927968749998,
+        "herdado@0.5": 0.08550952968750002,
+        "herdado@1": 0.089910728125,
+        "herdado@2": 0.09845398906250001
+      },
+      "brierPre": {
+        "iguais": 0.14542831249999993,
+        "herdado@0.5": 0.1429554875,
+        "herdado@1": 0.14946961250000004,
+        "herdado@2": 0.16203291250000001
+      }
+    },
+    {
+      "ano": 2022,
+      "serie": "B",
+      "degrau": 100.9,
+      "amplitudeBruta": 159,
+      "semHistorico": 0,
+      "brier": {
+        "iguais": 0.07446309791666667,
+        "herdado@0.5": 0.07433189166666666,
+        "herdado@1": 0.07545230833333333,
+        "herdado@2": 0.08384990208333333
+      },
+      "brierPre": {
+        "iguais": 0.12178259999999999,
+        "herdado@0.5": 0.11975153333333334,
+        "herdado@1": 0.12272404166666667,
+        "herdado@2": 0.1400843833333333
+      }
+    },
+    {
+      "ano": 2022,
+      "serie": "C",
+      "degrau": 100.9,
+      "amplitudeBruta": 157.6,
+      "semHistorico": 0,
+      "brier": {
+        "iguais": 0.11447501666666667,
+        "herdado@0.5": 0.11287443541666664,
+        "herdado@1": 0.11542542083333335,
+        "herdado@2": 0.12561494375
+      },
+      "brierPre": {
+        "iguais": 0.14975110833333333,
+        "herdado@0.5": 0.14534521666666667,
+        "herdado@1": 0.14635793333333333,
+        "herdado@2": 0.16092424166666672
+      }
+    },
+    {
+      "ano": 2022,
+      "serie": "D",
+      "degrau": 100.9,
+      "amplitudeBruta": 193.8,
+      "semHistorico": 32,
+      "brier": {
+        "iguais": 0.11661751855468754,
+        "herdado@0.5": 0.11998411523437502,
+        "herdado@1": 0.13024200292968752,
+        "herdado@2": 0.15479288476562506,
+        "via@0.25": 0.11298834179687499,
+        "via@0.5": 0.11539091113281252,
+        "herdado+via@0.5": 0.11722684374999999,
+        "herdado+via@1": 0.12792793359375002
+      },
+      "brierPre": {
+        "iguais": 0.17862566796874998,
+        "herdado@0.5": 0.18273566796875002,
+        "herdado@1": 0.19824112500000002,
+        "herdado@2": 0.23078503906250003,
+        "via@0.25": 0.1729603828125,
+        "via@0.5": 0.179431953125,
+        "herdado+via@0.5": 0.17878346875,
+        "herdado+via@1": 0.19390008593750002
+      }
+    },
+    {
+      "ano": 2023,
+      "serie": "A",
+      "degrau": 104.6,
+      "amplitudeBruta": 211,
+      "semHistorico": 0,
+      "brier": {
+        "iguais": 0.104780709375,
+        "herdado@0.5": 0.10240659687499999,
+        "herdado@1": 0.10456811250000002,
+        "herdado@2": 0.11131327656250001
+      },
+      "brierPre": {
+        "iguais": 0.14338817499999998,
+        "herdado@0.5": 0.133772575,
+        "herdado@1": 0.1368778875000001,
+        "herdado@2": 0.1472510125
+      }
+    },
+    {
+      "ano": 2023,
+      "serie": "B",
+      "degrau": 104.6,
+      "amplitudeBruta": 122.7,
+      "semHistorico": 0,
+      "brier": {
+        "iguais": 0.09254933750000001,
+        "herdado@0.5": 0.09445516041666668,
+        "herdado@1": 0.09854149583333333,
+        "herdado@2": 0.106969475
+      },
+      "brierPre": {
+        "iguais": 0.12333336666666667,
+        "herdado@0.5": 0.12387620833333335,
+        "herdado@1": 0.1289271833333333,
+        "herdado@2": 0.13842889999999997
+      }
+    },
+    {
+      "ano": 2023,
+      "serie": "C",
+      "degrau": 104.6,
+      "amplitudeBruta": 134.6,
+      "semHistorico": 0,
+      "brier": {
+        "iguais": 0.10924610833333334,
+        "herdado@0.5": 0.10288954583333335,
+        "herdado@1": 0.09907024583333333,
+        "herdado@2": 0.09816622291666666
+      },
+      "brierPre": {
+        "iguais": 0.14852986666666668,
+        "herdado@0.5": 0.13834403333333334,
+        "herdado@1": 0.13622953333333326,
+        "herdado@2": 0.13742934166666668
+      }
+    },
+    {
+      "ano": 2023,
+      "serie": "D",
+      "degrau": 104.6,
+      "amplitudeBruta": 182,
+      "semHistorico": 30,
+      "brier": {
+        "iguais": 0.1336144638671875,
+        "herdado@0.5": 0.13487287109375004,
+        "herdado@1": 0.14622361425781247,
+        "herdado@2": 0.17173461523437503,
+        "via@0.25": 0.14208917480468755,
+        "via@0.5": 0.1547435634765625,
+        "herdado+via@0.5": 0.14531522363281246,
+        "herdado+via@1": 0.15536666015624997
+      },
+      "brierPre": {
+        "iguais": 0.18119094921875,
+        "herdado@0.5": 0.18113355859375,
+        "herdado@1": 0.20084110546875,
+        "herdado@2": 0.23623358203125003,
+        "via@0.25": 0.19923951171875,
+        "via@0.5": 0.22491197265625001,
+        "herdado+via@0.5": 0.20424824218749998,
+        "herdado+via@1": 0.21959057421875
+      }
+    },
+    {
+      "ano": 2024,
+      "serie": "A",
+      "degrau": 98.9,
+      "amplitudeBruta": 145.1,
+      "semHistorico": 0,
+      "brier": {
+        "iguais": 0.0986363015625,
+        "herdado@0.5": 0.09346928906249999,
+        "herdado@1": 0.09019077187499999,
+        "herdado@2": 0.0903129625
+      },
+      "brierPre": {
+        "iguais": 0.14613966874999998,
+        "herdado@0.5": 0.13346849999999996,
+        "herdado@1": 0.12514936249999997,
+        "herdado@2": 0.12601791874999999
+      }
+    },
+    {
+      "ano": 2024,
+      "serie": "B",
+      "degrau": 98.9,
+      "amplitudeBruta": 146.4,
+      "semHistorico": 0,
+      "brier": {
+        "iguais": 0.08683205208333333,
+        "herdado@0.5": 0.08270097916666667,
+        "herdado@1": 0.07941754375,
+        "herdado@2": 0.07906737291666667
+      },
+      "brierPre": {
+        "iguais": 0.12304114999999997,
+        "herdado@0.5": 0.11251862500000001,
+        "herdado@1": 0.10603935833333332,
+        "herdado@2": 0.10523526666666665
+      }
+    },
+    {
+      "ano": 2024,
+      "serie": "C",
+      "degrau": 98.9,
+      "amplitudeBruta": 135.2,
+      "semHistorico": 0,
+      "brier": {
+        "iguais": 0.10055297083333332,
+        "herdado@0.5": 0.10422388333333335,
+        "herdado@1": 0.11030417916666664,
+        "herdado@2": 0.12482773958333332
+      },
+      "brierPre": {
+        "iguais": 0.148860075,
+        "herdado@0.5": 0.15658045833333334,
+        "herdado@1": 0.1710811583333333,
+        "herdado@2": 0.19761970833333328
+      }
+    },
+    {
+      "ano": 2024,
+      "serie": "D",
+      "degrau": 98.9,
+      "amplitudeBruta": 145.2,
+      "semHistorico": 26,
+      "brier": {
+        "iguais": 0.11006288574218749,
+        "herdado@0.5": 0.11152842578125,
+        "herdado@1": 0.11969063964843753,
+        "herdado@2": 0.1451807412109375,
+        "via@0.25": 0.107317017578125,
+        "via@0.5": 0.10822767187499999,
+        "herdado+via@0.5": 0.10908252246093753,
+        "herdado+via@1": 0.1179522578125
+      },
+      "brierPre": {
+        "iguais": 0.17986162890625002,
+        "herdado@0.5": 0.181403125,
+        "herdado@1": 0.19736662109375,
+        "herdado@2": 0.23483771093750003,
+        "via@0.25": 0.17540734765625,
+        "via@0.5": 0.17958799999999997,
+        "herdado+via@0.5": 0.177832265625,
+        "herdado+via@1": 0.19309557031249996
+      }
+    },
+    {
+      "ano": 2025,
+      "serie": "A",
+      "degrau": 103.7,
+      "amplitudeBruta": 179.5,
+      "semHistorico": 0,
+      "brier": {
+        "iguais": 0.078350121875,
+        "herdado@0.5": 0.07480590937500002,
+        "herdado@1": 0.0757575015625,
+        "herdado@2": 0.0833710546875
+      },
+      "brierPre": {
+        "iguais": 0.14426995,
+        "herdado@0.5": 0.13324145000000007,
+        "herdado@1": 0.13274594374999998,
+        "herdado@2": 0.14278663125
+      }
+    },
+    {
+      "ano": 2025,
+      "serie": "B",
+      "degrau": 103.7,
+      "amplitudeBruta": 176.4,
+      "semHistorico": 0,
+      "brier": {
+        "iguais": 0.10194340833333335,
+        "herdado@0.5": 0.10596345833333334,
+        "herdado@1": 0.11124673125,
+        "herdado@2": 0.1227822791666667
+      },
+      "brierPre": {
+        "iguais": 0.12183635,
+        "herdado@0.5": 0.12594970833333333,
+        "herdado@1": 0.13187515,
+        "herdado@2": 0.14680480833333337
+      }
+    },
+    {
+      "ano": 2025,
+      "serie": "C",
+      "degrau": 103.7,
+      "amplitudeBruta": 151.3,
+      "semHistorico": 0,
+      "brier": {
+        "iguais": 0.11881835625,
+        "herdado@0.5": 0.11787156458333335,
+        "herdado@1": 0.11990245208333335,
+        "herdado@2": 0.12841443125
+      },
+      "brierPre": {
+        "iguais": 0.14628457500000003,
+        "herdado@0.5": 0.1442317916666667,
+        "herdado@1": 0.14372965000000004,
+        "herdado@2": 0.15511200833333333
+      }
+    },
+    {
+      "ano": 2025,
+      "serie": "D",
+      "degrau": 103.7,
+      "amplitudeBruta": 228.3,
+      "semHistorico": 30,
+      "brier": {
+        "iguais": 0.10828775683593751,
+        "herdado@0.5": 0.10030934667968748,
+        "herdado@1": 0.1064354169921875,
+        "herdado@2": 0.12035123828125,
+        "via@0.25": 0.1036692509765625,
+        "via@0.5": 0.10703395312499997,
+        "herdado+via@0.5": 0.09811992187500002,
+        "herdado+via@1": 0.104983541015625
+      },
+      "brierPre": {
+        "iguais": 0.18134480859375,
+        "herdado@0.5": 0.16492965625,
+        "herdado@1": 0.17417663281249998,
+        "herdado@2": 0.1913825,
+        "via@0.25": 0.17715178515625002,
+        "via@0.5": 0.18871786328125,
+        "herdado+via@0.5": 0.16404951562499998,
+        "herdado+via@1": 0.17347185937500004
+      }
+    }
+  ],
+  "veredito": {
+    "herdado@0.5": {
+      "celulasMelhores": 9,
+      "de": 16,
+      "porSerie": {
+        "A": 3,
+        "B": 2,
+        "C": 3,
+        "D": 1
+      },
+      "ganhoMedio": 0.010617593748135097,
+      "celulasMelhoresPreTemporada": 11,
+      "ganhoMedioPreTemporada": 0.026917081649833856,
+      "passa": false
+    },
+    "herdado@1": {
+      "celulasMelhores": 6,
+      "de": 16,
+      "porSerie": {
+        "A": 3,
+        "B": 1,
+        "C": 1,
+        "D": 1
+      },
+      "ganhoMedio": -0.02019652246805797,
+      "celulasMelhoresPreTemporada": 8,
+      "ganhoMedioPreTemporada": -0.003660913268863704,
+      "passa": false
+    },
+    "herdado@2": {
+      "celulasMelhores": 3,
+      "de": 16,
+      "porSerie": {
+        "A": 1,
+        "B": 1,
+        "C": 1,
+        "D": 0
+      },
+      "ganhoMedio": -0.12235716761163652,
+      "celulasMelhoresPreTemporada": 4,
+      "ganhoMedioPreTemporada": -0.10441333926869734,
+      "passa": false
+    },
+    "via@0.25": {
+      "celulasMelhores": 3,
+      "de": 4,
+      "porSerie": {
+        "A": 0,
+        "B": 0,
+        "C": 0,
+        "D": 3
+      },
+      "ganhoMedio": 0.00882305532884739,
+      "celulasMelhoresPreTemporada": 3,
+      "ganhoMedioPreTemporada": -0.005001973248050934,
+      "passa": false
+    },
+    "via@0.5": {
+      "celulasMelhores": 3,
+      "de": 4,
+      "porSerie": {
+        "A": 0,
+        "B": 0,
+        "C": 0,
+        "D": 3
+      },
+      "ganhoMedio": -0.029840985103062767,
+      "celulasMelhoresPreTemporada": 1,
+      "ganhoMedioPreTemporada": -0.07123705120762303,
+      "passa": false
+    },
+    "herdado+via@0.5": {
+      "celulasMelhores": 2,
+      "de": 4,
+      "porSerie": {
+        "A": 0,
+        "B": 0,
+        "C": 0,
+        "D": 2
+      },
+      "ganhoMedio": 0.002501924286950452,
+      "celulasMelhoresPreTemporada": 2,
+      "ganhoMedioPreTemporada": -0.005370548393010488,
+      "passa": false
+    },
+    "herdado+via@1": {
+      "celulasMelhores": 1,
+      "de": 4,
+      "porSerie": {
+        "A": 0,
+        "B": 0,
+        "C": 0,
+        "D": 1
+      },
+      "ganhoMedio": -0.07523819560051426,
+      "celulasMelhoresPreTemporada": 1,
+      "ganhoMedioPreTemporada": -0.08190100500327882,
+      "passa": false
+    }
+  }
+}
