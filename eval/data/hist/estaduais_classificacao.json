@@ -1,0 +1,1306 @@
+[
+ {
+  "uf": "AM",
+  "ano": 2022,
+  "fonte": "Campeonato Amazonense de Futebol de 2022",
+  "secao": "Classificação Geral",
+  "clubes": [
+   "Manaus",
+   "Princesa do Solimões",
+   "Nacional-AM",
+   "Fast Clube",
+   "Amazonas",
+   "Manauara",
+   "Iranduba",
+   "Operário-AM",
+   "São Raimundo-AM",
+   "Clipper",
+   "Penarol",
+   "JC"
+  ]
+ },
+ {
+  "uf": "AM",
+  "ano": 2023,
+  "fonte": "Campeonato Amazonense de Futebol de 2023",
+  "secao": "Classificação Geral",
+  "clubes": [
+   "Amazonas",
+   "Manauara",
+   "Princesa do Solimões",
+   "Nacional-AM",
+   "Manaus",
+   "Parintins",
+   "Rio Negro",
+   "Operário-AM",
+   "Iranduba"
+  ]
+ },
+ {
+  "uf": "AM",
+  "ano": 2024,
+  "fonte": "Campeonato Amazonense de Futebol de 2024",
+  "secao": "Classificação Geral",
+  "clubes": [
+   "Manaus",
+   "Amazonas",
+   "Manauara",
+   "Parintins",
+   "Princesa do Solimões",
+   "São Raimundo-AM",
+   "Nacional-AM",
+   "Operário-AM",
+   "Unidos do Alvorada",
+   "Rio Negro-AM"
+  ]
+ },
+ {
+  "uf": "AM",
+  "ano": 2025,
+  "fonte": "Campeonato Amazonense de Futebol de 2025",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Amazonas",
+   "Nacional-AM",
+   "Manaus",
+   "Manauara",
+   "Parintins",
+   "Princesa do Solimões",
+   "São Raimundo-AM",
+   "Sete SAF"
+  ]
+ },
+ {
+  "uf": "AM",
+  "ano": 2026,
+  "fonte": "Campeonato Amazonense de Futebol de 2026",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Nacional-AM",
+   "Amazonas",
+   "Manaus",
+   "Manauara",
+   "Princesa do Solimões",
+   "Parintins",
+   "Itacoatiara",
+   "São Raimundo-AM"
+  ]
+ },
+ {
+  "uf": "AP",
+  "ano": 2025,
+  "fonte": "Campeonato Amapaense de Futebol de 2025 - Série A",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Trem",
+   "Oratório",
+   "Independente-AP",
+   "Santos-AP",
+   "Cristal",
+   "Ypiranga-AP",
+   "Portuguesa-AP",
+   "Santana"
+  ]
+ },
+ {
+  "uf": "BA",
+  "ano": 2022,
+  "fonte": "Campeonato Baiano de Futebol de 2022",
+  "secao": "Classificação Geral",
+  "clubes": [
+   "Atlético-BA",
+   "Jacuipense",
+   "Bahia de Feira",
+   "Barcelona-BA",
+   "Vitória",
+   "Bahia",
+   "Juazeirense",
+   "Doce Mel",
+   "Vitória da Conquista",
+   "UNIRB"
+  ]
+ },
+ {
+  "uf": "BA",
+  "ano": 2023,
+  "fonte": "Campeonato Baiano de Futebol de 2023",
+  "secao": "Classificação Geral",
+  "clubes": [
+   "Bahia",
+   "Jacuipense",
+   "Itabuna",
+   "Juazeirense",
+   "Bahia de Feira",
+   "Vitória",
+   "Barcelona-BA",
+   "Atlético-BA",
+   "Jacobinense",
+   "Doce Mel"
+  ]
+ },
+ {
+  "uf": "BA",
+  "ano": 2024,
+  "fonte": "Campeonato Baiano de Futebol de 2024",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Vitória",
+   "Bahia",
+   "Barcelona-BA",
+   "Jequié",
+   "Juazeirense",
+   "Jacobina",
+   "Atlético-BA",
+   "Jacuipense",
+   "Bahia de Feira",
+   "Itabuna"
+  ]
+ },
+ {
+  "uf": "BA",
+  "ano": 2025,
+  "fonte": "Campeonato Baiano de Futebol de 2025",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Bahia",
+   "Vitória",
+   "Jacuipense",
+   "Atlético-BA",
+   "Porto-BA",
+   "Juazeirense",
+   "Jequié",
+   "Barcelona-BA",
+   "Jacobina",
+   "Colo Colo-BA"
+  ]
+ },
+ {
+  "uf": "BA",
+  "ano": 2026,
+  "fonte": "Campeonato Baiano de Futebol de 2026",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Bahia",
+   "Vitória",
+   "Jacuipense",
+   "Juazeirense",
+   "Jequié",
+   "Porto-BA",
+   "Barcelona-BA",
+   "Galícia",
+   "Bahia de Feira",
+   "Atlético-BA"
+  ]
+ },
+ {
+  "uf": "CE",
+  "ano": 2022,
+  "fonte": "Campeonato Cearense de Futebol de 2022",
+  "secao": "Classificação Geral",
+  "clubes": [
+   "Fortaleza",
+   "Caucaia",
+   "Ferroviário",
+   "Iguatu",
+   "Pacajus",
+   "Ceará",
+   "Maracanã-CE",
+   "Atlético Cearense",
+   "Icasa",
+   "Crato"
+  ]
+ },
+ {
+  "uf": "CE",
+  "ano": 2023,
+  "fonte": "Campeonato Cearense de Futebol de 2023",
+  "secao": "Classificação Geral",
+  "clubes": [
+   "Fortaleza",
+   "Ceará",
+   "Iguatu",
+   "Ferroviário",
+   "Maracanã-CE",
+   "Atlético Cearense",
+   "Caucaia",
+   "Barbalha",
+   "Pacajus",
+   "Guarani-CE"
+  ]
+ },
+ {
+  "uf": "DF",
+  "ano": 2022,
+  "fonte": "Campeonato Brasiliense de Futebol de 2022",
+  "secao": "Classificação Final",
+  "clubes": [
+   "Brasiliense",
+   "Ceilândia",
+   "Capital",
+   "Gama",
+   "Santa Maria",
+   "Paranoá",
+   "Brasília",
+   "Taguatinga",
+   "Unaí",
+   "Luziânia"
+  ]
+ },
+ {
+  "uf": "DF",
+  "ano": 2025,
+  "fonte": "Campeonato Brasiliense de Futebol de 2025",
+  "secao": "Classificação geral[13]",
+  "clubes": [
+   "Gama",
+   "Capital",
+   "Ceilândia",
+   "Brasiliense",
+   "Paranoá",
+   "Sobradinho",
+   "Samambaia",
+   "Real Brasília",
+   "Ceilandense",
+   "Legião"
+  ]
+ },
+ {
+  "uf": "GO",
+  "ano": 2022,
+  "fonte": "Campeonato Goiano de Futebol de 2022",
+  "secao": "Classificação Final",
+  "clubes": [
+   "Atlético-GO",
+   "Goiás",
+   "Vila Nova-GO",
+   "Iporá",
+   "Anápolis",
+   "CRAC",
+   "Morrinhos",
+   "Goianésia",
+   "Aparecidense",
+   "Grêmio Anápolis",
+   "Jataiense",
+   "Goiatuba"
+  ]
+ },
+ {
+  "uf": "GO",
+  "ano": 2023,
+  "fonte": "Campeonato Goiano de Futebol de 2023",
+  "secao": "Classificação geral (predefinição)",
+  "clubes": [
+   "Atlético-GO",
+   "Goiás",
+   "Aparecidense",
+   "Anápolis",
+   "CRAC",
+   "Vila Nova",
+   "Iporá",
+   "Goiânia",
+   "Goianésia",
+   "Morrinhos",
+   "Grêmio Anápolis",
+   "Inhumas"
+  ]
+ },
+ {
+  "uf": "GO",
+  "ano": 2024,
+  "fonte": "Campeonato Goiano de Futebol de 2024",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Atlético-GO",
+   "Vila Nova",
+   "Aparecidense",
+   "Goiânia",
+   "Goiás",
+   "Anápolis",
+   "Goiatuba",
+   "Goianésia",
+   "Jataiense",
+   "CRAC",
+   "Morrinhos",
+   "Iporá"
+  ]
+ },
+ {
+  "uf": "GO",
+  "ano": 2025,
+  "fonte": "Campeonato Goiano de Futebol de 2025",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Vila Nova-GO",
+   "Anápolis",
+   "Atlético-GO",
+   "Goiás",
+   "CRAC",
+   "ABECAT",
+   "Inhumas",
+   "Jataiense",
+   "Goiatuba",
+   "Aparecidense",
+   "Goianésia",
+   "Goiânia"
+  ]
+ },
+ {
+  "uf": "GO",
+  "ano": 2026,
+  "fonte": "Campeonato Goiano de Futebol de 2026",
+  "secao": "Classificação Geral",
+  "clubes": [
+   "Goiás",
+   "Vila Nova-GO",
+   "Jataiense",
+   "Atlético-GO",
+   "ABECAT",
+   "Anapolina",
+   "Anápolis",
+   "CRAC",
+   "Goiatuba",
+   "Aparecidense",
+   "Centro Oeste",
+   "Inhumas"
+  ]
+ },
+ {
+  "uf": "MG",
+  "ano": 2022,
+  "fonte": "Campeonato Mineiro de Futebol de 2022 - Módulo I",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Atlético-MG",
+   "Cruzeiro",
+   "Athletic",
+   "Caldense",
+   "Democrata-GV",
+   "Tombense",
+   "Villa Nova",
+   "América-MG",
+   "CA Patrocinense",
+   "Pouso Alegre",
+   "Uberlândia",
+   "URT"
+  ]
+ },
+ {
+  "uf": "MG",
+  "ano": 2024,
+  "fonte": "Campeonato Mineiro de Futebol de 2024 - Módulo I",
+  "secao": "Classificação Geral",
+  "clubes": [
+   "Atlético-MG",
+   "Cruzeiro",
+   "América-MG",
+   "Tombense",
+   "Athletic",
+   "Pouso Alegre",
+   "Itabirito",
+   "Uberlândia",
+   "Villa Nova-MG",
+   "Democrata-GV",
+   "Ipatinga",
+   "CA Patrocinense"
+  ]
+ },
+ {
+  "uf": "MG",
+  "ano": 2025,
+  "fonte": "Campeonato Mineiro de Futebol de 2025 - Módulo I",
+  "secao": "Classificação Geral",
+  "clubes": [
+   "Atlético-MG",
+   "América-MG",
+   "Tombense",
+   "Cruzeiro",
+   "Athletic",
+   "Uberlândia",
+   "Betim Futebol",
+   "Democrata-GV",
+   "Itabirito",
+   "Pouso Alegre",
+   "Aymorés",
+   "Villa Nova"
+  ]
+ },
+ {
+  "uf": "MS",
+  "ano": 2025,
+  "fonte": "Campeonato Sul-Mato-Grossense de Futebol de 2025",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Operário-MS",
+   "Ivinhema",
+   "FC Pantanal",
+   "Águia Negra",
+   "Dourados",
+   "Costa Rica",
+   "Naviraiense",
+   "Corumbaense",
+   "Coxim",
+   "Aquidauanense"
+  ]
+ },
+ {
+  "uf": "PA",
+  "ano": 2022,
+  "fonte": "Campeonato Paraense de Futebol de 2022",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Remo",
+   "Paysandu",
+   "Tuna Luso",
+   "Águia de Marabá",
+   "Castanhal",
+   "Caeté",
+   "Bragantino-PA",
+   "Tapajós",
+   "Independente-PA",
+   "Itupiranga",
+   "Paragominas",
+   "Amazônia Independente"
+  ]
+ },
+ {
+  "uf": "PA",
+  "ano": 2023,
+  "fonte": "Campeonato Paraense de Futebol de 2023",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Águia de Marabá",
+   "Remo",
+   "Paysandu",
+   "Cametá",
+   "São Francisco",
+   "Castanhal",
+   "Tuna Luso",
+   "Caeté",
+   "Tapajós",
+   "Bragantino-PA",
+   "Itupiranga",
+   "Independente-PA"
+  ]
+ },
+ {
+  "uf": "PA",
+  "ano": 2024,
+  "fonte": "Campeonato Paraense de Futebol de 2024",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Paysandu",
+   "Remo",
+   "Tuna Luso",
+   "Águia de Marabá",
+   "São Francisco-PA",
+   "Caeté",
+   "Santa Rosa",
+   "Bragantino-PA",
+   "Cametá",
+   "Castanhal",
+   "Tapajós",
+   "Canaã-PA"
+  ]
+ },
+ {
+  "uf": "PA",
+  "ano": 2025,
+  "fonte": "Campeonato Paraense de Futebol de 2025 - Série A",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Remo",
+   "Paysandu",
+   "Tuna Luso",
+   "Águia de Marabá",
+   "Bragantino-PA",
+   "Castanhal",
+   "Capitão Poço",
+   "Santa Rosa",
+   "Cametá",
+   "São Francisco-PA",
+   "Independente-PA",
+   "Caeté"
+  ]
+ },
+ {
+  "uf": "PA",
+  "ano": 2026,
+  "fonte": "Campeonato Paraense de Futebol de 2026 - Série A",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Paysandu",
+   "Remo",
+   "Cametá",
+   "Castanhal",
+   "Águia de Marabá",
+   "Capitão Poço",
+   "Tuna Luso",
+   "Santa Rosa",
+   "São Raimundo-PA",
+   "Amazônia Independente",
+   "Bragantino-PA",
+   "São Francisco-PA"
+  ]
+ },
+ {
+  "uf": "PB",
+  "ano": 2022,
+  "fonte": "Campeonato Paraibano de Futebol de 2022 - Primeira Divisão",
+  "secao": "Classificação Final",
+  "clubes": [
+   "Campinense",
+   "Botafogo-PB",
+   "Sousa",
+   "Nacional-PB",
+   "Treze",
+   "São Paulo Crystal",
+   "Auto Esporte-PB",
+   "CSP",
+   "Sport-PB",
+   "Atlético Cajazeirense"
+  ]
+ },
+ {
+  "uf": "PE",
+  "ano": 2022,
+  "fonte": "Campeonato Pernambucano de Futebol de 2022",
+  "secao": "Classificação final",
+  "clubes": [
+   "Náutico",
+   "Retrô",
+   "Santa Cruz",
+   "Salgueiro",
+   "Sport",
+   "Caruaru City",
+   "Afogados",
+   "Íbis",
+   "Vera Cruz",
+   "Sete de Setembro"
+  ]
+ },
+ {
+  "uf": "PE",
+  "ano": 2023,
+  "fonte": "Campeonato Pernambucano de Futebol de 2023",
+  "secao": "Classificação Geral",
+  "clubes": [
+   "Sport",
+   "Retrô",
+   "Petrolina",
+   "Salgueiro",
+   "Náutico",
+   "Santa Cruz",
+   "Central",
+   "Porto-PE",
+   "Maguary-PE",
+   "Íbis",
+   "Afogados",
+   "Belo Jardim",
+   "Caruaru City"
+  ]
+ },
+ {
+  "uf": "PE",
+  "ano": 2024,
+  "fonte": "Campeonato Pernambucano de Futebol de 2024",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Sport",
+   "Náutico",
+   "Retrô",
+   "Santa Cruz",
+   "Central",
+   "Afogados",
+   "Maguary-PE",
+   "Petrolina",
+   "Porto-PE",
+   "Flamengo de Arcoverde"
+  ]
+ },
+ {
+  "uf": "PE",
+  "ano": 2025,
+  "fonte": "Campeonato Pernambucano de Futebol de 2025",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Sport",
+   "Retrô",
+   "Santa Cruz",
+   "Maguary-PE",
+   "Náutico",
+   "Decisão",
+   "Jaguar",
+   "Central",
+   "Afogados",
+   "Petrolina"
+  ]
+ },
+ {
+  "uf": "PE",
+  "ano": 2026,
+  "fonte": "Campeonato Pernambucano de Futebol de 2026",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Sport",
+   "Náutico",
+   "Retrô",
+   "Santa Cruz",
+   "Decisão Goiana",
+   "Série D de 2026",
+   "Vitória-PE",
+   "Jaguar"
+  ]
+ },
+ {
+  "uf": "PR",
+  "ano": 2023,
+  "fonte": "Campeonato Paranaense de Futebol de 2023",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Athletico-PR",
+   "FC Cascavel",
+   "Operário-PR",
+   "Maringá",
+   "Coritiba",
+   "Cianorte",
+   "Aruko Sports",
+   "SãoJoseense",
+   "Azuriz",
+   "Londrina",
+   "Rio Branco-PR",
+   "Foz do Iguaçu"
+  ]
+ },
+ {
+  "uf": "PR",
+  "ano": 2024,
+  "fonte": "Campeonato Paranaense de Futebol de 2024",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Athletico-PR",
+   "Maringá",
+   "Coritiba",
+   "Operário-PR",
+   "FC Cascavel",
+   "Azuriz",
+   "Londrina",
+   "Cianorte",
+   "Andraus",
+   "São Joseense",
+   "PSTC",
+   "Galo Maringá"
+  ]
+ },
+ {
+  "uf": "PR",
+  "ano": 2026,
+  "fonte": "Campeonato Paranaense de Futebol de 2026",
+  "secao": "Classificação Geral",
+  "clubes": [
+   "Operário-PR",
+   "Londrina",
+   "Athletico-PR",
+   "Coritiba",
+   "São Joseense",
+   "Azuriz",
+   "Foz do Iguaçu",
+   "Cianorte",
+   "Maringá",
+   "FC Cascavel",
+   "Andraus",
+   "Galo Maringá"
+  ]
+ },
+ {
+  "uf": "RJ",
+  "ano": 2022,
+  "fonte": "Campeonato Carioca de Futebol de 2022",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Fluminense",
+   "Flamengo",
+   "Vasco",
+   "Botafogo",
+   "Resende",
+   "Nova Iguaçu",
+   "Portuguesa-RJ",
+   "Audax Rio",
+   "Madureira",
+   "Boavista-RJ",
+   "Bangu",
+   "Volta Redonda"
+  ]
+ },
+ {
+  "uf": "RJ",
+  "ano": 2023,
+  "fonte": "Campeonato Carioca de Futebol de 2023",
+  "secao": "Classificação geral (predefinição)",
+  "clubes": [
+   "Fluminense",
+   "Flamengo",
+   "Vasco",
+   "Volta Redonda",
+   "Botafogo",
+   "Audax Rio",
+   "Nova Iguaçu",
+   "Portuguesa-RJ",
+   "Bangu",
+   "Madureira",
+   "Boavista-RJ",
+   "Resende"
+  ]
+ },
+ {
+  "uf": "RJ",
+  "ano": 2024,
+  "fonte": "Campeonato Carioca de Futebol de 2024",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Flamengo",
+   "Nova Iguaçu",
+   "Vasco",
+   "Fluminense",
+   "Botafogo",
+   "Boavista-RJ",
+   "Portuguesa-RJ",
+   "Sampaio Corrêa-RJ",
+   "Madureira",
+   "Volta Redonda",
+   "Bangu",
+   "Audax Rio"
+  ]
+ },
+ {
+  "uf": "RJ",
+  "ano": 2025,
+  "fonte": "Campeonato Carioca de Futebol de 2025",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Flamengo",
+   "Fluminense",
+   "Volta Redonda",
+   "Vasco",
+   "Sampaio Corrêa-RJ",
+   "Madureira",
+   "Nova Iguaçu",
+   "Boavista-RJ",
+   "Botafogo",
+   "Maricá",
+   "Portuguesa-RJ",
+   "Bangu"
+  ]
+ },
+ {
+  "uf": "RJ",
+  "ano": 2026,
+  "fonte": "Campeonato Carioca de Futebol de 2026",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Flamengo",
+   "Fluminense",
+   "Vasco",
+   "Madureira",
+   "Botafogo",
+   "Bangu",
+   "Volta Redonda",
+   "Boavista-RJ",
+   "Portuguesa-RJ",
+   "Sampaio Corrêa-RJ",
+   "Nova Iguaçu",
+   "Maricá"
+  ]
+ },
+ {
+  "uf": "RN",
+  "ano": 2022,
+  "fonte": "Campeonato Potiguar de Futebol de 2022",
+  "secao": "Classificação Geral",
+  "clubes": [
+   "ABC",
+   "América-RN",
+   "Potiguar",
+   "Globo",
+   "Potyguar Seridoense",
+   "Santa Cruz de Natal",
+   "Força e Luz",
+   "ASSU"
+  ]
+ },
+ {
+  "uf": "RN",
+  "ano": 2023,
+  "fonte": "Campeonato Potiguar de Futebol de 2023",
+  "secao": "Classificação Geral",
+  "clubes": [
+   "América-RN",
+   "ABC",
+   "Potiguar",
+   "Santa Cruz de Natal",
+   "Força e Luz",
+   "Potyguar CN",
+   "Globo",
+   "Alecrim"
+  ]
+ },
+ {
+  "uf": "RN",
+  "ano": 2024,
+  "fonte": "Campeonato Potiguar de Futebol de 2024",
+  "secao": "Classificação Geral",
+  "clubes": [
+   "América-RN",
+   "Santa Cruz de Natal",
+   "ABC",
+   "Potiguar de Mossoró",
+   "Baraúnas",
+   "Força e Luz",
+   "Globo",
+   "Potyguar CN"
+  ]
+ },
+ {
+  "uf": "RN",
+  "ano": 2025,
+  "fonte": "Campeonato Potiguar de Futebol de 2025",
+  "secao": "Classificação geral",
+  "clubes": [
+   "América-RN",
+   "ABC",
+   "Laguna SAF",
+   "Santa Cruz de Natal",
+   "Potiguar de Mossoró",
+   "Globo",
+   "Baraúnas",
+   "Força e Luz"
+  ]
+ },
+ {
+  "uf": "RR",
+  "ano": 2022,
+  "fonte": "Campeonato Roraimense de Futebol de 2022",
+  "secao": "Classificação geral",
+  "clubes": [
+   "São Raimundo-RR",
+   "Náutico-RR",
+   "Real-RR",
+   "Baré",
+   "Atlético-RR",
+   "Rio Negro-RR"
+  ]
+ },
+ {
+  "uf": "RR",
+  "ano": 2023,
+  "fonte": "Campeonato Roraimense de Futebol de 2023",
+  "secao": "Classificação geral (predefinição)",
+  "clubes": [
+   "São Raimundo-RR",
+   "Grêmio Sampaio",
+   "Real-RR",
+   "Náutico-RR",
+   "Atlético-RR",
+   "Baré",
+   "River-RR",
+   "Rio Negro-RR",
+   "Progresso"
+  ]
+ },
+ {
+  "uf": "RR",
+  "ano": 2024,
+  "fonte": "Campeonato Roraimense de Futebol de 2024",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Grêmio Sampaio",
+   "São Raimundo-RR",
+   "Monte Roraima",
+   "River-RR",
+   "Náutico-RR",
+   "Atlético-RR",
+   "Real-RR",
+   "Rio Negro-RR",
+   "Progresso"
+  ]
+ },
+ {
+  "uf": "RR",
+  "ano": 2025,
+  "fonte": "Campeonato Roraimense de Futebol de 2025",
+  "secao": "Classificação geral (predefinição)",
+  "clubes": [
+   "Grêmio Sampaio",
+   "Monte Roraima",
+   "Baré",
+   "São Raimundo-RR",
+   "Rio Negro-RR",
+   "Náutico-RR",
+   "Atlético-RR",
+   "Progresso"
+  ]
+ },
+ {
+  "uf": "RR",
+  "ano": 2026,
+  "fonte": "Campeonato Roraimense de Futebol de 2026",
+  "secao": "Classificação geral (predefinição)",
+  "clubes": [
+   "Grêmio Sampaio",
+   "Baré",
+   "São Raimundo-RR",
+   "Monte Roraima",
+   "River-RR",
+   "Progresso",
+   "Rio Negro-RR",
+   "Náutico-RR",
+   "Atlético-RR"
+  ]
+ },
+ {
+  "uf": "RS",
+  "ano": 2022,
+  "fonte": "Campeonato Gaúcho de Futebol de 2022 - Série A",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Grêmio",
+   "Ypiranga de Erechim",
+   "Inter",
+   "Brasil de Pelotas",
+   "Caxias",
+   "São José-POA",
+   "Novo Hamburgo",
+   "Aimoré",
+   "São Luiz-RS",
+   "Juventude",
+   "União Frederiquense",
+   "Guarany de Bagé"
+  ]
+ },
+ {
+  "uf": "RS",
+  "ano": 2023,
+  "fonte": "Campeonato Gaúcho de Futebol de 2023 - Série A",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Grêmio",
+   "Caxias",
+   "Internacional-RS",
+   "Ypiranga de Erechim",
+   "Juventude",
+   "São José-POA",
+   "Brasil de Pelotas",
+   "Novo Hamburgo",
+   "Avenida",
+   "São Luiz-RS",
+   "Esportivo",
+   "Aimoré"
+  ]
+ },
+ {
+  "uf": "RS",
+  "ano": 2024,
+  "fonte": "Campeonato Gaúcho de Futebol de 2024 - Série A",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Grêmio",
+   "Juventude",
+   "Internacional-RS",
+   "Caxias",
+   "Guarany de Bagé",
+   "São José-POA",
+   "Brasil de Pelotas",
+   "São Luiz-RS",
+   "Ypiranga-RS",
+   "Avenida",
+   "Novo Hamburgo",
+   "Santa Cruz-RS"
+  ]
+ },
+ {
+  "uf": "RS",
+  "ano": 2025,
+  "fonte": "Campeonato Gaúcho de Futebol de 2025 - Série A",
+  "secao": "Classificação Geral",
+  "clubes": [
+   "Internacional-RS",
+   "Juventude",
+   "Grêmio",
+   "Caxias",
+   "Ypiranga-RS",
+   "Guarany de Bagé",
+   "São Luiz-RS",
+   "Monsoon",
+   "Brasil de Pelotas",
+   "Pelotas",
+   "São José-POA",
+   "Avenida"
+  ]
+ },
+ {
+  "uf": "RS",
+  "ano": 2026,
+  "fonte": "Campeonato Gaúcho de Futebol de 2026 - Série A",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Grêmio",
+   "Internacional-RS",
+   "Juventude",
+   "Ypiranga-RS",
+   "São Luiz-RS",
+   "Novo Hamburgo",
+   "Caxias",
+   "São José-RS",
+   "Monsoon",
+   "Guarany de Bagé",
+   "Avenida",
+   "Inter-SM"
+  ]
+ },
+ {
+  "uf": "SC",
+  "ano": 2022,
+  "fonte": "Campeonato Catarinense de Futebol de 2022 - Série A",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Brusque",
+   "Camboriú",
+   "Concórdia",
+   "Figueirense",
+   "Hercílio Luz",
+   "Chapecoense",
+   "Marcílio Dias",
+   "Avaí",
+   "Joinville",
+   "Barra-SC",
+   "Próspera",
+   "Juventus-SC"
+  ]
+ },
+ {
+  "uf": "SC",
+  "ano": 2023,
+  "fonte": "Campeonato Catarinense de Futebol de 2023 - Série A",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Criciúma",
+   "Brusque",
+   "Hercílio Luz",
+   "Barra-SC",
+   "Chapecoense",
+   "Avaí",
+   "Concórdia",
+   "Figueirense",
+   "Joinville",
+   "Marcílio Dias",
+   "Camboriú",
+   "Atlético Catarinense"
+  ]
+ },
+ {
+  "uf": "SC",
+  "ano": 2024,
+  "fonte": "Campeonato Catarinense de Futebol de 2024 - Série A",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Criciúma",
+   "Brusque",
+   "Avaí",
+   "Barra-SC",
+   "Marcílio Dias",
+   "Figueirense",
+   "Joinville",
+   "Hercílio Luz",
+   "Chapecoense",
+   "Concórdia",
+   "Internacional-SC",
+   "Nação"
+  ]
+ },
+ {
+  "uf": "SC",
+  "ano": 2025,
+  "fonte": "Campeonato Catarinense de Futebol de 2025 - Série A",
+  "secao": "Classificação Final",
+  "clubes": [
+   "Avaí",
+   "Chapecoense",
+   "Santa Catarina",
+   "Joinville",
+   "Criciúma"
+  ]
+ },
+ {
+  "uf": "SE",
+  "ano": 2022,
+  "fonte": "Campeonato Sergipano de Futebol de 2022",
+  "secao": "Classificação Geral",
+  "clubes": [
+   "Sergipe",
+   "Falcon",
+   "Itabaiana",
+   "Confiança",
+   "Lagarto",
+   "Gloriense",
+   "Frei Paulistano",
+   "América-SE",
+   "Boca Júnior-SE",
+   "Maruinense"
+  ]
+ },
+ {
+  "uf": "SE",
+  "ano": 2025,
+  "fonte": "Campeonato Sergipano de Futebol de 2025",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Confiança",
+   "Itabaiana",
+   "Lagarto",
+   "América-SE",
+   "Guarany-SE",
+   "Falcon",
+   "Sergipe",
+   "Dorense",
+   "Barra-SE",
+   "Carmópolis"
+  ]
+ },
+ {
+  "uf": "SE",
+  "ano": 2026,
+  "fonte": "Campeonato Sergipano de Futebol de 2026",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Sergipe",
+   "Confiança",
+   "Itabaiana",
+   "América-SE",
+   "Lagarto",
+   "Guarany-SE",
+   "Falcon",
+   "Atlético-SE",
+   "Dorense",
+   "Desportiva Aracaju"
+  ]
+ },
+ {
+  "uf": "SP",
+  "ano": 2022,
+  "fonte": "Campeonato Paulista de Futebol de 2022",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Palmeiras",
+   "São Paulo",
+   "Corinthians",
+   "Red Bull Bragantino",
+   "Ituano",
+   "São Bernardo",
+   "Guarani",
+   "Santo André",
+   "Botafogo-SP",
+   "Mirassol",
+   "Água Santa",
+   "Ferroviária",
+   "Inter de Limeira",
+   "Santos",
+   "Ponte Preta",
+   "Grêmio Novorizontino"
+  ]
+ },
+ {
+  "uf": "SP",
+  "ano": 2023,
+  "fonte": "Campeonato Paulista de Futebol de 2023",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Palmeiras",
+   "Água Santa",
+   "Red Bull Bragantino",
+   "Ituano",
+   "São Bernardo",
+   "São Paulo",
+   "Corinthians",
+   "Botafogo-SP",
+   "Mirassol",
+   "Guarani",
+   "Santo André",
+   "Santos",
+   "Inter de Limeira",
+   "Portuguesa",
+   "São Bento",
+   "Ferroviária"
+  ]
+ },
+ {
+  "uf": "SP",
+  "ano": 2024,
+  "fonte": "Campeonato Paulista de Futebol de 2024",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Palmeiras",
+   "Santos",
+   "Red Bull Bragantino",
+   "Novorizontino",
+   "São Paulo",
+   "Inter de Limeira",
+   "Ponte Preta",
+   "Portuguesa",
+   "São Bernardo",
+   "Água Santa",
+   "Corinthians",
+   "Mirassol",
+   "Botafogo-SP",
+   "Guarani",
+   "Santo André",
+   "Ituano"
+  ]
+ },
+ {
+  "uf": "SP",
+  "ano": 2025,
+  "fonte": "Campeonato Paulista de Futebol de 2025",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Corinthians",
+   "Palmeiras",
+   "São Paulo",
+   "Santos",
+   "São Bernardo",
+   "Novorizontino",
+   "Red Bull Bragantino",
+   "Mirassol",
+   "Ponte Preta",
+   "Guarani",
+   "Velo Clube",
+   "Portuguesa",
+   "Botafogo-SP",
+   "Noroeste",
+   "Água Santa",
+   "Inter de Limeira"
+  ]
+ },
+ {
+  "uf": "SP",
+  "ano": 2026,
+  "fonte": "Campeonato Paulista de Futebol de 2026",
+  "secao": "Classificação geral",
+  "clubes": [
+   "Palmeiras",
+   "Novorizontino",
+   "São Paulo",
+   "Corinthians",
+   "Portuguesa",
+   "Red Bull Bragantino",
+   "Capivariano",
+   "Santos",
+   "Guarani",
+   "Botafogo-SP",
+   "Mirassol",
+   "Primavera",
+   "São Bernardo",
+   "Noroeste",
+   "Velo Clube",
+   "Ponte Preta"
+  ]
+ }
+]
