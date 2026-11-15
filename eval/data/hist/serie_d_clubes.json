@@ -1,0 +1,2252 @@
+{
+"2021": [
+{
+"id": "20381",
+"nome": "Atlético",
+"uf": "AC",
+"grupo": "GRUPO A01",
+"via": "Melhor colocado do Estadual 2020"
+},
+{
+"id": "35949",
+"nome": "Castanhal",
+"uf": "PA",
+"grupo": "GRUPO A01",
+"via": "Melhor colocado do Estadual 2020"
+},
+{
+"id": "20073",
+"nome": "Fast Clube",
+"uf": "AM",
+"grupo": "GRUPO A01",
+"via": "2º melhor colocado do Estadual 2020"
+},
+{
+"id": "32816",
+"nome": "Galvez",
+"uf": "AC",
+"grupo": "GRUPO A01",
+"via": "Campeão do Estadual 2020"
+},
+{
+"id": "21892",
+"nome": "Penarol",
+"uf": "AM",
+"grupo": "GRUPO A01",
+"via": "Campeão do Estadual 2020"
+},
+{
+"id": "20353",
+"nome": "Sampaio",
+"uf": "RR",
+"grupo": "GRUPO A01",
+"via": "Vice-campeão do Estadual 2020"
+},
+{
+"id": "21638",
+"nome": "São Raimundo",
+"uf": "RR",
+"grupo": "GRUPO A01",
+"via": "Campeão do Estadual 2020"
+},
+{
+"id": "20260",
+"nome": "Ypiranga Clube",
+"uf": "AP",
+"grupo": "GRUPO A01",
+"via": "Campeão do Estadual 2020"
+},
+{
+"id": "20328",
+"nome": "4 de Julho",
+"uf": "PI",
+"grupo": "GRUPO A02",
+"via": "Campeão do Estadual 2020"
+},
+{
+"id": "20412",
+"nome": "Guarany de Sobral",
+"uf": "CE",
+"grupo": "GRUPO A02",
+"via": "Melhor colocado do Estadual 2020"
+},
+{
+"id": "20372",
+"nome": "Imperatriz",
+"uf": "MA",
+"grupo": "GRUPO A02",
+"via": "20º colocado da Série C de 2020"
+},
+{
+"id": "32770",
+"nome": "Juventude",
+"uf": "MA",
+"grupo": "GRUPO A02",
+"via": "2° melhor colocado do Estadual 2020"
+},
+{
+"id": "20029",
+"nome": "Moto Club",
+"uf": "MA",
+"grupo": "GRUPO A02",
+"via": "Melhor colocado do Estadual 2020"
+},
+{
+"id": "56695",
+"nome": "Palmas Ltda",
+"uf": "TO",
+"grupo": "GRUPO A02",
+"via": "Campeão do Estadual 2020"
+},
+{
+"id": "35784",
+"nome": "Paragominas",
+"uf": "PA",
+"grupo": "GRUPO A02",
+"via": "2º melhor colocado do Estadual 2020"
+},
+{
+"id": "20288",
+"nome": "Tocantinopolis",
+"uf": "TO",
+"grupo": "GRUPO A02",
+"via": ""
+},
+{
+"id": "20042",
+"nome": "Abc F. C.",
+"uf": "RN",
+"grupo": "GRUPO A03",
+"via": "Campeão do Estadual 2020"
+},
+{
+"id": "20030",
+"nome": "América",
+"uf": "RN",
+"grupo": "GRUPO A03",
+"via": "Vice-campeão do Estadual 2020"
+},
+{
+"id": "20060",
+"nome": "Campinense",
+"uf": "PB",
+"grupo": "GRUPO A03",
+"via": "Melhor colocado do Estadual 2020"
+},
+{
+"id": "21806",
+"nome": "Caucaia",
+"uf": "CE",
+"grupo": "GRUPO A03",
+"via": "3º melhor colocado do Estadual 2020"
+},
+{
+"id": "20112",
+"nome": "Central de Caruaru",
+"uf": "PE",
+"grupo": "GRUPO A03",
+"via": "3º melhor colocado do Estadual 2020"
+},
+{
+"id": "35316",
+"nome": "Fc Atlético Cearense",
+"uf": "CE",
+"grupo": "GRUPO A03",
+"via": "2º melhor colocado do Estadual 2020"
+},
+{
+"id": "20390",
+"nome": "Sousa",
+"uf": "PB",
+"grupo": "GRUPO A03",
+"via": "2º melhor colocado do Estadual 2020"
+},
+{
+"id": "20071",
+"nome": "Treze",
+"uf": "PB",
+"grupo": "GRUPO A03",
+"via": "17º colocado da Série C de 2020"
+},
+{
+"id": "20108",
+"nome": "Asa",
+"uf": "AL",
+"grupo": "GRUPO A04",
+"via": "Campeão da Copa Alagoas 2020"
+},
+{
+"id": "20236",
+"nome": "Atlético de Alagoinhas",
+"uf": "BA",
+"grupo": "GRUPO A04",
+"via": "Melhor colocado do Estadual 2020"
+},
+{
+"id": "21878",
+"nome": "Bahia de Feira",
+"uf": "BA",
+"grupo": "GRUPO A04",
+"via": "3º melhor colocado do Estadual 2020"
+},
+{
+"id": "20057",
+"nome": "Itabaiana",
+"uf": "SE",
+"grupo": "GRUPO A04",
+"via": ""
+},
+{
+"id": "35212",
+"nome": "Juazeirense",
+"uf": "BA",
+"grupo": "GRUPO A04",
+"via": "2º melhor colocado do Estadual 2020"
+},
+{
+"id": "21850",
+"nome": "Murici",
+"uf": "AL",
+"grupo": "GRUPO A04",
+"via": "Melhor colocado do Estadual 2020"
+},
+{
+"id": "55531",
+"nome": "Retrô",
+"uf": "PE",
+"grupo": "GRUPO A04",
+"via": "2º melhor colocado do Estadual 2020"
+},
+{
+"id": "20034",
+"nome": "Sergipe",
+"uf": "SE",
+"grupo": "GRUPO A04",
+"via": "Vice-campeão do Estadual 2020"
+},
+{
+"id": "21889",
+"nome": "Aparecidense",
+"uf": "GO",
+"grupo": "GRUPO A05",
+"via": "3º melhor colocado do Estadual 2020"
+},
+{
+"id": "20446",
+"nome": "Brasiliense",
+"uf": "DF",
+"grupo": "GRUPO A05",
+"via": "Vice-campeão do Metropolitano 2020"
+},
+{
+"id": "20098",
+"nome": "Gama",
+"uf": "DF",
+"grupo": "GRUPO A05",
+"via": "Campeão do Metropolitano 2020"
+},
+{
+"id": "56220",
+"nome": "Gazin Porto Velho",
+"uf": "RO",
+"grupo": "GRUPO A05",
+"via": "Campeão do Estadual 2020"
+},
+{
+"id": "21890",
+"nome": "Goianesia",
+"uf": "GO",
+"grupo": "GRUPO A05",
+"via": "Melhor colocado do Estadual 2020"
+},
+{
+"id": "37549",
+"nome": "Jaraguá",
+"uf": "GO",
+"grupo": "GRUPO A05",
+"via": "2º melhor colocado do Estadual 2020"
+},
+{
+"id": "57118",
+"nome": "Nova Mutum Ec",
+"uf": "MT",
+"grupo": "GRUPO A05",
+"via": "Campeão do Estadual 2020"
+},
+{
+"id": "20287",
+"nome": "União",
+"uf": "MT",
+"grupo": "GRUPO A05",
+"via": "2º melhor colocado do Estadual 2020"
+},
+{
+"id": "21757",
+"nome": "Aguia Negra",
+"uf": "MS",
+"grupo": "GRUPO A06",
+"via": "Campeão do Estadual 2020"
+},
+{
+"id": "21926",
+"nome": "Boa",
+"uf": "MG",
+"grupo": "GRUPO A06",
+"via": "19º colocado da Série C de 2020"
+},
+{
+"id": "34146",
+"nome": "Ca Patrocinense",
+"uf": "MG",
+"grupo": "GRUPO A06",
+"via": "3º melhor colocado do Estadual 2020"
+},
+{
+"id": "20103",
+"nome": "Caldense",
+"uf": "MG",
+"grupo": "GRUPO A06",
+"via": "Melhor colocado do Estadual 2020"
+},
+{
+"id": "20038",
+"nome": "Ferroviária",
+"uf": "SP",
+"grupo": "GRUPO A06",
+"via": "2ª melhor colocada do Estadual 20202021|"
+},
+{
+"id": "20070",
+"nome": "Rio Branco A. C.",
+"uf": "ES",
+"grupo": "GRUPO A06",
+"via": "Vice-campeão do Estadual 2020"
+},
+{
+"id": "35461",
+"nome": "Rio Branco FC",
+"uf": "ES",
+"grupo": "GRUPO A06",
+"via": "Campeão do Estadual 2020"
+},
+{
+"id": "20087",
+"nome": "Uberlândia",
+"uf": "MG",
+"grupo": "GRUPO A06",
+"via": "2º melhor colocado do Estadual 2020"
+},
+{
+"id": "20026",
+"nome": "Bangu",
+"uf": "RJ",
+"grupo": "GRUPO A07",
+"via": "3º melhor colocado do Estadual 2020"
+},
+{
+"id": "21752",
+"nome": "Boavista",
+"uf": "RJ",
+"grupo": "GRUPO A07",
+"via": "Melhor colocado do Estadual 2020"
+},
+{
+"id": "20107",
+"nome": "Inter de Limeira",
+"uf": "SP",
+"grupo": "GRUPO A07",
+"via": "3ª melhor colocada do Estadual 2020"
+},
+{
+"id": "20816",
+"nome": "Leão do Vale - Cianorte",
+"uf": "PR",
+"grupo": "GRUPO A07",
+"via": "2º melhor colocado do Estadual 2020"
+},
+{
+"id": "20249",
+"nome": "Madureira",
+"uf": "RJ",
+"grupo": "GRUPO A07",
+"via": "2º melhor colocado do Estadual 2020"
+},
+{
+"id": "20009",
+"nome": "Portuguesa",
+"uf": "SP",
+"grupo": "GRUPO A07",
+"via": "Campeã da [[Copa Paulista de Futebol de 20202021"
+},
+{
+"id": "20121",
+"nome": "Santo André",
+"uf": "SP",
+"grupo": "GRUPO A07",
+"via": "Melhor colocado do Estadual 2020"
+},
+{
+"id": "20110",
+"nome": "São Bento",
+"uf": "SP",
+"grupo": "GRUPO A07",
+"via": "18º colocado da Série C de 2020"
+},
+{
+"id": "32945",
+"nome": "Aimoré",
+"uf": "RS",
+"grupo": "GRUPO A08",
+"via": ""
+},
+{
+"id": "21922",
+"nome": "Cascavel",
+"uf": "PR",
+"grupo": "GRUPO A08",
+"via": "Melhor colocado do Estadual 2020"
+},
+{
+"id": "20062",
+"nome": "Caxias",
+"uf": "RS",
+"grupo": "GRUPO A08",
+"via": "Melhor colocado do Estadual 2020"
+},
+{
+"id": "20232",
+"nome": "Esportivo",
+"uf": "RS",
+"grupo": "GRUPO A08",
+"via": "2º melhor colocado do Estadual 2020"
+},
+{
+"id": "20395",
+"nome": "GE Juventus",
+"uf": "SC",
+"grupo": "GRUPO A08",
+"via": "2° melhor colocado do Estadual 2020"
+},
+{
+"id": "20076",
+"nome": "Joinville",
+"uf": "SC",
+"grupo": "GRUPO A08",
+"via": "3° melhor colocado do Estadual 2020"
+},
+{
+"id": "20207",
+"nome": "Marcílio Dias",
+"uf": "SC",
+"grupo": "GRUPO A08",
+"via": "Melhor colocado do Estadual 2020"
+},
+{
+"id": "21739",
+"nome": "Rio Branco Sport Club",
+"uf": "PR",
+"grupo": "GRUPO A08",
+"via": "3º melhor colocado do Estadual 2020"
+}
+],
+"2022": [
+{
+"id": "57591",
+"nome": "Amazonas Fc",
+"uf": "AM",
+"grupo": "GRUPO A1",
+"via": "2º melhor colocado do Estadual 2021"
+},
+{
+"id": "56220",
+"nome": "Gazin Porto Velho",
+"uf": "RO",
+"grupo": "GRUPO A1",
+"via": "Campeão do Estadual 2021"
+},
+{
+"id": "54133",
+"nome": "Humaitá",
+"uf": "AC",
+"grupo": "GRUPO A1",
+"via": "Vice-campeão do Estadual 2021"
+},
+{
+"id": "21986",
+"nome": "Nautico",
+"uf": "RR",
+"grupo": "GRUPO A1",
+"via": "Vice-campeão do Estadual 2021"
+},
+{
+"id": "20258",
+"nome": "Rio Branco",
+"uf": "AC",
+"grupo": "GRUPO A1",
+"via": "Campeão do Estadual 2021"
+},
+{
+"id": "20290",
+"nome": "São Raimundo",
+"uf": "AM",
+"grupo": "GRUPO A1",
+"via": "Vice-campeão do Estadual 2021"
+},
+{
+"id": "21638",
+"nome": "São Raimundo",
+"uf": "RR",
+"grupo": "GRUPO A1",
+"via": "Campeão do Estadual 2021"
+},
+{
+"id": "20810",
+"nome": "Trem",
+"uf": "AP",
+"grupo": "GRUPO A1",
+"via": "Campeão do Estadual 2021"
+},
+{
+"id": "20328",
+"nome": "4 de Julho",
+"uf": "PI",
+"grupo": "GRUPO A2",
+"via": "2º melhor colocado do Estadual 2021"
+},
+{
+"id": "35949",
+"nome": "Castanhal",
+"uf": "PA",
+"grupo": "GRUPO A2",
+"via": ""
+},
+{
+"id": "35775",
+"nome": "Fluminense",
+"uf": "PI",
+"grupo": "GRUPO A2",
+"via": "Vice-campeão do Estadual 2021"
+},
+{
+"id": "32770",
+"nome": "Juventude",
+"uf": "MA",
+"grupo": "GRUPO A2",
+"via": "Vice-campeão da Copa FMF 2021"
+},
+{
+"id": "20029",
+"nome": "Moto Club",
+"uf": "MA",
+"grupo": "GRUPO A2",
+"via": "Vice-campeão do Estadual 2021"
+},
+{
+"id": "55306",
+"nome": "Pacajus",
+"uf": "CE",
+"grupo": "GRUPO A2",
+"via": "Melhor colocado do Estadual 2021"
+},
+{
+"id": "20288",
+"nome": "Tocantinopolis",
+"uf": "TO",
+"grupo": "GRUPO A2",
+"via": "Campeão do eonato Tocantinense de Futebol de 2021|Estadual 2021"
+},
+{
+"id": "20100",
+"nome": "Tuna Luso",
+"uf": "PA",
+"grupo": "GRUPO A2",
+"via": "Vice-campeã do Estadual 2021"
+},
+{
+"id": "53322",
+"nome": "Afogados",
+"uf": "PE",
+"grupo": "GRUPO A3",
+"via": "2º melhor colocado do Estadual 2021"
+},
+{
+"id": "20030",
+"nome": "América",
+"uf": "RN",
+"grupo": "GRUPO A3",
+"via": "2º melhor colocado do Estadual 2021"
+},
+{
+"id": "21879",
+"nome": "Crato",
+"uf": "CE",
+"grupo": "GRUPO A3",
+"via": "2º melhor colocado do Estadual 2021"
+},
+{
+"id": "40377",
+"nome": "Globo",
+"uf": "RN",
+"grupo": "GRUPO A3",
+"via": "Campeão do Estadual 2021"
+},
+{
+"id": "20253",
+"nome": "Icasa",
+"uf": "CE",
+"grupo": "GRUPO A3",
+"via": "3º melhor colocado do Estadual 2021"
+},
+{
+"id": "55531",
+"nome": "Retrô",
+"uf": "PE",
+"grupo": "GRUPO A3",
+"via": "4º melhor colocado do Estadual 2021"
+},
+{
+"id": "20390",
+"nome": "Sousa",
+"uf": "PB",
+"grupo": "GRUPO A3",
+"via": "Vice-campeão do Estadual 2021"
+},
+{
+"id": "53340",
+"nome": "São Paulo Crystal",
+"uf": "PB",
+"grupo": "GRUPO A3",
+"via": "2º melhor colocado do Estadual 2021"
+},
+{
+"id": "20108",
+"nome": "Asa",
+"uf": "AL",
+"grupo": "GRUPO A4",
+"via": "Campeão da Copa Alagoas 2021"
+},
+{
+"id": "20236",
+"nome": "Atlético de Alagoinhas",
+"uf": "BA",
+"grupo": "GRUPO A4",
+"via": "Campeão do Estadual 2021"
+},
+{
+"id": "35522",
+"nome": "Cse",
+"uf": "AL",
+"grupo": "GRUPO A4",
+"via": "Melhor colocado do Estadual 2021"
+},
+{
+"id": "35152",
+"nome": "Jacuipense",
+"uf": "BA",
+"grupo": "GRUPO A4",
+"via": "17º colocado da Série C de 2021"
+},
+{
+"id": "35212",
+"nome": "Juazeirense",
+"uf": "BA",
+"grupo": "GRUPO A4",
+"via": "3º melhor colocado do Estadual 2021"
+},
+{
+"id": "35680",
+"nome": "Lagarto F.C.",
+"uf": "SE",
+"grupo": "GRUPO A4",
+"via": "Vice-campeão do Estadual 2021"
+},
+{
+"id": "20039",
+"nome": "Santa Cruz",
+"uf": "PE",
+"grupo": "GRUPO A4",
+"via": "19º colocado da Série C de 2021"
+},
+{
+"id": "20034",
+"nome": "Sergipe",
+"uf": "SE",
+"grupo": "GRUPO A4",
+"via": "Campeão do Estadual 2021"
+},
+{
+"id": "20164",
+"nome": "Anápolis",
+"uf": "GO",
+"grupo": "GRUPO A5",
+"via": "2º melhor colocado do Estadual 2021"
+},
+{
+"id": "35054",
+"nome": "Ação",
+"uf": "MT",
+"grupo": "GRUPO A5",
+"via": "2º melhor colocado do Estadual 2021"
+},
+{
+"id": "20446",
+"nome": "Brasiliense",
+"uf": "DF",
+"grupo": "GRUPO A5",
+"via": "Campeão do Metropolitano 2021"
+},
+{
+"id": "20418",
+"nome": "Ceilândia",
+"uf": "DF",
+"grupo": "GRUPO A5",
+"via": "Vice-campeão do Metropolitano 2021"
+},
+{
+"id": "35021",
+"nome": "Costa Rica",
+"uf": "MS",
+"grupo": "GRUPO A5",
+"via": "Campeão do Estadual 2021"
+},
+{
+"id": "20790",
+"nome": "Gremio Anapolis Saf",
+"uf": "GO",
+"grupo": "GRUPO A5",
+"via": "Campeão do Estadual 2021"
+},
+{
+"id": "37541",
+"nome": "Ipec",
+"uf": "GO",
+"grupo": "GRUPO A5",
+"via": "3º melhor colocado do Estadual 2021"
+},
+{
+"id": "35079",
+"nome": "Operário",
+"uf": "MT",
+"grupo": "GRUPO A5",
+"via": "Melhor colocado do Estadual 2021"
+},
+{
+"id": "59135",
+"nome": "A. D. Richarlison de Andrade",
+"uf": "ES",
+"grupo": "GRUPO A6",
+"via": ""
+},
+{
+"id": "21878",
+"nome": "Bahia de Feira",
+"uf": "BA",
+"grupo": "GRUPO A6",
+"via": "Vice-campeão do Estadual 2021"
+},
+{
+"id": "20103",
+"nome": "Caldense",
+"uf": "MG",
+"grupo": "GRUPO A6",
+"via": "3º melhor colocado do Estadual 2021"
+},
+{
+"id": "20038",
+"nome": "Ferroviária",
+"uf": "SP",
+"grupo": "GRUPO A6",
+"via": ""
+},
+{
+"id": "20107",
+"nome": "Inter de Limeira",
+"uf": "SP",
+"grupo": "GRUPO A6",
+"via": "Melhor colocada do Estadual 2021"
+},
+{
+"id": "34519",
+"nome": "Pouso Alegre",
+"uf": "MG",
+"grupo": "GRUPO A6",
+"via": "2º melhor colocado do Estadual 2021"
+},
+{
+"id": "21942",
+"nome": "Real Noroeste Capixaba F. C.",
+"uf": "ES",
+"grupo": "GRUPO A6",
+"via": "Campeão do Estadual 2021"
+},
+{
+"id": "20359",
+"nome": "Urt",
+"uf": "MG",
+"grupo": "GRUPO A6",
+"via": "Melhor colocado do Estadual 2021"
+},
+{
+"id": "20816",
+"nome": "Leão do Vale - Cianorte",
+"uf": "PR",
+"grupo": "GRUPO A7",
+"via": "3º melhor colocado do Estadual 2021"
+},
+{
+"id": "21751",
+"nome": "Nova Iguaçu",
+"uf": "RJ",
+"grupo": "GRUPO A7",
+"via": "2º melhor colocado do Estadual 2021"
+},
+{
+"id": "21853",
+"nome": "Osasco Sporting",
+"uf": "SP",
+"grupo": "GRUPO A7",
+"via": "20º colocado da Série C de 2021"
+},
+{
+"id": "20015",
+"nome": "Parana",
+"uf": "PR",
+"grupo": "GRUPO A7",
+"via": "18º colocado da Série C de 2021"
+},
+{
+"id": "20805",
+"nome": "Portuguesa",
+"uf": "RJ",
+"grupo": "GRUPO A7",
+"via": "Melhor colocada do Estadual 2021"
+},
+{
+"id": "54897",
+"nome": "Pérolas Negras",
+"uf": "RJ",
+"grupo": "GRUPO A7",
+"via": "Campeão da Copa Rio 2021"
+},
+{
+"id": "20121",
+"nome": "Santo André",
+"uf": "SP",
+"grupo": "GRUPO A7",
+"via": ""
+},
+{
+"id": "31790",
+"nome": "São Bernardo SAF",
+"uf": "SP",
+"grupo": "GRUPO A7",
+"via": "Campeão da Copa Paulista 2021"
+},
+{
+"id": "32945",
+"nome": "Aimoré",
+"uf": "RS",
+"grupo": "GRUPO A8",
+"via": ""
+},
+{
+"id": "56804",
+"nome": "Azuriz",
+"uf": "PR",
+"grupo": "GRUPO A8",
+"via": "2º melhor colocado do Estadual 2021"
+},
+{
+"id": "21922",
+"nome": "Cascavel",
+"uf": "PR",
+"grupo": "GRUPO A8",
+"via": "Vice-campeão do Esta2022|dual 2021"
+},
+{
+"id": "20062",
+"nome": "Caxias",
+"uf": "RS",
+"grupo": "GRUPO A8",
+"via": "Melhor colocado do Estadual 2021"
+},
+{
+"id": "20395",
+"nome": "GE Juventus",
+"uf": "SC",
+"grupo": "GRUPO A8",
+"via": ""
+},
+{
+"id": "20207",
+"nome": "Marcílio Dias",
+"uf": "SC",
+"grupo": "GRUPO A8",
+"via": "Melhor colocado do Estadual 2021"
+},
+{
+"id": "37947",
+"nome": "Prospera",
+"uf": "SC",
+"grupo": "GRUPO A8",
+"via": ""
+},
+{
+"id": "33061",
+"nome": "São Luiz",
+"uf": "RS",
+"grupo": "GRUPO A8",
+"via": "3º melhor colocado do Estadual 2021"
+}
+],
+"2023": [
+{
+"id": "20782",
+"nome": "Aguia de Maraba",
+"uf": "PA",
+"grupo": "GRUPO A1",
+"via": "2º melhor colocado do Estadual 2022"
+},
+{
+"id": "54133",
+"nome": "Humaitá",
+"uf": "AC",
+"grupo": "GRUPO A1",
+"via": "Campeão do Estadual 2022"
+},
+{
+"id": "20050",
+"nome": "Nacional",
+"uf": "AM",
+"grupo": "GRUPO A1",
+"via": "2º melhor colocado do Estadual 2022"
+},
+{
+"id": "20428",
+"nome": "Princesa do Solimões",
+"uf": "AM",
+"grupo": "GRUPO A1",
+"via": "Vice-campeão do Estadual 2022"
+},
+{
+"id": "32811",
+"nome": "Sao Francisco",
+"uf": "AC",
+"grupo": "GRUPO A1",
+"via": "Vice-campeão do Estadual 2022"
+},
+{
+"id": "21638",
+"nome": "São Raimundo",
+"uf": "RR",
+"grupo": "GRUPO A1",
+"via": "Campeão do Estadual 2022"
+},
+{
+"id": "20810",
+"nome": "Trem",
+"uf": "AP",
+"grupo": "GRUPO A1",
+"via": "Campeão do Estadual 2022"
+},
+{
+"id": "20100",
+"nome": "Tuna Luso",
+"uf": "PA",
+"grupo": "GRUPO A1",
+"via": "Melhor colocada do Estadual 2022"
+},
+{
+"id": "21806",
+"nome": "Caucaia",
+"uf": "CE",
+"grupo": "GRUPO A2",
+"via": "Vice-campeão do Estadual 2022"
+},
+{
+"id": "32776",
+"nome": "Cordino",
+"uf": "MA",
+"grupo": "GRUPO A2",
+"via": "Vice-campeão do Estadual 2022"
+},
+{
+"id": "35316",
+"nome": "Fc Atlético Cearense",
+"uf": "CE",
+"grupo": "GRUPO A2",
+"via": "17º colocado da Série C de 2022"
+},
+{
+"id": "20091",
+"nome": "Ferroviário",
+"uf": "CE",
+"grupo": "GRUPO A2",
+"via": "19º colocado da Série C de 2022"
+},
+{
+"id": "35775",
+"nome": "Fluminense",
+"uf": "PI",
+"grupo": "GRUPO A2",
+"via": "Campeão do Estadual 2022"
+},
+{
+"id": "20043",
+"nome": "Maranhão",
+"uf": "MA",
+"grupo": "GRUPO A2",
+"via": "Vice-campeão da Copa FMF 2022"
+},
+{
+"id": "20429",
+"nome": "Parnahyba",
+"uf": "PI",
+"grupo": "GRUPO A2",
+"via": "Vice-campeão do Estadual 2022"
+},
+{
+"id": "20288",
+"nome": "Tocantinopolis",
+"uf": "TO",
+"grupo": "GRUPO A2",
+"via": "Campeão do Estadual 2022"
+},
+{
+"id": "20060",
+"nome": "Campinense",
+"uf": "PB",
+"grupo": "GRUPO A3",
+"via": "20º colocado da Série C de 2022"
+},
+{
+"id": "40377",
+"nome": "Globo",
+"uf": "RN",
+"grupo": "GRUPO A3",
+"via": "2º melhor colocado do Estadual 2022"
+},
+{
+"id": "35361",
+"nome": "Iguatu",
+"uf": "CE",
+"grupo": "GRUPO A3",
+"via": "2° melhor colocado do Estadual 2022"
+},
+{
+"id": "20419",
+"nome": "Nacional",
+"uf": "PB",
+"grupo": "GRUPO A3",
+"via": "2° melhor colocado do Estadual 2022"
+},
+{
+"id": "55306",
+"nome": "Pacajus",
+"uf": "CE",
+"grupo": "GRUPO A3",
+"via": "3° melhor colocado do Estadual 2022"
+},
+{
+"id": "21836",
+"nome": "Potiguar",
+"uf": "RN",
+"grupo": "GRUPO A3",
+"via": "Melhor colocado do Estadual 2022"
+},
+{
+"id": "20039",
+"nome": "Santa Cruz",
+"uf": "PE",
+"grupo": "GRUPO A3",
+"via": "2° melhor colocado do Estadual 2022"
+},
+{
+"id": "20390",
+"nome": "Sousa",
+"uf": "PB",
+"grupo": "GRUPO A3",
+"via": "Melhor colocado do Estadual 2022"
+},
+{
+"id": "20108",
+"nome": "Asa",
+"uf": "AL",
+"grupo": "GRUPO A4",
+"via": "Vice-campeão do Estadual 2022"
+},
+{
+"id": "20236",
+"nome": "Atlético de Alagoinhas",
+"uf": "BA",
+"grupo": "GRUPO A4",
+"via": "Campeão do Estadual 2022"
+},
+{
+"id": "21878",
+"nome": "Bahia de Feira",
+"uf": "BA",
+"grupo": "GRUPO A4",
+"via": ""
+},
+{
+"id": "57403",
+"nome": "Cruzeiro",
+"uf": "AL",
+"grupo": "GRUPO A4",
+"via": "Campeão da Copa Alagoas 2022"
+},
+{
+"id": "58978",
+"nome": "Falcon Futebol Clube",
+"uf": "SE",
+"grupo": "GRUPO A4",
+"via": "Vice-campeão do Estadual 2022"
+},
+{
+"id": "35152",
+"nome": "Jacuipense",
+"uf": "BA",
+"grupo": "GRUPO A4",
+"via": "Vice-campeão do Estadual 2022"
+},
+{
+"id": "55531",
+"nome": "Retrô",
+"uf": "PE",
+"grupo": "GRUPO A4",
+"via": "Vice-campeão do Estadual 2022"
+},
+{
+"id": "20034",
+"nome": "Sergipe",
+"uf": "SE",
+"grupo": "GRUPO A4",
+"via": "Campeão do Estadual 2022"
+},
+{
+"id": "20164",
+"nome": "Anápolis",
+"uf": "GO",
+"grupo": "GRUPO A5",
+"via": "2º melhor colocado do Estadual 2022"
+},
+{
+"id": "20446",
+"nome": "Brasiliense",
+"uf": "DF",
+"grupo": "GRUPO A5",
+"via": "Campeão do Metropolitano 2022"
+},
+{
+"id": "20418",
+"nome": "Ceilândia",
+"uf": "DF",
+"grupo": "GRUPO A5",
+"via": ""
+},
+{
+"id": "20990",
+"nome": "Interporto",
+"uf": "TO",
+"grupo": "GRUPO A5",
+"via": "Vice-campeão do Estadual 2022"
+},
+{
+"id": "37541",
+"nome": "Ipec",
+"uf": "GO",
+"grupo": "GRUPO A5",
+"via": "Melhor colocado do Estadual 2022"
+},
+{
+"id": "35079",
+"nome": "Operário",
+"uf": "MT",
+"grupo": "GRUPO A5",
+"via": "Vice-campeão da Copa FMF 2022"
+},
+{
+"id": "35668",
+"nome": "Real Ariquemes",
+"uf": "RO",
+"grupo": "GRUPO A5",
+"via": "Campeão do Estadual 2022"
+},
+{
+"id": "20287",
+"nome": "União",
+"uf": "MT",
+"grupo": "GRUPO A5",
+"via": "Vice-campeão do Estadual 2022"
+},
+{
+"id": "59896",
+"nome": "Athletic SAF",
+"uf": "MG",
+"grupo": "GRUPO A6",
+"via": "Melhor colocado do Estadual 2022"
+},
+{
+"id": "20432",
+"nome": "EC Democrata",
+"uf": "MG",
+"grupo": "GRUPO A6",
+"via": "2º melhor colocado do Estadual 2022"
+},
+{
+"id": "21751",
+"nome": "Nova Iguaçu",
+"uf": "RJ",
+"grupo": "GRUPO A6",
+"via": "2º melhor colocado do Estadual 2022"
+},
+{
+"id": "20805",
+"nome": "Portuguesa",
+"uf": "RJ",
+"grupo": "GRUPO A6",
+"via": "Vice-campeã da Copa Rio 2022"
+},
+{
+"id": "21942",
+"nome": "Real Noroeste Capixaba F. C.",
+"uf": "ES",
+"grupo": "GRUPO A6",
+"via": "Campeão do Estadual 2022"
+},
+{
+"id": "21881",
+"nome": "Resende",
+"uf": "RJ",
+"grupo": "GRUPO A6",
+"via": "Melhor colocado do Estadual 2022"
+},
+{
+"id": "20121",
+"nome": "Santo André",
+"uf": "SP",
+"grupo": "GRUPO A6",
+"via": "Melhor colocado do Estadual 2022"
+},
+{
+"id": "20081",
+"nome": "Vitoria F. C.",
+"uf": "ES",
+"grupo": "GRUPO A6",
+"via": "Vice-campeão do Estadual 2022"
+},
+{
+"id": "34146",
+"nome": "Ca Patrocinense",
+"uf": "MG",
+"grupo": "GRUPO A7",
+"via": "5º melhor colocado do Estadual 2022"
+},
+{
+"id": "21922",
+"nome": "Cascavel",
+"uf": "PR",
+"grupo": "GRUPO A7",
+"via": "3° melhor colocado do Estadual 2022"
+},
+{
+"id": "20811",
+"nome": "Crac",
+"uf": "GO",
+"grupo": "GRUPO A7",
+"via": "3º melhor colocado do Estadual 2022"
+},
+{
+"id": "20038",
+"nome": "Ferroviária",
+"uf": "SP",
+"grupo": "GRUPO A7",
+"via": "2° melhor colocado do Estadual 2022"
+},
+{
+"id": "20107",
+"nome": "Inter de Limeira",
+"uf": "SP",
+"grupo": "GRUPO A7",
+"via": "3° melhor colocado do Estadual 2022"
+},
+{
+"id": "21918",
+"nome": "Maringá FC SAF",
+"uf": "PR",
+"grupo": "GRUPO A7",
+"via": "Vice-campeão do Estadual 2022"
+},
+{
+"id": "20041",
+"nome": "Operário",
+"uf": "MS",
+"grupo": "GRUPO A7",
+"via": "Campeão do Estadual 2022"
+},
+{
+"id": "20072",
+"nome": "XV de Piracicaba",
+"uf": "SP",
+"grupo": "GRUPO A7",
+"via": "Campeão da Copa Paulista 2022"
+},
+{
+"id": "32945",
+"nome": "Aimoré",
+"uf": "RS",
+"grupo": "GRUPO A8",
+"via": "3º melhor colocado do Estadual 2022"
+},
+{
+"id": "20090",
+"nome": "Brasil",
+"uf": "RS",
+"grupo": "GRUPO A8",
+"via": "18º colocado da Série C de 2022"
+},
+{
+"id": "37936",
+"nome": "Camboriu Futebol Clube",
+"uf": "SC",
+"grupo": "GRUPO A8",
+"via": "Vice-campeão do Estadual 2022"
+},
+{
+"id": "20062",
+"nome": "Caxias",
+"uf": "RS",
+"grupo": "GRUPO A8",
+"via": "Melhor colocado do Estadual 2022"
+},
+{
+"id": "21988",
+"nome": "Concordia Atletico Clube",
+"uf": "SC",
+"grupo": "GRUPO A8",
+"via": "2° melhor colocado do Estadual 2022"
+},
+{
+"id": "61080",
+"nome": "Hercílio Luz",
+"uf": "SC",
+"grupo": "GRUPO A8",
+"via": "3° melhor colocado do Estadual 2022"
+},
+{
+"id": "20104",
+"nome": "Novo Hamburgo",
+"uf": "RS",
+"grupo": "GRUPO A8",
+"via": "2º melhor colocado do Estadual 2022"
+},
+{
+"id": "54488",
+"nome": "Sãojoseense",
+"uf": "PR",
+"grupo": "GRUPO A8",
+"via": "2° melhor colocado do Estadual 2022"
+}
+],
+"2024": [
+{
+"id": "56220",
+"nome": "Gazin Porto Velho",
+"uf": "RO",
+"grupo": "GRUPO A1",
+"via": "Campeão do Estadual 2023"
+},
+{
+"id": "54133",
+"nome": "Humaitá",
+"uf": "AC",
+"grupo": "GRUPO A1",
+"via": "Vice-campeão do Estadual 2023"
+},
+{
+"id": "59102",
+"nome": "Manauara",
+"uf": "AM",
+"grupo": "GRUPO A1",
+"via": "Vice-campeão do Estadual 2023"
+},
+{
+"id": "52844",
+"nome": "Manaus",
+"uf": "AM",
+"grupo": "GRUPO A1",
+"via": "17.º colocado da Série C 2023"
+},
+{
+"id": "20428",
+"nome": "Princesa do Solimões",
+"uf": "AM",
+"grupo": "GRUPO A1",
+"via": "2.º melhor colocado do Estadual 2023"
+},
+{
+"id": "20258",
+"nome": "Rio Branco",
+"uf": "AC",
+"grupo": "GRUPO A1",
+"via": "Campeão do Estadual 2023"
+},
+{
+"id": "21638",
+"nome": "São Raimundo",
+"uf": "RR",
+"grupo": "GRUPO A1",
+"via": "Campeão do Estadual 2023"
+},
+{
+"id": "20810",
+"nome": "Trem",
+"uf": "AP",
+"grupo": "GRUPO A1",
+"via": "Campeão do Estadual 2023"
+},
+{
+"id": "20782",
+"nome": "Aguia de Maraba",
+"uf": "PA",
+"grupo": "GRUPO A2",
+"via": "Campeão do Estadual 2023"
+},
+{
+"id": "53914",
+"nome": "Altos",
+"uf": "PI",
+"grupo": "GRUPO A2",
+"via": "19.º colocado da Série C 2023"
+},
+{
+"id": "21856",
+"nome": "Cametá",
+"uf": "PA",
+"grupo": "GRUPO A2",
+"via": "2.º melhor colocado do Estadual 2023"
+},
+{
+"id": "35775",
+"nome": "Fluminense",
+"uf": "PI",
+"grupo": "GRUPO A2",
+"via": "Vice-campeão do Estadual 2023"
+},
+{
+"id": "20043",
+"nome": "Maranhão",
+"uf": "MA",
+"grupo": "GRUPO A2",
+"via": "Campeão do Estadual 2023"
+},
+{
+"id": "20029",
+"nome": "Moto Club",
+"uf": "MA",
+"grupo": "GRUPO A2",
+"via": "Vice-campeão do Estadual 2023"
+},
+{
+"id": "20077",
+"nome": "River",
+"uf": "PI",
+"grupo": "GRUPO A2",
+"via": "Campeão do Estadual 2023"
+},
+{
+"id": "20288",
+"nome": "Tocantinopolis",
+"uf": "TO",
+"grupo": "GRUPO A2",
+"via": "Campeão do Estadual 2023"
+},
+{
+"id": "62025",
+"nome": "America F.c. Saf",
+"uf": "RN",
+"grupo": "GRUPO A3",
+"via": "18.º colocado da - Série C|Série C 2023"
+},
+{
+"id": "35316",
+"nome": "Fc Atlético Cearense",
+"uf": "CE",
+"grupo": "GRUPO A3",
+"via": ""
+},
+{
+"id": "35361",
+"nome": "Iguatu",
+"uf": "CE",
+"grupo": "GRUPO A3",
+"via": "Melhor colocado do Estadual 2023"
+},
+{
+"id": "35330",
+"nome": "Maracana",
+"uf": "CE",
+"grupo": "GRUPO A3",
+"via": "2.º melhor colocado do Estadual 2023"
+},
+{
+"id": "21836",
+"nome": "Potiguar",
+"uf": "RN",
+"grupo": "GRUPO A3",
+"via": "Melhor colocado do Estadual 2023"
+},
+{
+"id": "35622",
+"nome": "Santa Cruz de Natal",
+"uf": "RN",
+"grupo": "GRUPO A3",
+"via": "2.º melhor colocado do Estadual 2023"
+},
+{
+"id": "20390",
+"nome": "Sousa",
+"uf": "PB",
+"grupo": "GRUPO A3",
+"via": "Vice-campeão do Estadual 2023"
+},
+{
+"id": "20071",
+"nome": "Treze",
+"uf": "PB",
+"grupo": "GRUPO A3",
+"via": "Campeão do Estadual 2023"
+},
+{
+"id": "20108",
+"nome": "Asa",
+"uf": "AL",
+"grupo": "GRUPO A4",
+"via": "Vice-campeão do Estadual 2023"
+},
+{
+"id": "35522",
+"nome": "Cse",
+"uf": "AL",
+"grupo": "GRUPO A4",
+"via": "Campeão da Copa Alagoas 2023"
+},
+{
+"id": "20057",
+"nome": "Itabaiana",
+"uf": "SE",
+"grupo": "GRUPO A4",
+"via": "Campeão do Estadual 2023"
+},
+{
+"id": "35152",
+"nome": "Jacuipense",
+"uf": "BA",
+"grupo": "GRUPO A4",
+"via": "Vice-campeão do Estadual 2023"
+},
+{
+"id": "35212",
+"nome": "Juazeirense",
+"uf": "BA",
+"grupo": "GRUPO A4",
+"via": "3.º melhor colocado do Estadual 2023"
+},
+{
+"id": "21797",
+"nome": "Petrolina",
+"uf": "PE",
+"grupo": "GRUPO A4",
+"via": "2.º melhor colocado do Estadual 2023"
+},
+{
+"id": "55531",
+"nome": "Retrô",
+"uf": "PE",
+"grupo": "GRUPO A4",
+"via": "Vice-campeão do Estadual 2023"
+},
+{
+"id": "20034",
+"nome": "Sergipe",
+"uf": "SE",
+"grupo": "GRUPO A4",
+"via": "2.º melhor colocado do Estadual 2023"
+},
+{
+"id": "20164",
+"nome": "Anápolis",
+"uf": "GO",
+"grupo": "GRUPO A5",
+"via": "Melhor colocado do Estadual 2023"
+},
+{
+"id": "62652",
+"nome": "Brasiliense",
+"uf": "DF",
+"grupo": "GRUPO A5",
+"via": "Vice-campeão do Metropolitano 2023"
+},
+{
+"id": "38081",
+"nome": "Capital Futebol Clube",
+"uf": "TO",
+"grupo": "GRUPO A5",
+"via": "Vice-campeão do Estadual 2023"
+},
+{
+"id": "20811",
+"nome": "Crac",
+"uf": "GO",
+"grupo": "GRUPO A5",
+"via": "2.º melhor colocado do Estadual 2023"
+},
+{
+"id": "37541",
+"nome": "Ipec",
+"uf": "GO",
+"grupo": "GRUPO A5",
+"via": "3.º melhor colocado do Estadual 2023"
+},
+{
+"id": "20064",
+"nome": "Mixto",
+"uf": "MT",
+"grupo": "GRUPO A5",
+"via": "Campeão da Copa FMF 2023"
+},
+{
+"id": "20263",
+"nome": "Real Brasília",
+"uf": "DF",
+"grupo": "GRUPO A5",
+"via": "Campeão do Metropolitano 2023"
+},
+{
+"id": "20287",
+"nome": "União",
+"uf": "MT",
+"grupo": "GRUPO A5",
+"via": "Vice-campeão do Estadual 2023"
+},
+{
+"id": "20393",
+"nome": "Democrata Fc",
+"uf": "MG",
+"grupo": "GRUPO A6",
+"via": "6.° melhor colocado do Estadual 2023"
+},
+{
+"id": "21927",
+"nome": "GPA AUDAX RIO",
+"uf": "RJ",
+"grupo": "GRUPO A6",
+"via": "Melhor colocado do Estadual 2023"
+},
+{
+"id": "62222",
+"nome": "Ipatinga SAF",
+"uf": "MG",
+"grupo": "GRUPO A6",
+"via": "3.º melhor colocado do Estadual 2023"
+},
+{
+"id": "20089",
+"nome": "Itabuna",
+"uf": "BA",
+"grupo": "GRUPO A6",
+"via": "2.º melhor colocado do Estadual 2023"
+},
+{
+"id": "21751",
+"nome": "Nova Iguaçu",
+"uf": "RJ",
+"grupo": "GRUPO A6",
+"via": "2.º melhor colocado do Estadual 2023"
+},
+{
+"id": "20805",
+"nome": "Portuguesa",
+"uf": "RJ",
+"grupo": "GRUPO A6",
+"via": "Campeã da Copa Rio 2023"
+},
+{
+"id": "21942",
+"nome": "Real Noroeste Capixaba F. C.",
+"uf": "ES",
+"grupo": "GRUPO A6",
+"via": "Campeão do Estadual 2023"
+},
+{
+"id": "20298",
+"nome": "Serra F. C.",
+"uf": "ES",
+"grupo": "GRUPO A6",
+"via": ""
+},
+{
+"id": "34146",
+"nome": "Ca Patrocinense",
+"uf": "MG",
+"grupo": "GRUPO A7",
+"via": "4.º melhor colocado do Estadual 2023"
+},
+{
+"id": "35021",
+"nome": "Costa Rica",
+"uf": "MS",
+"grupo": "GRUPO A7",
+"via": "Campeão do Estadual 2023"
+},
+{
+"id": "20107",
+"nome": "Inter de Limeira",
+"uf": "SP",
+"grupo": "GRUPO A7",
+"via": "3.° melhor colocado do Estadual 2023"
+},
+{
+"id": "21918",
+"nome": "Maringá FC SAF",
+"uf": "PR",
+"grupo": "GRUPO A7",
+"via": "2.º melhor colocado do Estadual 2023"
+},
+{
+"id": "34519",
+"nome": "Pouso Alegre",
+"uf": "MG",
+"grupo": "GRUPO A7",
+"via": "20.º colocado da Série C 2023"
+},
+{
+"id": "20121",
+"nome": "Santo André",
+"uf": "SP",
+"grupo": "GRUPO A7",
+"via": "2.° melhor colocado do Estadual 2023"
+},
+{
+"id": "61505",
+"nome": "São José EC SAF",
+"uf": "SP",
+"grupo": "GRUPO A7",
+"via": ""
+},
+{
+"id": "31399",
+"nome": "Água Santa",
+"uf": "SP",
+"grupo": "GRUPO A7",
+"via": "Melhor colocado do Estadual 2023"
+},
+{
+"id": "32973",
+"nome": "Avenida",
+"uf": "RS",
+"grupo": "GRUPO A8",
+"via": ""
+},
+{
+"id": "40387",
+"nome": "Barra Futebol Clube",
+"uf": "SC",
+"grupo": "GRUPO A8",
+"via": "Melhor colocado do Estadual 2023"
+},
+{
+"id": "20090",
+"nome": "Brasil",
+"uf": "RS",
+"grupo": "GRUPO A8",
+"via": "Melhor colocado do Estadual 2023"
+},
+{
+"id": "21922",
+"nome": "Cascavel",
+"uf": "PR",
+"grupo": "GRUPO A8",
+"via": "Vice-campeão do Estadual 2023"
+},
+{
+"id": "21988",
+"nome": "Concordia Atletico Clube",
+"uf": "SC",
+"grupo": "GRUPO A8",
+"via": "3.° melhor colocado do Estadual 2023"
+},
+{
+"id": "61080",
+"nome": "Hercílio Luz",
+"uf": "SC",
+"grupo": "GRUPO A8",
+"via": "Melhor colocado do Estadual 2023"
+},
+{
+"id": "20816",
+"nome": "Leão do Vale - Cianorte",
+"uf": "PR",
+"grupo": "GRUPO A8",
+"via": "3.º melhor colocado do Estadual 2023"
+},
+{
+"id": "20104",
+"nome": "Novo Hamburgo",
+"uf": "RS",
+"grupo": "GRUPO A8",
+"via": "2.º melhor colocado do Estadual 2023"
+}
+],
+"2025": [
+{
+"id": "20782",
+"nome": "Aguia de Maraba",
+"uf": "PA",
+"grupo": "GRUPO A1",
+"via": "2.º melhor colocado do Estadual 2024"
+},
+{
+"id": "54133",
+"nome": "Humaitá",
+"uf": "AC",
+"grupo": "GRUPO A1",
+"via": "Vice-campeão do Estadual 2024"
+},
+{
+"id": "20380",
+"nome": "Independência",
+"uf": "AC",
+"grupo": "GRUPO A1",
+"via": "Campeão do Estadual 2024"
+},
+{
+"id": "59102",
+"nome": "Manauara",
+"uf": "AM",
+"grupo": "GRUPO A1",
+"via": "2.º melhor colocado do Estadual 2024"
+},
+{
+"id": "52844",
+"nome": "Manaus",
+"uf": "AM",
+"grupo": "GRUPO A1",
+"via": "Melhor colocado do Estadual 2024"
+},
+{
+"id": "20353",
+"nome": "Sampaio",
+"uf": "RR",
+"grupo": "GRUPO A1",
+"via": "Campeão do Estadual 2024"
+},
+{
+"id": "20810",
+"nome": "Trem",
+"uf": "AP",
+"grupo": "GRUPO A1",
+"via": "Campeão do Estadual 2024"
+},
+{
+"id": "20100",
+"nome": "Tuna Luso",
+"uf": "PA",
+"grupo": "GRUPO A1",
+"via": "Melhor colocada do Estadual 2024"
+},
+{
+"id": "53914",
+"nome": "Altos",
+"uf": "PI",
+"grupo": "GRUPO A2",
+"via": "Campeão do Estadual 2024"
+},
+{
+"id": "35361",
+"nome": "Iguatu",
+"uf": "CE",
+"grupo": "GRUPO A2",
+"via": "2.º melhor colocado do Estadual 2024"
+},
+{
+"id": "20372",
+"nome": "Imperatriz",
+"uf": "MA",
+"grupo": "GRUPO A2",
+"via": "2.º melhor colocado do Estadual 2024"
+},
+{
+"id": "35330",
+"nome": "Maracana",
+"uf": "CE",
+"grupo": "GRUPO A2",
+"via": "Melhor colocado do Estadual 2024"
+},
+{
+"id": "20043",
+"nome": "Maranhão",
+"uf": "MA",
+"grupo": "GRUPO A2",
+"via": "Melhor colocado do Estadual 2024"
+},
+{
+"id": "20429",
+"nome": "Parnahyba",
+"uf": "PI",
+"grupo": "GRUPO A2",
+"via": "Vice-campeão do Estadual 2024"
+},
+{
+"id": "20056",
+"nome": "Sampaio Corrêa",
+"uf": "MA",
+"grupo": "GRUPO A2",
+"via": "17.º colocado da Série C 2024"
+},
+{
+"id": "20288",
+"nome": "Tocantinopolis",
+"uf": "TO",
+"grupo": "GRUPO A2",
+"via": "Vice-campeão do Estadual 2024"
+},
+{
+"id": "62025",
+"nome": "America F.c. Saf",
+"uf": "RN",
+"grupo": "GRUPO A3",
+"via": "Melhor colocado do Estadual 2024"
+},
+{
+"id": "20112",
+"nome": "Central de Caruaru",
+"uf": "PE",
+"grupo": "GRUPO A3",
+"via": "2.º melhor colocado do Estadual 2024"
+},
+{
+"id": "20091",
+"nome": "Ferroviário",
+"uf": "CE",
+"grupo": "GRUPO A3",
+"via": "19.º colocado da Série C 2024"
+},
+{
+"id": "21768",
+"nome": "Horizonte",
+"uf": "CE",
+"grupo": "GRUPO A3",
+"via": "3.º melhor colocado do Estadual 2024"
+},
+{
+"id": "20039",
+"nome": "Santa Cruz",
+"uf": "PE",
+"grupo": "GRUPO A3",
+"via": "Melhor colocado do Estadual 2024"
+},
+{
+"id": "35622",
+"nome": "Santa Cruz de Natal",
+"uf": "RN",
+"grupo": "GRUPO A3",
+"via": "Melhor colocado do Estadual 2024"
+},
+{
+"id": "20390",
+"nome": "Sousa",
+"uf": "PB",
+"grupo": "GRUPO A3",
+"via": "Campeão do Estadual 2024"
+},
+{
+"id": "20071",
+"nome": "Treze",
+"uf": "PB",
+"grupo": "GRUPO A3",
+"via": "2.º melhor colocado do Estadual 2024"
+},
+{
+"id": "20108",
+"nome": "Asa",
+"uf": "AL",
+"grupo": "GRUPO A4",
+"via": "Melhor colocado do Estadual 2024"
+},
+{
+"id": "57800",
+"nome": "Barcelona de Ilhéus",
+"uf": "BA",
+"grupo": "GRUPO A4",
+"via": "Melhor colocado do Estadual 2024"
+},
+{
+"id": "35129",
+"nome": "Jequié",
+"uf": "BA",
+"grupo": "GRUPO A4",
+"via": "2.º melhor colocado do Estadual 2024"
+},
+{
+"id": "35212",
+"nome": "Juazeirense",
+"uf": "BA",
+"grupo": "GRUPO A4",
+"via": "3.º melhor colocado do Estadual 2024"
+},
+{
+"id": "35680",
+"nome": "Lagarto F.C.",
+"uf": "SE",
+"grupo": "GRUPO A4",
+"via": "2.º melhor colocado do Estadual 2024"
+},
+{
+"id": "35556",
+"nome": "Penedense",
+"uf": "AL",
+"grupo": "GRUPO A4",
+"via": ""
+},
+{
+"id": "20034",
+"nome": "Sergipe",
+"uf": "SE",
+"grupo": "GRUPO A4",
+"via": "Melhor colocado do Estadual 2024"
+},
+{
+"id": "20389",
+"nome": "União Atlético Clube",
+"uf": "TO",
+"grupo": "GRUPO A4",
+"via": "Campeão do Estadual 2024"
+},
+{
+"id": "21889",
+"nome": "Aparecidense",
+"uf": "GO",
+"grupo": "GRUPO A5",
+"via": "18.º colocado da Série C 2024"
+},
+{
+"id": "37743",
+"nome": "Capital",
+"uf": "DF",
+"grupo": "GRUPO A5",
+"via": ""
+},
+{
+"id": "63519",
+"nome": "Ceilândia Saf",
+"uf": "DF",
+"grupo": "GRUPO A5",
+"via": ""
+},
+{
+"id": "56220",
+"nome": "Gazin Porto Velho",
+"uf": "RO",
+"grupo": "GRUPO A5",
+"via": "Campeão do Estadual 2024"
+},
+{
+"id": "21890",
+"nome": "Goianesia",
+"uf": "GO",
+"grupo": "GRUPO A5",
+"via": "3.º melhor colocado do Estadual 2024"
+},
+{
+"id": "20059",
+"nome": "Goiania",
+"uf": "GO",
+"grupo": "GRUPO A5",
+"via": "Melhor colocado do Estadual 2024"
+},
+{
+"id": "21725",
+"nome": "Luverdense",
+"uf": "MT",
+"grupo": "GRUPO A5",
+"via": "2.º melhor colocado do Estadual 2024"
+},
+{
+"id": "20064",
+"nome": "Mixto",
+"uf": "MT",
+"grupo": "GRUPO A5",
+"via": "3.° colocado do Estadual 2024"
+},
+{
+"id": "63010",
+"nome": "Boavista Saf",
+"uf": "RJ",
+"grupo": "GRUPO A6",
+"via": "2.º melhor colocado do Estadual 2024"
+},
+{
+"id": "32036",
+"nome": "Maricá",
+"uf": "RJ",
+"grupo": "GRUPO A6",
+"via": "Campeão da Copa Rio 2024"
+},
+{
+"id": "21751",
+"nome": "Nova Iguaçu",
+"uf": "RJ",
+"grupo": "GRUPO A6",
+"via": "Melhor colocado do Estadual 2024"
+},
+{
+"id": "53162",
+"nome": "Porto Vitória F. C.",
+"uf": "ES",
+"grupo": "GRUPO A6",
+"via": ""
+},
+{
+"id": "63521",
+"nome": "Portuguesa Saf",
+"uf": "SP",
+"grupo": "GRUPO A6",
+"via": "2.ª melhor colocada do Estadual 2024"
+},
+{
+"id": "63322",
+"nome": "Pouso Alegre Saf",
+"uf": "MG",
+"grupo": "GRUPO A6",
+"via": "Melhor colocado do Estadual 2024"
+},
+{
+"id": "62546",
+"nome": "Rio Branco A.C. SAF",
+"uf": "ES",
+"grupo": "GRUPO A6",
+"via": "Campeão do Estadual 2024"
+},
+{
+"id": "31399",
+"nome": "Água Santa",
+"uf": "SP",
+"grupo": "GRUPO A6",
+"via": "3.º melhor colocado do Estadual 2024"
+},
+{
+"id": "21922",
+"nome": "Cascavel",
+"uf": "PR",
+"grupo": "GRUPO A7",
+"via": "Melhor colocado do Estadual 2024"
+},
+{
+"id": "20101",
+"nome": "Goiatuba",
+"uf": "GO",
+"grupo": "GRUPO A7",
+"via": "2.º melhor colocado do Estadual 2024"
+},
+{
+"id": "20107",
+"nome": "Inter de Limeira",
+"uf": "SP",
+"grupo": "GRUPO A7",
+"via": "Melhor colocada do Estadual 2024"
+},
+{
+"id": "60368",
+"nome": "Itabirito Saf",
+"uf": "MG",
+"grupo": "GRUPO A7",
+"via": "2.º melhor colocado do Estadual 2024"
+},
+{
+"id": "20816",
+"nome": "Leão do Vale - Cianorte",
+"uf": "PR",
+"grupo": "GRUPO A7",
+"via": "3.º melhor colocado do Estadual 2024"
+},
+{
+"id": "31539",
+"nome": "Monte Azul",
+"uf": "SP",
+"grupo": "GRUPO A7",
+"via": "Campeão da Copa Paulista 2024"
+},
+{
+"id": "20041",
+"nome": "Operário",
+"uf": "MS",
+"grupo": "GRUPO A7",
+"via": "Campeão do Estadual 2024"
+},
+{
+"id": "20087",
+"nome": "Uberlândia",
+"uf": "MG",
+"grupo": "GRUPO A7",
+"via": "3.º melhor colocado do Estadual 2024"
+},
+{
+"id": "56804",
+"nome": "Azuriz",
+"uf": "PR",
+"grupo": "GRUPO A8",
+"via": "2.º melhor colocado do Estadual 2024"
+},
+{
+"id": "40387",
+"nome": "Barra Futebol Clube",
+"uf": "SC",
+"grupo": "GRUPO A8",
+"via": "Melhor colocado do Estadual 2024"
+},
+{
+"id": "20090",
+"nome": "Brasil",
+"uf": "RS",
+"grupo": "GRUPO A8",
+"via": ""
+},
+{
+"id": "20225",
+"nome": "Guarany FC",
+"uf": "RS",
+"grupo": "GRUPO A8",
+"via": "Melhor colocado do Estadual 2024"
+},
+{
+"id": "20076",
+"nome": "Joinville",
+"uf": "SC",
+"grupo": "GRUPO A8",
+"via": "3.º melhor colocado do Estadual 2024"
+},
+{
+"id": "20207",
+"nome": "Marcílio Dias",
+"uf": "SC",
+"grupo": "GRUPO A8",
+"via": "2.º melhor colocado do Estadual 2024"
+},
+{
+"id": "20319",
+"nome": "São José",
+"uf": "RS",
+"grupo": "GRUPO A8",
+"via": "20.º colocado da Série C 2024"
+},
+{
+"id": "33061",
+"nome": "São Luiz",
+"uf": "RS",
+"grupo": "GRUPO A8",
+"via": "3.º melhor colocado do Estadual 2024"
+}
+]
+}

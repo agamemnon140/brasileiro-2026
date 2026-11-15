@@ -116,6 +116,33 @@ Os oito estados sem cobertura são justamente os de clubes quase só de Série D
 input mais pesa. Faltam também a UF de cada clube (a API da CBF não traz) e o casamento dos
 nomes da Wikipedia com os ids da CBF. As tabelas são os nomes como a Wikipedia os escreve.
 
+## Força do estado na Série D (14/11)
+
+`node eval/hist/sementes.cjs --uf` testa, só na Série D de 2022 a 2025, a força do estado
+como semente: o aproveitamento dos clubes de cada UF na fase de grupos de anos anteriores,
+puxado para a média nacional. Régua: 1º e top-4 do grupo, quatro cortes, 3 mil simulações.
+
+| Semente | Células em que melhora (de 4) | Ganho médio |
+|---|---|---|
+| UF, só o ano anterior, k=0,25 | 0 | −4,6% |
+| UF, só o ano anterior, k=0,5 | 0 | −14,7% |
+| UF, só o ano anterior, k=1 | 0 | −37,3% |
+| UF acumulada desde 2021, k=0,1 | 3 | +0,4% |
+| UF acumulada desde 2021, k=0,25 | 2 | −1,3% |
+| Tabela do ano anterior, k=0,25 | 2 | +1,2% |
+| Média das duas, k=0,25 | 2 | −0,2% |
+
+**Nenhuma passa** (lição de uma série só pede 4 de 4). A força de um estado medida num ano
+só é ruído: o Pará sai como o mais forte na base de 2021 e entre os mais fracos na de 2022.
+Acumulando anos ela fica neutra. Isso não contradiz o relatório de setembro, em que a
+tabela de UF feita à mão bateu "todos iguais" em 2026: diz apenas que uma regra simples,
+derivada de um a quatro anos de Série D, não reproduz esse ganho em 2022–2025.
+
+A UF de cada clube está em `eval/data/hist/serie_d_clubes.json` (64 clubes por ano, 2021 a
+2025), junto com a via de classificação. Veio das tabelas de participantes da Wikipedia pt,
+casadas com os ids da CBF por nome; 16 pares foram casados à mão e 5 ids corrigidos (dois
+"Operário" e dois "São Raimundo" no mesmo ano). Os scripts desse casamento não estão no repo.
+
 ## O que falta
 
 1. Feito em 14/11: jogos das quatro séries em 2021–2025. A API do site da CBF serve as
