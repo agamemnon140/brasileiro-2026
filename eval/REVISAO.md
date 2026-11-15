@@ -143,6 +143,79 @@ A UF de cada clube está em `eval/data/hist/serie_d_clubes.json` (64 clubes por 
 casadas com os ids da CBF por nome; 16 pares foram casados à mão e 5 ids corrigidos (dois
 "Operário" e dois "São Raimundo" no mesmo ano). Os scripts desse casamento não estão no repo.
 
+## Rating herdado e via de classificação (14/11)
+
+`node eval/hist/sementes.cjs --herdado` testa as duas candidatas que não pediam coleta nova.
+
+- **Rating herdado**: o motor roda a temporada anterior partindo de todos iguais e o clube
+  entra no ano seguinte com o Elo em que terminou, mais um degrau por divisão trocada
+  (2 desvios-padrão do Elo final, cerca de 100 pontos por nível). Quem não jogou série
+  nacional no ano anterior recebe o piso da série.
+- **Via de classificação** (só Série D): o caminho de entrada, que é a colocação no estadual
+  do ano anterior. Ordem: rebaixado da C, campeão estadual, vice ou melhor colocado, copa
+  ou 2º melhor, e assim por diante.
+
+Mesma régua dos testes anteriores (zonas reais, quatro cortes, 2 mil simulações, contra
+"todos iguais"). O `k` do rating herdado multiplica o desvio bruto; a amplitude resultante
+entre o melhor e o pior clube vai de 60–115 pontos de Elo (k=0,5) a 245–455 (k=2).
+
+| Semente | Células em que melhora | Por série (de 4) | Ganho médio | Só pré-temporada |
+|---|---|---|---|---|
+| Herdado, k=0,5 | 9 de 16 | A 3, B 2, C 3, D 1 | +1,1% | 11 de 16, +2,7% |
+| Herdado, k=1 | 6 de 16 | A 3, B 1, C 1, D 1 | −2,0% | 8 de 16, −0,4% |
+| Herdado, k=2 | 3 de 16 | A 1, B 1, C 1, D 0 | −12,2% | 4 de 16, −10,4% |
+| Via, k=0,25 (D) | 3 de 4 | D 3 | +0,9% | 3 de 4, −0,5% |
+| Via, k=0,5 (D) | 3 de 4 | D 3 | −3,0% | 1 de 4, −7,1% |
+| Herdado k=0,5 + via (D) | 2 de 4 | D 2 | +0,3% | 2 de 4, −0,5% |
+| Herdado k=1 + via (D) | 1 de 4 | D 1 | −7,5% | 1 de 4, −8,2% |
+
+**Nenhuma passa.** A via de classificação melhora em 2022, 2024 e 2025 e piora 6,3% em
+2023, e a regra de série única pede 4 de 4.
+
+## Leitura conjunta das cinco construções (14/11)
+
+Tabela do ano anterior, rating herdado, força do estado de um ano, força do estado
+acumulada e via de classificação: nenhuma foi confirmada pela regra fixada antes (12 de 16
+células, ou 4 de 4 para lição de uma série). O que os três testes dizem juntos:
+
+1. **A amplitude decide mais que a construção.** Duas sementes diferentes dão a mesma curva:
+   até cerca de 115 pontos de Elo entre o melhor e o pior, ganho pequeno (+1% a +2%); entre
+   125 e 230, neutro a levemente negativo; acima de 245, perda clara (−10% a −12%).
+2. **O risco é assimétrico.** Nas duas sementes testadas nas 16 células, a melhor célula
+   ganha 13% e a pior perde 33%; na força do estado de um ano a pior perde 51%. Errar para o
+   lado largo custa mais do que errar para o lado "todos iguais".
+3. **O ganho mora antes da 1ª rodada.** Na tabela do ano anterior com k=0,25, +3,7% no corte
+   de pré-temporada e +0,9% na média dos três cortes com jogos; no herdado com k=0,5, +2,7%
+   e +0,1%. Com um quarto do campeonato jogado a semente já quase não importa.
+4. **A Série A é a única em que o passado carrega sinal.** Ganho médio por série da tabela
+   do ano anterior (média dos cortes | só pré-temporada):
+
+   | Amplitude | A | B | C | D |
+   |---|---|---|---|---|
+   | k=0,25 (88 pontos) | +4,2% \| +7,9% | +1,0% \| +3,0% | +1,2% \| +2,0% | +1,2% \| +1,8% |
+   | k=0,5 (175) | +5,2% \| +10,0% | −0,6% \| +1,0% | −1,9% \| −2,1% | −2,9% \| −2,6% |
+   | k=1 (350) | +0,1% \| +5,3% | −7,4% \| −6,7% | −12,5% \| −13,7% | −19,2% \| −18,3% |
+
+   Na A a semente melhora em 3 dos 4 anos nas três amplitudes e 2023 é o ano em que piora em
+   todas. Na D, onde 26 a 32 dos 64 clubes não têm histórico nacional no ano anterior,
+   qualquer amplitude acima da mínima piora.
+5. **Contagem de células tem ruído de ±2.** Tratando diferença menor que 1% como empate, a
+   tabela do ano anterior com k=0,25 fica em 8 vitórias, 3 empates e 5 derrotas, e o herdado
+   com k=0,5 em 7, 4 e 5. Nenhuma chega perto de 12 por qualquer contagem.
+
+O que isso diz sobre a recomendação 3 de setembro (encolher a semente da Série A para
+k=0,4): a base de 2022–2025 aponta para a mesma vizinhança, com o melhor resultado em
+k=0,5 e amplitude cheia neutra, mas com 3 de 4 anos e não 4 de 4. O teste fora da amostra
+de 2026 foi na direção contrária (encolher só a amplitude: −0,015 nos jogos até 19/08,
++0,012 [−0,001; +0,026] nos de depois). São objetos diferentes: aqui a semente é uma regra,
+em 2026 é a nota dada à mão. A recomendação segue como hipótese, sem confirmação.
+
+Para 2027, o que se sustenta até aqui: semente por regra é sinal fraco, vale na Série A com
+amplitude moderada e some depressa; nas séries B, C e D "todos iguais" não perde nada que
+se meça a partir de um quarto do campeonato. A nota à mão foi a melhor das seis sementes na
+Série A de 2026 no horizonte de 34 rodadas e a quinta no de 23; é um caso só e não há como
+reproduzi-la em 2022–2025.
+
 ## O que falta
 
 1. Feito em 14/11: jogos das quatro séries em 2021–2025. A API do site da CBF serve as
@@ -151,7 +224,11 @@ casadas com os ids da CBF por nome; 16 pares foram casados à mão e 5 ids corri
    coletor e `eval/hist/ingerir.cjs` normaliza e confere. As tabelas de A e B de 2025
    reconstruídas dos jogos batem, campanha por campanha, com as classificações finais da
    Wikipedia.
-2. Classificação final dos estaduais (cerca de 135 tabelas, 2022–2026) e a força do estado.
-3. Carregador de temporadas passadas, candidatas de semente, zonas reais.
-4. Veredito pela regra de células e a seção de lições reescrita.
+2. Parcial: classificação final dos estaduais, 58 de 108 tabelas de 2022–2025 (oito estados
+   sem página na Wikipedia pt; faltam também as de 2026). Força do estado: testada, não passa.
+3. Feito em 14/11: carregador de temporadas passadas, zonas reais e quatro das cinco
+   candidatas de semente. Falta a do estadual do mesmo ano, que depende do item 2 e de casar
+   os nomes da Wikipedia com os ids da CBF.
+4. Veredito pela regra de células: nenhuma candidata passou até aqui, então não há o que
+   confirmar em 2026 por enquanto. Falta reescrever a seção de lições com os rótulos.
 5. A corrida completa de dezembro (`node eval/run.cjs --full`), depois do fim da Série A.

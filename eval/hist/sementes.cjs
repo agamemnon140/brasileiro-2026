@@ -261,7 +261,108 @@ function rodarUF() {
   return { nSims: NSIMS, celulas, veredito };
 }
 
-if (require.main === module && process.argv.includes('--uf')) {
+// TERCEIRO TESTE: o RATING HERDADO e, na Serie D, a VIA DE CLASSIFICACAO.
+//
+// Rating herdado: roda o motor na temporada Y-1 partindo de todos iguais e guarda o Elo
+// final de cada clube (o trilho de Elo do proprio updR). Na temporada Y o clube entra com
+// esse desvio em relacao ao centro, mais um degrau por divisao trocada (2 desvios-padrao do
+// Elo final de Y-1 por nivel), tudo multiplicado por k. Quem nao jogou serie nacional em
+// Y-1 recebe o piso: o menor valor da serie.
+//
+// Via de classificacao (so D): o caminho pelo qual o clube entrou na Serie D, que e a
+// colocacao no estadual do ano anterior. Ordem: rebaixado da C, campeao estadual, vice ou
+// melhor colocado, 2o melhor ou copa, 3o melhor, 4o melhor em diante. Elo linear no posto.
+function ratingsFinais(E, liga, serie) {
+  const cfg = structuredClone(E.DEFAULT_CFG); cfg.lambdas.A = { ...E.DEFAULT_CFG.lambdas[serie] };
+  const lg = E.initLeague(liga.times, () => CENTRO, cfg), { mc, mf } = E.getML(cfg, 'A');
+  const elos = {}, atk = {}, def = {};
+  liga.times.forEach(t => { elos[t] = CENTRO; const i = lg.initAD(CENTRO); atk[t] = i.atk; def[t] = i.def; });
+  for (const g of [...liga.jogos].filter(g => g.gm != null).sort((a, b) => a.rodada - b.rodada)) {
+    const { lC, lF } = E.calcL(atk[g.id_m], def[g.id_m], atk[g.id_v], def[g.id_v], elos[g.id_m], elos[g.id_v], mc, mf, cfg.homeAdv, false, cfg.c0Log);
+    E.updR(elos, atk, def, g.id_m, g.id_v, g.gm, g.gv, lC, lF, cfg, cfg.defaultAlpha, false);
+  }
+  return elos;
+}
+function categoriaVia(via) {
+  const v = via.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (/copa|taca|recopa/.test(v)) return 3;
+  if (/vice/.test(v)) return 2;
+  if (/campea/.test(v)) return 1;
+  const m = /(\d)\s*\.?\s*[ºo°]?\s*melhor colocad/.exec(v);
+  if (m) return Math.min(6, Number(m[1]) + 1);
+  if (/melhor colocad/.test(v)) return 2;
+  return 4;
+}
+function rodarHerdado() {
+  const E = loadEngine(['DEFAULT_CFG', 'simMC', 'calcClassif', 'initLeague', 'getML', 'calcL', 'updR']);
+  const jogos = lerCsv(); const LG = ligas(jogos);
+  const al = { ...aliases(jogos).mapa, ...ALIAS_MANUAL };
+  const CLUBES = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'hist', 'serie_d_clubes.json'), 'utf8'));
+  const NIVEL = { A: 3, B: 2, C: 1, D: 0 };
+  const KH = [0.5, 1, 2], celulas = [];
+  for (const ano of [2022, 2023, 2024, 2025]) {
+    // Elo final e divisao de cada clube em Y-1
+    const fim = {}, div = {};
+    for (const s of ['A', 'B', 'C', 'D']) for (const l of LG[`${ano - 1}|${s}`]) { const e = ratingsFinais(E, l, s); for (const t of l.times) { fim[t] = e[t] - CENTRO; div[t] = s; } }
+    const vals = Object.values(fim), dp = Math.sqrt(vals.reduce((a, x) => a + x * x, 0) / vals.length), DEGRAU = 2 * dp;
+    const antigo = t => { let i = t, n = 0; while (fim[i] === undefined && al[i] && n++ < 5) i = al[i]; return fim[i] === undefined ? null : i; };
+    for (const serie of ['A', 'B', 'C', 'D']) {
+      const ls = LG[`${ano}|${serie}`], ids = ls.flatMap(l => l.times);
+      const bruto = {}; ids.forEach(t => { const i = antigo(t); if (i) bruto[t] = fim[i] + DEGRAU * (NIVEL[div[i]] - NIVEL[serie]); });
+      const piso = Math.min(...Object.values(bruto)); ids.forEach(t => { if (bruto[t] === undefined) bruto[t] = piso; });
+      const med = ids.reduce((a, t) => a + bruto[t], 0) / ids.length;
+      const variantes = { iguais: () => CENTRO };
+      KH.forEach(k => variantes[`herdado@${k}`] = t => CENTRO + k * (bruto[t] - med));
+      if (serie === 'D') {
+        const via = {}; CLUBES[ano].forEach(c => via[c.id] = c.via);
+        const posto = {}; ids.forEach(t => { const i = antigo(t); posto[t] = (i && div[i] === 'C') ? 0.5 : categoriaVia(via[t] || ''); });
+        const eloVia = eloPorPosto(ids, posto);
+        [0.25, 0.5].forEach(k => variantes[`via@${k}`] = t => CENTRO + k * (eloVia[t] - CENTRO));
+        [0.5, 1].forEach(k => variantes[`herdado+via@${k}`] = t => CENTRO + k * (bruto[t] - med) + 0.25 * (eloVia[t] - CENTRO));
+      }
+      const cfg = structuredClone(E.DEFAULT_CFG); cfg.lambdas.A = { ...E.DEFAULT_CFG.lambdas[serie] };
+      const soma = {}, soma0 = {}; let n = 0, n0 = 0;
+      Object.keys(variantes).forEach(v => { soma[v] = 0; soma0[v] = 0; });
+      ls.forEach((l, gi) => {
+        const H = l.jogos.reduce((m, g) => Math.max(m, g.rodada), 0);
+        const fixture = l.jogos.map(g => ({ casa: g.id_m, fora: g.id_v, rodada: g.rodada, data: g.data }));
+        const res = l.jogos.filter(g => g.gm != null).map(g => ({ c: g.id_m, f: g.id_v, gc: g.gm, gf: g.gv, r: g.rodada }));
+        const real = {}; E.calcClassif(l.times, res).forEach(c => real[c.time] = c.pos);
+        for (const corte of [0, Math.round(H * 0.25), Math.round(H * 0.5), Math.round(H * 0.75)]) {
+          for (const [v, ge] of Object.entries(variantes)) {
+            const ranking = {}; l.times.forEach(t => ranking[t] = { elo: ge(t) });
+            const { dist } = L.preverEm(E, { times: l.times, ranking, fixture, res, cfg, sk: 'A', H, corte, nSims: NSIMS, ak: cfg.defaultAlpha, seed: ano * 1000 + gi * 37 + corte * 7 + serie.charCodeAt(0) });
+            let b = 0, m = 0;
+            for (const [, de, ate0] of EVENTOS[serie]) { const ate = Math.min(ate0, l.times.length); for (const t of l.times) { const p = L.soma(dist[t], de - 1, ate), o = real[t] >= de && real[t] <= ate ? 1 : 0; b += (p - o) ** 2; m++; } }
+            soma[v] += b / m; if (corte === 0) soma0[v] += b / m;
+          }
+          n++; if (corte === 0) n0++;
+        }
+      });
+      const cel = { ano, serie, degrau: +DEGRAU.toFixed(1), amplitudeBruta: +(Math.max(...Object.values(bruto)) - piso).toFixed(1), semHistorico: ids.filter(t => !antigo(t)).length, brier: {}, brierPre: {} };
+      Object.keys(variantes).forEach(v => { cel.brier[v] = soma[v] / n; cel.brierPre[v] = soma0[v] / n0; });
+      celulas.push(cel);
+      process.stderr.write(`  ${ano} ${serie}: ` + Object.entries(cel.brier).map(([v, x]) => `${v} ${x.toFixed(4)}`).join(' | ') + '\n');
+    }
+  }
+  const veredito = {};
+  const todas = [...new Set(celulas.flatMap(c => Object.keys(c.brier)))].filter(v => v !== 'iguais');
+  for (const v of todas) { const cs = celulas.filter(c => c.brier[v] !== undefined); const g = cs.filter(c => c.brier[v] < c.brier.iguais);
+    const porSerie = {}; ['A', 'B', 'C', 'D'].forEach(s => porSerie[s] = g.filter(c => c.serie === s).length);
+    veredito[v] = { celulasMelhores: g.length, de: cs.length, porSerie, ganhoMedio: cs.reduce((a, c) => a + (1 - c.brier[v] / c.brier.iguais), 0) / cs.length,
+      celulasMelhoresPreTemporada: cs.filter(c => c.brierPre[v] < c.brierPre.iguais).length, ganhoMedioPreTemporada: cs.reduce((a, c) => a + (1 - c.brierPre[v] / c.brierPre.iguais), 0) / cs.length,
+      passa: cs.length === 16 ? g.length >= 12 : g.length === cs.length }; }
+  return { nSims: NSIMS, celulas, veredito };
+}
+
+if (require.main === module && process.argv.includes('--herdado')) {
+  const out = rodarHerdado();
+  console.log('\nveredito (16 celulas: >= 12; so D: 4 de 4):');
+  for (const [v, r] of Object.entries(out.veredito)) console.log(`  ${v}: melhor em ${r.celulasMelhores}/${r.de} (A ${r.porSerie.A}, B ${r.porSerie.B}, C ${r.porSerie.C}, D ${r.porSerie.D}) | ganho medio ${(r.ganhoMedio * 100).toFixed(1)}% | pre-temporada: ${r.celulasMelhoresPreTemporada}/${r.de}, ganho ${(r.ganhoMedioPreTemporada * 100).toFixed(1)}% | ${r.passa ? 'PASSA' : 'nao passa'}`);
+  console.log('degrau e amplitude bruta por celula:', out.celulas.map(c => `${c.ano}${c.serie} ${c.degrau}/${c.amplitudeBruta}`).join(' '));
+  fs.writeFileSync(path.join(__dirname, '..', 'out', 'hist_sementes_herdado.json'), JSON.stringify(out, null, 2) + '\n');
+  console.log('-> eval/out/hist_sementes_herdado.json');
+} else if (require.main === module && process.argv.includes('--uf')) {
   const out = rodarUF();
   const vs = Object.keys(out.celulas[0].brier);
   console.log('Serie D, Brier de zona (1o e top-4 do grupo) | ' + vs.join(' | '));
