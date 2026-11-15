@@ -1023,6 +1023,11 @@ Em ordem de confiança no achado que as sustenta.
 > (`node eval/holdout.cjs`) e a ordenação das sementes da Série A virou entre o horizonte
 > da rodada 23 e o da 34. Trate-as como hipóteses até o estudo multi-temporada fechar.
 > Ver `eval/REVISAO.md`.
+>
+> **Atualização de 15/11/2026.** Na base de 2022 a 2025 (`node eval/hist/parametros.cjs`) a
+> recomendação 2 se sustenta jogo a jogo com `pesoCasa` 0,60 no lugar de 0,58 e sem efeito
+> na tabela; a 9 (preset `base`) não se sustenta fora da Série D; a 7 e o diagnóstico da 11
+> se confirmam, e o `total` da Série D está 0,34 gol alto.
 
 0. **Manter ATK/DEF como modo padrão — agora medido.** Δ +0,0268 a favor de ATK/DEF
    contra ELO PURO, z = 5,43: o maior efeito de todo o relatório, e em 4 das 5

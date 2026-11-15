@@ -189,6 +189,17 @@ code facts and stand. Also since 14/11: `node eval/paridade.cjs` shows the predi
 is identical in every `index.html` version since 05/06, so for the league tables the replay
 the harness measures is what the app published.
 
+**Multi-season update, 15/11/2026** (`eval/hist/`, Séries A–D 2022–2025, 5,592 league games;
+details in `eval/REVISAO.md`). Home advantage: one `pesoCasa` of 0.60 for the four leagues
+beats the live values per match in 15 of 16 season×série cells, chosen out of sample. Série
+A (0.652) over-predicts home wins by 7.5 pp (z = 6) and B/C (0.583) under-predict by 3–5 pp,
+so 0.58 is the wrong number for B and C. None of it moves the projected table: in a double
+round-robin home advantage cancels, and zone-event Brier is flat. Série D `total` (2.65)
+has been about 0.34 goals above reality for five seasons. Preset `base` as the default does
+not hold outside Série D. No rule-derived seed (previous table, inherited rating, state
+strength, qualification route) beat equal seeds by the pre-registered rule; small spread
+(about 90–175 Elo) helps Série A in 3 of 4 years and fades after a quarter of the season.
+
 When `simMC` is called from a harness, pass the **parsed** fixture (`parseTab(SX_TAB, SX_NM,
 SX_DATES)`), not the raw `SX_TAB` strings — the raw form silently produces nonsense (100%
 title, 0 points) instead of failing.

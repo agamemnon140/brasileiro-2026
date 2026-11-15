@@ -39,6 +39,10 @@ Claude e ainda não neste repo.
 A leitura conjunta: 100 a 200 jogos não arbitram parâmetro em nenhuma direção. O z = −3 de
 agosto e a reversão de novembro cabem ambos no ruído de uma temporada.
 
+Atualização de 15/11: com os 1.520 jogos da Série A de 2022–2025 no repo, o viés de casa
+aparece com z = 6 e nos quatro anos. O trecho de 2026 depois de 19/08 foi a exceção. Ver
+"Mando, gols, preset e Dixon-Coles em 2022–2025".
+
 ## O que se confirmou
 
 **O replay equivale ao publicado.** `node eval/paridade.cjs` mostra que `DEFAULT_CFG`,
@@ -70,10 +74,17 @@ vence em 28 de 29 cortes. Corrida compacta: 3 mil simulações, 1 semente.
 ## O que está em revisão no REPORT.md
 
 - **Recomendação 2** (`pesoCasa` único de 0,58): o histórico apoia, o teste de 2026 não.
+  Atualização de 15/11: na base 2022–2025 a estrutura se sustenta jogo a jogo, com 0,60 no
+  lugar de 0,58, e não tem efeito na tabela. Ver a seção de 15/11.
 - **Recomendação 3** (amplitude da semente da Série A 2–3× larga demais): k=0,4 sozinho
   piorou o Brier fora da amostra em +0,0123.
 - **Recomendação 8** (a semente neutra empata com a vigente): no horizonte da rodada 34 a
   vigente ganha da neutra por 0,0797 a 0,0913.
+
+- **Recomendação 9** (preset `base` como padrão), desde 15/11: não se sustenta em 2022–2025
+  nem na temporada de 2026 completa, fora da Série D.
+- **Recomendação 7** (Dixon-Coles ajuda pouco) e o diagnóstico de gols da **11**: confirmados
+  em 2022–2025. O `total` da Série D está 0,34 gol alto.
 
 As recomendações 0, 4, 10 e 13 são fatos de código ou de desenho e não dependem da amostra.
 
@@ -216,6 +227,104 @@ se meça a partir de um quarto do campeonato. A nota à mão foi a melhor das se
 Série A de 2026 no horizonte de 34 rodadas e a quinta no de 23; é um caso só e não há como
 reproduzi-la em 2022–2025.
 
+## Mando, gols, preset e Dixon-Coles em 2022–2025 (15/11)
+
+`node eval/hist/parametros.cjs` põe as recomendações de setembro que não são de semente
+contra a config vigente nas 16 células. São três estágios: jogo a jogo (5.592 jogos, Brier
+de vitória, empate e derrota, bootstrap pareado), `--zona` (a régua combinada, 2 mil
+simulações) e `--2026` (a confirmação).
+
+A candidata é montada fora da amostra. Para cada ano, o `pesoCasa` único que minimiza o
+Brier das quatro séries nos outros três anos e o total de gols observado na mesma série nos
+outros três. O `pesoCasa` escolhido foi 0,60 nas quatro dobras.
+
+O que os jogos de 2022–2025 mostram (viés = vitória do mandante prevista menos a observada):
+
+| Série | Jogos | Mandante vence | Gols por jogo: real · config | Fração dos gols em casa: real · config | Viés de casa da vigente |
+|---|---|---|---|---|---|
+| A | 1.520 | 47,2% | 2,46 · 2,50 | 0,585 · 0,652 | +7,5 pp (z 6,0) |
+| B | 1.520 | 48,5% | 2,13 · 2,20 | 0,606 · 0,583 | −4,8 pp (z −3,9) |
+| C | 760 | 48,0% | 2,23 · 2,20 | 0,592 · 0,583 | −3,5 pp (z −1,9) |
+| D | 1.792 | 46,1% | 2,31 · 2,65 | 0,599 · 0,604 | +2,8 pp (z 2,4) |
+
+Na A o modelo superestima o mandante nos quatro anos (+10,0, +8,2, +7,5 e +4,4 pp); na B
+subestima nos quatro (−7,1, −2,4, −8,4 e −1,4 pp).
+
+Jogo a jogo, variante menos vigente (negativo é melhor; "sig" quando o IC95 exclui zero):
+
+| Variante | A | B | C | D | Geral | Células melhores |
+|---|---|---|---|---|---|---|
+| `pesoCasa` 0,60, fora da amostra | −0,0094 sig | −0,0026 sig | −0,0020 | −0,0003 | −0,0036 sig | 15 de 16 |
+| Total observado, fora da amostra | −0,0002 | +0,0002 | 0,0000 | −0,0020 sig | −0,0006 sig | 10 de 16 (D 4 de 4) |
+| Os dois juntos | −0,0094 sig | −0,0025 sig | −0,0019 | −0,0021 sig | −0,0042 sig | 16 de 16 |
+| `pesoCasa` 0,58 (rec. 2) | −0,0089 sig | +0,0006 | +0,0005 | −0,0005 | −0,0023 sig | 4 de 16 |
+| Preset `base` (rec. 9) | +0,0012 | +0,0075 sig | +0,0043 | −0,0047 sig | +0,0015 | 6 de 16 |
+| Preset `agressivo` | +0,0185 sig | +0,0308 sig | +0,0286 sig | +0,0064 | +0,0193 sig | 1 de 16 |
+| Dixon-Coles ρ=−0,05 (rec. 7) | −0,0004 | +0,0004 | −0,0001 | −0,0009 sig | −0,0003 | 13 de 16 |
+| Dixon-Coles ρ=−0,10 | −0,0004 | +0,0012 | +0,0002 | −0,0013 | −0,0002 | 11 de 16 |
+
+Os números são com "todos iguais"; com a tabela do ano anterior em k=0,25 mudam na quarta
+casa (os dois juntos: 16 de 16, −0,0041). O Brier da vigente nos 5.592 jogos é 0,6244 contra
+0,6372 da taxa-base.
+
+Eventos de zona (`--zona`), contra a vigente:
+
+| Variante | Células melhores | Ganho médio |
+|---|---|---|
+| `pesoCasa` 0,60 | 6 de 16 | −0,1% |
+| Total observado | 8 de 16 | 0,0% |
+| Os dois juntos | 10 de 16 | +0,1% |
+| `pesoCasa` 0,58 | 5 de 16 | −0,3% |
+| Preset `base` | 6 de 16 | +0,2% |
+
+Nenhuma passa, e todas ficam dentro de ±0,3%, que é o ruído de 2 mil simulações.
+
+Em 2026 (`--2026`, com a semente do app; `pesoCasa` 0,60 e totais A 2,46, B 2,13, C 2,23 e
+D 2,31 tirados dos quatro anos), jogo a jogo:
+
+| Variante | A (339) | B (373) | C (190) | D (480) | Quatro ligas (1.382) |
+|---|---|---|---|---|---|
+| Os dois juntos | −0,0043 | +0,0013 | −0,0003 | −0,0034 sig | −0,0019 [−0,0050; +0,0013] |
+| Preset `base` | +0,0048 | +0,0036 | +0,0089 | −0,0053 | +0,0015 [−0,0024; +0,0057] |
+| Dixon-Coles ρ=−0,05 | −0,0008 | +0,0008 | +0,0009 | −0,0015 sig | −0,0004 [−0,0012; +0,0005] |
+
+O viés de casa da Série A em 2026 cai de +6,3 pp para zero e o da D de +5,6 para +3,6 pp.
+
+Leitura:
+
+1. **O mando da Série A está alto, e o das Séries B e C está baixo.** Cinco temporadas
+   apontam o mesmo lado na A: o mandante venceu 47,2% em 2022–2025 e 48,7% em 2026, contra
+   cerca de 55% previstos. O z = −3 de agosto era real; o trecho depois de 19/08 (55,3% em
+   114 jogos) foi o ponto fora da curva. Na B e na C a correção vai no sentido contrário ao
+   da recomendação 2: 0,583 já subestima o mandante, e 0,58 piora um pouco.
+2. **Um número serve às quatro ligas, e ele é 0,60.** A estrutura da recomendação 2 ("dois
+   números, não cinco") se sustenta; o valor sai de quatro temporadas em vez de dois terços
+   de uma.
+3. **Nada disso muda a tabela.** Pela régua combinada, tudo é neutro. Em turno e returno
+   todo clube tem o mesmo número de jogos em casa, então o mando se cancela na classificação
+   final. Ele pesa na probabilidade de cada jogo, que o app mostra, e no mata-mata, onde quem
+   decide em casa não é simétrico. O mata-mata não foi medido aqui.
+4. **O `total` da Série D está 0,34 gol acima do real** há cinco temporadas seguidas (2,31
+   em 2022–2025 e 2,34 em 2026, contra 2,65). Corrigir melhora o jogo a jogo nos quatro anos
+   e em 2026 e reduz o déficit de empates da D de −2,8 para −1,2 pp. Os totais de A, B e C
+   estão certos a menos de 0,07.
+5. **Preset `base` como padrão: revertida.** Pior na B (significativo) e na C e neutro na A
+   em 2022–2025, e de novo pior nas três com a temporada de 2026 completa. A Série D é a
+   exceção: `base` é melhor em 3 dos 4 anos (−0,0047, significativo) e em 2026 (−0,0053, com
+   o IC encostando em zero), mas os eventos de zona não confirmam (2 de 4). `agressivo`
+   perde em quase toda parte.
+6. **Dixon-Coles: confirmado que ajuda pouco.** ρ=−0,05 melhora em 13 das 16 células, por
+   0,0003, e o agrupado não se distingue de zero. Não paga a mudança no motor.
+
+**Veredito.** Pela régua fixada (eventos de zona), nada passa. Jogo a jogo, mando e gols
+passam em 16 de 16 fora da amostra e não pioram 2026. A regra foi escrita para lições que
+mudam a tabela, e a régua de zona é cega ao mando por construção. O rótulo que descreve o
+achado é "confirmada multi-temporada jogo a jogo, sem efeito na tabela"; a decisão de
+adotá-lo é do dono do projeto.
+
+Ressalvas: 2022–2025 roda sem a nota à mão; o teste z do viés é aproximado, como no
+relatório; nada aqui mede o mata-mata nem a Copa do Brasil.
+
 ## O que falta
 
 1. Feito em 14/11: jogos das quatro séries em 2021–2025. A API do site da CBF serve as
@@ -229,6 +338,8 @@ reproduzi-la em 2022–2025.
 3. Feito em 14/11: carregador de temporadas passadas, zonas reais e quatro das cinco
    candidatas de semente. Falta a do estadual do mesmo ano, que depende do item 2 e de casar
    os nomes da Wikipedia com os ids da CBF.
-4. Veredito pela regra de células: nenhuma candidata passou até aqui, então não há o que
-   confirmar em 2026 por enquanto. Falta reescrever a seção de lições com os rótulos.
-5. A corrida completa de dezembro (`node eval/run.cjs --full`), depois do fim da Série A.
+4. Veredito pela regra de células: nenhuma semente passou. Mando e gols passam jogo a jogo
+   e são neutros na tabela (seção de 15/11). Falta decidir o rótulo desse caso e reescrever
+   a seção de lições.
+5. Não medido: drift, que só existe no longo prazo, e o mando no mata-mata.
+6. A corrida completa de dezembro (`node eval/run.cjs --full`), depois do fim da Série A.
