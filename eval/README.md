@@ -65,7 +65,7 @@ Hoje o desvio é ~2e-16 (erro de arredondamento de ponto flutuante), nas três s
 | `holdout.cjs` | teste fora da amostra da config candidata: pontua só os jogos posteriores a `data/holdout_ago19.json` |
 | `paridade.cjs` | confere, pelo histórico do git, se o replay equivale ao que o app publicou |
 | `hist/coletar_cbf.browser.js` | coletor dos jogos de 2021–2025 na API do site da CBF (rodou num navegador) |
-| `hist/sementes.cjs` | primeiro teste multi-temporada: semente "tabela do ano anterior" contra "todos iguais", por eventos de zona |
+| `hist/sementes.cjs` | testes multi-temporada de semente contra "todos iguais", por eventos de zona: tabela do ano anterior (sem flag), força do estado na Série D (`--uf`), rating herdado e via de classificação (`--herdado`) |
 | `hist/estaduais.py` | classificação final dos estaduais a partir do wikitext da Wikipedia pt; grava `data/hist/estaduais_classificacao.json` |
 | `hist/ingerir.cjs` | normaliza, deduplica e confere a coleta; grava `data/hist/cbf_jogos_2021_2025.csv` |
 | `lib/appdata.cjs` | reconstrói os resultados que o app enxerga (`mergeRes` + `results.json`) |
