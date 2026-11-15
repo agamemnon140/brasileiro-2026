@@ -510,6 +510,50 @@ O painel interativo com as curvas por série e zona está em
 <https://claude.ai/artifact/W9pUszM6skfX2FkxqMNbC1>; `eval/painel/` guarda a página e o
 script que monta os dados dela.
 
+## Por conjunto de rodadas (15/11)
+
+`zonas2026.cjs` e `matamata2026.cjs` passaram a separar as mesmas medidas pelo momento da
+previsão: metades e quartos da fase de liga de cada série (o 1º quarto de 38 rodadas são as
+previsões feitas antes das rodadas 1 a 10) e, nas fases finais, o que foi previsto depois
+dela. O painel ganhou o seletor "Rodadas" e um quadro por quarto.
+
+Zonas da fase de liga, quatro séries juntas:
+
+| Quarto | Previsões | Brier | Erro médio de calibração | Anunciado 40–60%: aconteceu | Anunciado 80–90%: aconteceu |
+|---|---|---|---|---|---|
+| 1º | 2.396 | 0,119 | 1,9 pp | 48% | 91% |
+| 2º | 2.044 | 0,093 | 2,0 pp | 56% | 89% |
+| 3º | 2.396 | 0,074 | 1,7 pp | 51% | 95% (fora da margem) |
+| 4º | 1.984 | 0,039 | 1,0 pp | 46% | 96% (fora) |
+
+Habilidade sobre a taxa-base, por quarto:
+
+| Série | Zona | 1º | 2º | 3º | 4º |
+|---|---|---|---|---|---|
+| A (prévia) | título | 33% | 37% | 23% | 79% |
+| A (prévia) | G4 | 54% | 57% | 63% | 72% |
+| A (prévia) | G6 | 41% | 49% | 67% | 89% |
+| A (prévia) | Z4 | 27% | 46% | 31% | 72% |
+| B | 1º | −7% | 5% | 3% | 35% |
+| B | acesso direto (top-2) | −7% | 7% | 39% | 67% |
+| B | G6 | 1% | 31% | 68% | 80% |
+| B | Z4 | 18% | 69% | 76% | 95% |
+| C | 1º | −2% | −21% | −23% | 11% |
+| C | G8 | 4% | −7% | 22% | 49% |
+| C | Z2 | 7% | 28% | 28% | 53% |
+| D | 1º do grupo | 14% | 28% | 47% | 77% |
+| D | top-4 do grupo | 14% | 34% | 48% | 63% |
+
+1. **A calibração vale em todo o campeonato**, não só na média: a faixa de 40–60% dá de 46%
+   a 56% nos quatro quartos, e o erro médio fica entre 1,0 e 2,0 pontos.
+2. **A habilidade é que muda.** No 1º quarto a Série A já sabe alguma coisa (27% a 54%), a
+   Série B não sabe nada (−7% a 18%) e a C fica negativa no 1º lugar até o último quarto.
+3. **A timidez de 2026 está na segunda metade** (85% anunciados, 95% a 96% ocorridos no 3º
+   e no 4º quarto). Em 2022–2025, com o mesmo drift, a segunda metade dá 86% para 85%
+   anunciados; continua sendo coisa de 2026.
+4. **Nas fases finais, depois da fase de liga**, o modelo ganha no acesso da C (38%) e nas
+   oitavas da D (23%) e perde em final e título nas duas (−26% a −31%).
+
 ## O que falta
 
 1. Feito em 14/11: jogos das quatro séries em 2021–2025. A API do site da CBF serve as

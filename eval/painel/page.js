@@ -12,17 +12,32 @@ function selecao() {
   const serie = p.serie || 'Todas';
   const chave = String(p.zona || 'liga|Todas');
   const i = chave.indexOf('|');
-  return { serie, fase: chave.slice(0, i), zona: chave.slice(i + 1), chave };
+  return { serie, fase: chave.slice(0, i), zona: chave.slice(i + 1), chave, bloco: p.rodadas || 'todas' };
 }
 function linhas(id) {
   const d = dash.data(id);
   return d.status === 'ok' && Array.isArray(d.data) ? d.data : null;
 }
-function faixasDaSelecao() {
+function faixasDe(s, bloco) {
   const rows = linhas('calibracao');
   if (!rows) return null;
+  return rows.filter((r) => r.serie === s.serie && r.fase_id === s.fase && r.zona === s.zona && r.bloco_id === bloco).sort((a, b) => a.ordem - b.ordem);
+}
+function faixasDaSelecao() {
   const s = selecao();
-  return rows.filter((r) => r.serie === s.serie && r.fase_id === s.fase && r.zona === s.zona).sort((a, b) => a.ordem - b.ordem);
+  return faixasDe(s, s.bloco);
+}
+// os conjuntos de rodadas que existem para uma série, fase e zona
+function recortesDe(s) {
+  const rows = linhas('recortes');
+  if (!rows) return null;
+  return rows.filter((r) => r.serie === s.serie && r.fase_id === s.fase && r.zona === s.zona).sort((a, b) => a.bloco_ordem - b.bloco_ordem);
+}
+// ao trocar de zona, mantém o conjunto de rodadas se ele existir no novo recorte
+function blocoValido(serie, chave, bloco) {
+  const i = chave.indexOf('|');
+  const rs = recortesDe({ serie, fase: chave.slice(0, i), zona: chave.slice(i + 1) });
+  return rs && rs.some((r) => r.bloco_id === bloco) ? bloco : 'todas';
 }
 function celula(texto, classe) {
   const td = document.createElement('td');
@@ -39,7 +54,7 @@ function linhaDe(id, celulas) {
 
 // Série: as opções estão no HTML; o script só ouve e mantém o valor.
 document.querySelectorAll('.cal-page select[data-cal="serie"]').forEach((sel) => {
-  sel.addEventListener('change', () => dash.setParams({ serie: sel.value, zona: 'liga|Todas' }));
+  sel.addEventListener('change', () => dash.setParams({ serie: sel.value, zona: 'liga|Todas', rodadas: blocoValido(sel.value, 'liga|Todas', selecao().bloco) }));
 });
 
 dash.onData(() => {
@@ -77,7 +92,16 @@ dash.draw('zona', (sel) => {
   });
   sel.replaceChildren(...nos);
   sel.value = s.chave;
-  sel.onchange = () => dash.setParams({ zona: sel.value });
+  sel.onchange = () => dash.setParams({ zona: sel.value, rodadas: blocoValido(s.serie, sel.value, s.bloco) });
+});
+
+// Rodadas: os conjuntos que existem para a série, a fase e a zona escolhidas.
+dash.draw('rodadas', (sel) => {
+  const s = selecao();
+  const rs = recortesDe(s) || [];
+  sel.replaceChildren(...rs.map((r) => new Option(r.bloco, r.bloco_id)));
+  sel.value = s.bloco;
+  sel.onchange = () => dash.setParams({ rodadas: sel.value });
 });
 
 // Frase do topo: a faixa de 40–60% da seleção.
@@ -113,7 +137,7 @@ dash.draw('curva', (el) => {
   const W = Math.max(260, el.clientWidth || 600);
   const alto = Math.round(Math.max(260, Math.min(440, W * 0.62)));
   const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${alto + 64}`).attr('role', 'img')
-    .attr('aria-label', `Curva de calibração: probabilidade anunciada contra frequência ocorrida, ${s.serie === 'Todas' ? 'todas as séries' : 'Série ' + s.serie}, ${s.zona === 'Todas' ? 'todas as zonas' : s.zona}. Os valores estão na tabela abaixo.`);
+    .attr('aria-label', `Curva de calibração: probabilidade anunciada contra frequência ocorrida, ${s.serie === 'Todas' ? 'todas as séries' : 'Série ' + s.serie}, ${s.zona === 'Todas' ? 'todas as zonas' : s.zona}${s.bloco === 'todas' ? '' : ', conjunto de rodadas escolhido'}. Os valores estão na tabela abaixo.`);
   // margens medidas do rótulo mais largo
   const sonda = svg.append('text').attr('class', 'cal-tick').text('100%');
   const larguraTick = sonda.node().getComputedTextLength() || 34;
@@ -200,6 +224,50 @@ dash.draw('curva', (el) => {
   });
 });
 
+// Os quadros por conjunto de rodadas: uma curva pequena por quarto (e pelas fases finais).
+dash.draw('blocos', (el) => {
+  const s = selecao();
+  const rs = recortesDe(s);
+  if (!rs || !linhas('calibracao')) { el.replaceChildren(document.createTextNode('—')); return; }
+  const quadros = rs.filter((r) => /^q\d$/.test(r.bloco_id) || r.bloco_id === 'finais');
+  el.replaceChildren();
+  if (!quadros.length) { el.appendChild(document.createTextNode('Sem previsões nesta seleção.')); return; }
+  const span = (classe, texto) => { const e = document.createElement('span'); e.className = classe; e.textContent = texto; return e; };
+  const marca = (r, campo, texto) => { const e = document.createElement('span'); e.setAttribute('data-source', 'recortes'); e.setAttribute('data-field', campo); e.setAttribute('data-where', 'id=' + r.id); e.textContent = texto; return e; };
+  const botoes = quadros.map((r) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'cal-mini';
+    b.setAttribute('aria-pressed', String(s.bloco === r.bloco_id));
+    const n = span('cal-mini-n', '');
+    n.append(marca(r, 'previsoes', NF0.format(r.previsoes)), document.createTextNode(' previsões · erro médio '), marca(r, 'erro_medio_pp', NF1.format(r.erro_medio_pp)), document.createTextNode(' pp'));
+    const caixa = document.createElement('div');
+    b.append(span('cal-mini-t', r.bloco_curto), span('cal-mini-s', r.bloco_rodadas || ' '), caixa, n);
+    b.addEventListener('click', () => dash.setParams({ rodadas: s.bloco === r.bloco_id ? 'todas' : r.bloco_id }));
+    el.appendChild(b);
+    return [r, caixa];
+  });
+  botoes.forEach(([r, caixa]) => {
+    const fs = faixasDe(s, r.bloco_id) || [];
+    const W = Math.max(140, caixa.clientWidth || 180), lado = Math.round(Math.min(W * 0.72, 190));
+    const m = { top: 6, right: 6, bottom: 16, left: 30 };
+    const svg = d3.select(caixa).append('svg').attr('viewBox', `0 0 ${W} ${lado + m.top + m.bottom}`).attr('role', 'img')
+      .attr('aria-label', `Curva de calibração, ${r.bloco}: ${NF0.format(r.previsoes)} previsões, erro médio de ${NF1.format(r.erro_medio_pp)} pontos.`);
+    const x = d3.scaleLinear([0, 100], [m.left, W - m.right]), y = d3.scaleLinear([0, 100], [m.top + lado, m.top]);
+    svg.selectAll('line.h').data([0, 50, 100]).join('line').attr('class', 'cal-grid').attr('x1', m.left).attr('x2', W - m.right).attr('y1', (d) => y(d)).attr('y2', (d) => y(d));
+    svg.selectAll('text.ty').data([0, 50, 100]).join('text').attr('class', 'cal-tick').attr('x', m.left - 5).attr('y', (d) => y(d)).attr('dy', '0.32em').attr('text-anchor', 'end').text((d) => d + '%');
+    svg.selectAll('text.tx').data([50, 100]).join('text').attr('class', 'cal-tick').attr('x', (d) => x(d)).attr('y', m.top + lado + 12).attr('text-anchor', (d) => (d === 100 ? 'end' : 'middle')).text((d) => d + '%');
+    svg.append('line').attr('class', 'cal-diag').attr('x1', x(0)).attr('y1', y(0)).attr('x2', x(100)).attr('y2', y(100));
+    const lim = (v) => Math.max(0, Math.min(100, v));
+    svg.append('g').selectAll('line').data(fs).join('line').attr('class', 'cal-margem')
+      .attr('x1', (f) => x(f.previsto_pct)).attr('x2', (f) => x(f.previsto_pct))
+      .attr('y1', (f) => y(lim(f.previsto_pct + f.margem_lo_pp))).attr('y2', (f) => y(lim(f.previsto_pct + f.margem_hi_pp)));
+    svg.append('path').attr('class', 'cal-linha').attr('d', d3.line().x((f) => x(f.previsto_pct)).y((f) => y(f.aconteceu_pct))(fs));
+    svg.append('g').selectAll('circle').data(fs).join('circle').attr('class', (f) => 'cal-ponto' + (f.veredito === 'dentro da margem' ? '' : ' cal-fora'))
+      .attr('cx', (f) => x(f.previsto_pct)).attr('cy', (f) => y(f.aconteceu_pct)).attr('r', 3.5);
+  });
+});
+
 dash.draw('faixas', (tb) => {
   const fs = faixasDaSelecao() || [];
   tb.replaceChildren(...fs.map((r) => linhaDe(r.id, [
@@ -213,9 +281,9 @@ dash.draw('faixas', (tb) => {
 dash.draw('precisao', (tb) => {
   const rows = linhas('precisao') || [];
   const s = selecao();
-  const vis = rows.filter((r) => s.serie === 'Todas' || r.serie === s.serie);
+  const vis = rows.filter((r) => (s.serie === 'Todas' || r.serie === s.serie) && r.bloco_id === s.bloco);
   tb.replaceChildren(...vis.map((r) => linhaDe(r.id, [
-    celula(r.serie_nome), celula(r.fase), celula(r.zona), celula(NF0.format(r.vagas), 'cal-num'),
+    celula(r.serie_nome), celula(r.fase), celula(r.zona), celula(r.bloco_curto), celula(NF0.format(r.vagas), 'cal-num'),
     celula(pct(r.habilidade_pct), 'cal-num' + (r.habilidade_pct < 0 ? ' cal-alerta' : '')),
     celula(NF3.format(r.brier), 'cal-num'), celula(NF3.format(r.brier_referencia), 'cal-num'),
     celula(pct(r.acerto_modelo_pct), 'cal-num'), celula(pct(r.acerto_tabela_pct), 'cal-num'),

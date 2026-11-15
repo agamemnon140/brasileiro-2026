@@ -35,6 +35,22 @@
 .cal-sw-fora { width: 6px; height: 6px; border-radius: 50%; border: 3px solid var(--cds-chart-status-critical, var(--color-bad)); background: var(--color-panel); }
 .cal-sw-margem { width: 2px; height: 14px; border-radius: 1px; background: var(--cal-serie); opacity: .35; }
 .cal-sw-diag { width: 18px; height: 0; border-top: 1.5px solid var(--cds-chart-reference, var(--color-fg-muted)); }
+.cal-minis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--cds-gap-md, 12px); color: var(--color-fg-muted); }
+.cal-mini { display: block; min-width: 0; text-align: left; font: inherit; color: var(--color-fg); background: var(--color-bg); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius, 8px); padding: var(--cds-pad-sm, 10px); cursor: pointer; }
+.cal-mini:hover { border-color: var(--color-fg-muted); }
+.cal-mini:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 2px; }
+.cal-mini[aria-pressed="true"] { border-color: var(--color-fg); box-shadow: inset 0 0 0 1px var(--color-fg); }
+.cal-mini-t { display: block; font-weight: var(--cds-font-weight-medium, 600); }
+.cal-mini-s, .cal-mini-n { display: block; font-size: var(--cds-font-size-caption, 12px); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+.cal-mini-s { min-height: 1.45em; }
+.cal-mini svg { display: block; width: 100%; height: auto; margin: 6px 0 4px; overflow: visible; }
+.cal-mini .cal-tick { fill: var(--cds-text-secondary, var(--color-fg-muted)); font-size: 10px; font-variant-numeric: tabular-nums; }
+.cal-mini .cal-grid { stroke: var(--cds-chart-grid, var(--color-border-line)); stroke-width: 1; }
+.cal-mini .cal-diag { stroke: var(--cds-chart-reference, var(--color-fg-muted)); stroke-width: 1; }
+.cal-mini .cal-linha { fill: none; stroke: var(--cal-serie); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.cal-mini .cal-margem { stroke: var(--cal-serie); stroke-width: 1.5; stroke-linecap: round; opacity: .3; }
+.cal-mini .cal-ponto { fill: var(--cal-serie); stroke: var(--color-bg); stroke-width: 1.5; }
+.cal-mini .cal-ponto.cal-fora { fill: var(--color-bg); stroke: var(--cds-chart-status-critical, var(--color-bad)); stroke-width: 2.5; }
 .cal-scroll { overflow-x: auto; }
 .cal-table { border-collapse: collapse; width: 100%; font-size: var(--cds-font-size-caption, 12px); font-variant-numeric: tabular-nums; }
 .cal-table th { text-align: left; vertical-align: bottom; font-weight: var(--cds-font-weight-medium, 600); color: var(--color-fg-muted); border-bottom: 1px solid var(--color-border-line); padding: 6px 14px 6px 0; }
@@ -67,6 +83,9 @@
     <label class="cal-filter">Zona ou fase
       <select class="dash-select" data-draw="zona" aria-label="Zona ou fase" data-source="calibracao"></select>
     </label>
+    <label class="cal-filter">Rodadas
+      <select class="dash-select" data-draw="rodadas" aria-label="Conjunto de rodadas" data-source="recortes"></select>
+    </label>
   </div>
 
   <section class="cal-card" id="curva">
@@ -79,6 +98,12 @@
       <li><span class="cal-sw cal-sw-margem"></span>margem de 95%</li>
       <li><span class="cal-sw cal-sw-diag"></span>calibração perfeita</li>
     </ul>
+  </section>
+
+  <section class="cal-card" id="blocos">
+    <h2 class="cal-h">Por conjunto de rodadas</h2>
+    <p class="cal-sub">A mesma curva, separada pelo momento em que a previsão foi feita. Cada quadro reúne as previsões de um quarto da fase de liga, da pré-temporada às últimas rodadas; nas fases finais há um quadro a mais, com o que foi previsto depois dela. Escolha um quadro para vê-lo no gráfico de cima e nas tabelas; escolha de novo para voltar a todas as rodadas.</p>
+    <div class="cal-minis" data-draw="blocos" data-source="calibracao recortes">—</div>
   </section>
 
   <section class="cal-card" id="faixas">
@@ -104,13 +129,14 @@
 
   <section class="cal-card" id="precisao">
     <h2 class="cal-h">Precisão por zona</h2>
-    <p class="cal-sub">Habilidade é quanto o modelo melhora sobre dar a mesma chance a todos os clubes ainda na disputa: 0% é não saber nada além do número de vagas, 100% é acertar tudo, e negativo é pior que isso. O acerto dos apontados é a fração dos clubes que o modelo dava como mais prováveis na zona e que terminaram nela, na média das rodadas; a tabela do momento aponta quem ocupava a zona naquela rodada.</p>
+    <p class="cal-sub">Habilidade é quanto o modelo melhora sobre dar a mesma chance a todos os clubes ainda na disputa: 0% é não saber nada além do número de vagas, 100% é acertar tudo, e negativo é pior que isso. O acerto dos apontados é a fração dos clubes que o modelo dava como mais prováveis na zona e que terminaram nela, na média das rodadas; a tabela do momento aponta quem ocupava a zona naquela rodada. A tabela segue a série e o conjunto de rodadas escolhidos.</p>
     <div class="cal-scroll">
       <table class="cal-table" data-source="precisao" data-row-key="id">
         <thead><tr>
           <th data-field="serie_nome">Série</th>
           <th data-field="fase">Fase</th>
           <th data-field="zona">Zona ou evento</th>
+          <th data-field="bloco_curto">Rodadas</th>
           <th class="cal-num" data-field="vagas">Vagas</th>
           <th class="cal-num" data-field="habilidade_pct">Habilidade</th>
           <th class="cal-num" data-field="brier">Brier do modelo</th>
@@ -164,6 +190,7 @@
   <details class="cal-notas" id="notas">
     <summary>Como os números foram feitos e o que eles não cobrem</summary>
     <p>Em cada rodada de 2026, da pré-temporada à penúltima, o Monte Carlo do simulador roda sabendo só os resultados até ali, com a configuração e a semente do app, e a probabilidade de cada clube em cada zona é comparada com o desfecho. Nas fases finais das Séries C e D o eixo continua depois da fase de liga: cada rodada dos quadrangulares e cada fase do mata-mata.</p>
+    <p>Os conjuntos de rodadas dividem a fase de liga de cada série em metades e quartos pelo momento da previsão: o 1º quarto de um campeonato de 38 rodadas são as previsões feitas antes das rodadas 1 a 10. Com "todas as séries", cada campeonato entra com o seu próprio quarto.</p>
     <p>A Série A é uma prévia: o desfecho usado é a tabela da rodada 34, e não a final. Na Série B, sete placares da rodada 38 vêm da imprensa. Nas fases finais só entram as previsões ainda em aberto, ou seja, com chance maior que zero e menor que 100%.</p>
     <p>A base de 2022 a 2025 roda o mesmo motor com todos os clubes partindo iguais, porque as temporadas passadas não têm a nota dada à mão; ela serve para ver se um desvio de 2026 se repete.</p>
   </details>

@@ -26,7 +26,7 @@ const fs = require('fs');
 const path = require('path');
 const { loadEngine } = require('../scripts/engine.cjs');
 const L = require('./lib/longterm.cjs');
-const { calibrar, trajetorias } = require('./zonas2026.cjs');
+const { calibrar, trajetorias, BLOCOS, noBloco, rodadasDoBloco } = require('./zonas2026.cjs');
 
 const NSIMS = parseInt(process.argv.find(a => /^\d+$/.test(a))) || 5000;
 
@@ -56,11 +56,11 @@ function serieC(E, dados, quad) {
   for (const c of cortes) {
     const P = c.P();
     for (const [evento, campo, k, ultima] of EV) if (c.ordem <= ultima) for (const t of times)
-      recs.push({ serie: 'C', evento, k, time: t, corte: c.ordem, rotulo: c.rotulo, H: 27, p: P[t][campo] / 100, o: fim[t][campo] > 99.9 ? 1 : 0 });
+      recs.push({ serie: 'C', evento, k, time: t, corte: c.ordem, rotulo: c.rotulo, H: 27, Hliga: H, p: P[t][campo] / 100, o: fim[t][campo] > 99.9 ? 1 : 0 });
     process.stderr.write(`\r  Serie C: ${c.rotulo}          `);
   }
   process.stderr.write('\n');
-  return { recs, rotulos: cortes.map(c => c.rotulo) };
+  return { recs, rotulos: cortes.map(c => c.rotulo), Hliga: H };
 }
 
 function serieD(E, KO) {
@@ -91,12 +91,12 @@ function serieD(E, KO) {
       if (c.ordem > ultima) continue;
       const soma = E.SD_TIMES.reduce((a, t) => a + P[t][campo], 0) / 100;
       if (Math.abs(soma - k) > 1e-6) throw new Error(`Serie D, ${c.rotulo}: ${evento} soma ${soma}, esperado ${k}`);
-      for (const t of E.SD_TIMES) recs.push({ serie: 'D', evento, k, time: t, corte: c.ordem, rotulo: c.rotulo, H: H + 6, p: P[t][campo] / 100, o: fim[t][campo] > 99.9 ? 1 : 0 });
+      for (const t of E.SD_TIMES) recs.push({ serie: 'D', evento, k, time: t, corte: c.ordem, rotulo: c.rotulo, H: H + 6, Hliga: H, p: P[t][campo] / 100, o: fim[t][campo] > 99.9 ? 1 : 0 });
     }
     process.stderr.write(`\r  Serie D: ${c.rotulo}          `);
   }
   process.stderr.write('\n');
-  return { recs, rotulos: cortes.map(c => c.rotulo) };
+  return { recs, rotulos: cortes.map(c => c.rotulo), Hliga: H };
 }
 
 // Por evento: so as previsoes ABERTAS (0 < p < 1). A referencia divide as vagas que restam
@@ -113,8 +113,22 @@ function resumir(recs) {
       const ref = (g[0].k - garantidos) / abertos.length;
       for (const r of abertos) { n++; b += (r.p - r.o) ** 2; bb += (ref - r.o) ** 2; }
     }
+    if (!n) return null;
     return { evento: ev, vagas: rs[0].k, previsoesAbertas: n, brier: b / n, brierReferencia: bb / n, habilidade: 1 - b / bb, calibracao: calibrar(rs.filter(r => r.p > 0 && r.p < 1), 1000) };
-  });
+  }).filter(Boolean);
+}
+
+const abertas = rs => rs.filter(r => r.p > 0 && r.p < 1);
+// Os mesmos numeros por conjunto de rodadas (ver zonas2026.cjs): metades e quartos da fase de
+// liga, e "finais" para o que foi previsto depois dela.
+function blocosDe(recs, Hliga) {
+  const o = {};
+  for (const id of BLOCOS) {
+    const rs = recs.filter(r => noBloco(r, id)), ab = abertas(rs);
+    if (!ab.length) continue;
+    o[id] = { rodadas: id === 'finais' ? null : rodadasDoBloco(id, Hliga), previsoes: ab.length, calibracao: calibrar(ab, 1000), porEvento: resumir(rs) };
+  }
+  return o;
 }
 
 function rodar() {
@@ -123,10 +137,12 @@ function rodar() {
   const dados = require('./lib/appdata.cjs').load();
   const R = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'results.json'), 'utf8'));
   const C = serieC(E, dados, R.quad_c || []), D = serieD(E, R.ko_d || []);
-  const abertas = rs => rs.filter(r => r.p > 0 && r.p < 1);
+  const todos = [...C.recs, ...D.recs];
   const out = { results_json: dados.updated_at, nSims: NSIMS,
-    series: { C: { porEvento: resumir(C.recs), calibracao: calibrar(abertas(C.recs)), etapas: C.rotulos }, D: { porEvento: resumir(D.recs), calibracao: calibrar(abertas(D.recs)), etapas: D.rotulos } },
-    geral: { calibracao: calibrar(abertas([...C.recs, ...D.recs])) } };
+    series: { C: { rodadasDaLiga: C.Hliga, porEvento: resumir(C.recs), calibracao: calibrar(abertas(C.recs)), etapas: C.rotulos, blocos: blocosDe(C.recs, C.Hliga) },
+      D: { rodadasDaLiga: D.Hliga, porEvento: resumir(D.recs), calibracao: calibrar(abertas(D.recs)), etapas: D.rotulos, blocos: blocosDe(D.recs, D.Hliga) } },
+    geral: { calibracao: calibrar(abertas(todos)), blocos: {} } };
+  for (const id of BLOCOS) { const ab = abertas(todos.filter(r => noBloco(r, id))); if (ab.length) out.geral.blocos[id] = { previsoes: ab.length, calibracao: calibrar(ab, 1000) }; }
   const traj = { C: trajetorias(C.recs), D: trajetorias(D.recs) };
   return { out, traj, etapas: { C: C.rotulos, D: D.rotulos } };
 }

@@ -109,7 +109,28 @@ function ligaD(E, cfg, ak) {
   return { recs, info: { jogos: todos.length, H, maxR: H, completa: true, sobrepostos: 0, clubes: E.SD_TIMES.length } };
 }
 
-const media = (xs, f) => xs.reduce((a, x) => a + f(x), 0) / xs.length;
+const media = (xs, f) => (xs.length ? xs.reduce((a, x) => a + f(x), 0) / xs.length : null);
+
+// CONJUNTOS DE RODADAS. As mesmas medidas, separadas pelo momento em que a previsao foi
+// feita: metades (m1, m2) e quartos (q1..q4) da fase de liga. O corte c e a previsao feita
+// antes da rodada c+1, entao o 1o quarto de 38 rodadas sao as previsoes feitas antes das
+// rodadas 1 a 10. Nas fases finais (matamata2026.cjs) existe tambem "finais": tudo o que
+// foi previsto depois de encerrada a fase de liga.
+const BLOCOS = ['m1', 'm2', 'q1', 'q2', 'q3', 'q4', 'finais'];
+function noBloco(r, id) {
+  const H = r.Hliga || r.H;
+  if (r.corte >= H) return id === 'finais';
+  if (id === 'm1') return r.corte < H / 2;
+  if (id === 'm2') return r.corte >= H / 2;
+  if (id[0] === 'q') return Math.min(3, Math.floor(4 * r.corte / H)) === Number(id[1]) - 1;
+  return false;
+}
+function rodadasDoBloco(id, H) {
+  if (id === 'm1') return [1, Math.ceil(H / 2)];
+  if (id === 'm2') return [Math.ceil(H / 2) + 1, H];
+  const q = Number(id[1]) - 1;
+  return [Math.ceil(q * H / 4) + 1, Math.ceil((q + 1) * H / 4)];
+}
 
 // Acerto dos k mais prováveis: em cada unidade e rodada, os k clubes com maior probabilidade
 // do evento; fração deles que terminou na zona. A "tabela do momento" aponta quem ocupa a zona.
@@ -158,26 +179,40 @@ function calibrar(recs, B = 2000) {
   return { n, clubes: clubes.length, ece, faixas };
 }
 
-function resumir(recs, info) {
-  const eventos = [...new Set(recs.map(r => r.evento))];
-  const ac = acertos(recs), H = info.H;
-  const marcos = [0, Math.round(H * 0.25), Math.round(H * 0.5), Math.round(H * 0.75)];
-  const porEvento = eventos.map(ev => {
+function eventosDe(recs, marcos) {
+  const eventos = [...new Set(recs.map(r => r.evento))], ac = acertos(recs);
+  return eventos.map(ev => {
     const rs = recs.filter(r => r.evento === ev), r1 = rs.filter(r => r.cong !== null), a = ac.filter(x => x.evento === ev);
     const brier = media(rs, r => (r.p - r.o) ** 2), base = media(rs, r => (r.k / r.n - r.o) ** 2);
-    return {
+    const e = {
       evento: ev, vagas: rs[0].k, previsoes: rs.length, brier, brierTaxaBase: base, habilidade: 1 - brier / base, calibracao: calibrar(rs, 1000),
       brierDesdeR1: media(r1, r => (r.p - r.o) ** 2), brierTabelaDoMomento: media(r1, r => (r.cong - r.o) ** 2),
       acertoMedio: media(a, x => x.modelo), acertoTabelaDoMomento: media(a.filter(x => x.tabela !== null), x => x.tabela),
       acertoModeloDesdeR1: media(a.filter(x => x.tabela !== null), x => x.modelo),
-      acertoPorMarco: marcos.map(m => ({ rodada: m, modelo: media(a.filter(x => x.corte === m), x => x.modelo), tabela: m > 0 ? media(a.filter(x => x.corte === m && x.tabela !== null), x => x.tabela) : null })),
     };
+    if (marcos) e.acertoPorMarco = marcos.map(m => ({ rodada: m, modelo: media(a.filter(x => x.corte === m), x => x.modelo), tabela: m > 0 ? media(a.filter(x => x.corte === m && x.tabela !== null), x => x.tabela) : null }));
+    return e;
   });
+}
+
+function blocosDe(recs, H) {
+  const o = {};
+  for (const id of BLOCOS) {
+    const rs = recs.filter(r => noBloco(r, id));
+    if (!rs.length) continue;
+    o[id] = { rodadas: id === 'finais' ? null : rodadasDoBloco(id, H), previsoes: rs.length, brier: media(rs, r => (r.p - r.o) ** 2), calibracao: calibrar(rs, 1000), porEvento: eventosDe(rs, null) };
+  }
+  return o;
+}
+
+function resumir(recs, info) {
+  const H = info.H;
+  const porEvento = eventosDe(recs, [0, Math.round(H * 0.25), Math.round(H * 0.5), Math.round(H * 0.75)]);
   // Maiores surpresas: por clube e evento, a previsao mais distante do desfecho e a rodada dela.
   const pior = {};
   for (const r of recs) { const k = r.time + '|' + r.evento, e = Math.abs(r.p - r.o); if (!pior[k] || e > pior[k].erro) pior[k] = { time: r.time, evento: r.evento, rodada: r.corte, previsto: r.p, aconteceu: r.o === 1, erro: e }; }
   const surpresas = Object.values(pior).sort((a, b) => b.erro - a.erro).slice(0, 6);
-  return { ...info, porEvento, calibracao: calibrar(recs), surpresas };
+  return { ...info, brier: media(recs, r => (r.p - r.o) ** 2), porEvento, calibracao: calibrar(recs), surpresas, blocos: blocosDe(recs, H) };
 }
 
 function coletar({ drift = null, preset = null } = {}) {
@@ -215,10 +250,12 @@ function rodar(opts) {
   // meio da temporada em diante x primeira metade
   out.geral.primeiraMetade = calibrar(todos.filter(r => r.corte < r.H / 2));
   out.geral.segundaMetade = calibrar(todos.filter(r => r.corte >= r.H / 2));
+  out.geral.blocos = {};
+  for (const id of BLOCOS) { const rs = todos.filter(r => noBloco(r, id)); if (rs.length) out.geral.blocos[id] = { previsoes: rs.length, brier: media(rs, r => (r.p - r.o) ** 2), calibracao: calibrar(rs, 1000) }; }
   return { out, traj };
 }
 
-module.exports = { rodar, coletar, calibrar, trajetorias, FAIXAS, ROTULO };
+module.exports = { rodar, coletar, calibrar, trajetorias, FAIXAS, ROTULO, BLOCOS, noBloco, rodadasDoBloco };
 
 if (require.main === module) {
   const nome = arg('nome');
