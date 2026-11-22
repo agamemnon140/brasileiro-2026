@@ -48,3 +48,21 @@ Sem test runner. Verificação = Edge headless + screenshots.
   script principal: `window.requestAnimationFrame = cb => setTimeout(() => cb(performance.now()), 16)`.
   Drivers que fazem polling: usar poucos sims (500/ponto) — há um teto real de ~18 s por captura.
   Para mudar um `<select>` controlado pelo React: `s.value = v; s.dispatchEvent(new Event('change', {bubbles: true}))`.
+
+## Receita (Linux / sandbox sem acesso aos CDNs)
+
+No ambiente de nuvem o Chrome não alcança cdnjs nem cdn.tailwindcss.com, então a página abre em
+branco. Monte a cópia de teste com os dois trocados por arquivos locais e sirva por HTTP (o
+`results.json` é buscado por caminho relativo; `file://` bloqueia o fetch):
+
+- `npm install react@18.2.0 react-dom@18.2.0 tailwindcss@3` numa pasta de rascunho; copie
+  `react/umd/react.development.js` e `react-dom/umd/react-dom.development.js` (o build de
+  desenvolvimento ainda acusa key duplicada e filho inválido) e troque as duas tags `<script>`;
+- gere o CSS com `npx tailwindcss -i in.css -o tw.css --content copia.html` (`in.css` = as três
+  diretivas `@tailwind`) e troque a tag do Play CDN por `<link rel="stylesheet" href="tw.css">`.
+  REGERE o CSS a cada mudança de classe — ele só contém o que estava no HTML naquele momento;
+- copie o `results.json` para a mesma pasta, `python3 -m http.server`, e dirija com o Playwright
+  (`chromium.launch({ executablePath: '/usr/bin/google-chrome' })`). Viewport de celular de verdade
+  sai de `newContext({ viewport: { width: 375, height: 812 }, isMobile: true })` — aqui não precisa
+  do truque do iframe. O "Simular Tudo" automático (10k sims) fecha em ~15 s; espere por um seletor
+  da aba em vez de um tempo fixo.

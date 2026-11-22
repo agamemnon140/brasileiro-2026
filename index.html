@@ -31,7 +31,35 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.90
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.91
+// v4.91 (22/11/2026): ABA "ESTADOS" — QUANTOS CLUBES DE CADA UF EM CADA DIVISÃO NACIONAL EM 2027.
+//        Aba nova "🗺️ Estados": número esperado de clubes de cada estado nas Séries A, B, C e D
+//        de 2027 e a distribuição P(exatamente k). Visão "Resumo" (UF × divisão: E, as contagens
+//        mais prováveis e a cor dizendo se o estado ganha ou perde em relação a 2026; linha
+//        Brasil = 20/20/24/96) e uma visão por divisão (P(k) por estado, 2026, E e Δ, ordenável).
+//        Tocar num estado abre os clubes dele com a chance de cada divisão em 2027.
+//        MOTOR: buildUF2027(dash, rncProj) monta as QUATRO divisões por sorteio — A27 = A26 − 4
+//        rebaixados + 4 acessos da B; B27 = B26 − 4 − 4 + 4 da A + 4 da C; C27 = C26 − 4 − 2 +
+//        4 da B + 6 da D (24 clubes); D27 = as 96 vagas do build2027Alloc — e conta por UF. Somar
+//        as probabilidades por clube daria a esperança, mas não P(k): dois clubes do mesmo
+//        estado no mesmo playoff ou na mesma briga contra o rebaixamento não são independentes.
+//        Faltavam dois rastros para fechar o encadeamento: simMC passa a emitir B.rebTrace (4
+//        rebaixados por sim) e C.accTrace (top-2 de cada grupo do quadrangular). A e B entram
+//        alinhadas por índice de sorteio (as séries são independentes no modelo, como no
+//        buildCB2027), então com o mesmo nº de sims a esperança por estado reproduz z4/bAccess do
+//        dashboard sem ruído; a C usa o mesmo sorteio que o build2027Alloc pareou com a D, via o
+//        gancho novo cfg.onDraw(d, j, reb, prom, cnt) — sem ele o rebaixado da C sairia da C27
+//        num cenário e entraria na D27 em outro. O waterfall das 96 vagas não foi duplicado nem
+//        alterado: mesma seed, mesmos números da aba Série D → Class. 2027.
+//        Limite herdado: a vaga pelo Ranking (Critério 4) segue o RNC 2027 projetado como ordem
+//        fixa, então a D 2027 por estado só varia com quem sobe/cai e com as copas em disputa.
+//        Harness novo scripts/uf2027.cjs (divisões fecham 20/20/24/96 em todo sorteio; Σ P(k) =
+//        100 em cada UF; E por estado = base − z4 + bAccess na A, exato; clubes do estado somam
+//        a esperança; D por UF idêntica à do build2027Alloc).
+//        CORREÇÃO DE CARONA: os cabeçalhos ordenáveis do Ranking CBF e do "2026 vs 2027" (Série D
+//        → Class. 2027) passavam onClick: st.onSort, que não existe — useSortable devolve toggle.
+//        Clicar lançava "onClick is not a function" e a tabela não reordenava. Agora usam
+//        st.toggle, como o resto do app.
 // v4.90 (18/10/2026): COPA PAULISTA DECIDIDA. São José campeão (1×1 na ida; 0×0 na volta
 //        em 17/10 no Martins Pereira e 4×3 nos pênaltis sobre o União São João). Pelo regulamento o
 //        campeão opta entre Copa do Brasil e Série D; o São José declarou preferência pela Série D
@@ -272,7 +300,7 @@ const {
 //        o slot "em disputa", até uma rodada de pesquisa notar. APP_VERSION vira const
 //        colada neste cabeçalho — o rodapé já ficou preso duas vezes (v4.59, v4.73) por
 //        ser string solta.
-const APP_VERSION = 'v4.90';
+const APP_VERSION = 'v4.91';
 // v4.77 (19/08/2026): FILA DE SUCESSÃO nos 27 estados (antes 14 com fonte, 11 sem folga
 //        alguma sobre a cota) + coluna Copa do Brasil 2027 na aba Ranking CBF.
 //        A rodada de pesquisa corrigiu a ordem campeão/vice em SETE estados (AC, AP, MS,
@@ -1656,6 +1684,10 @@ const simMC = (times, ranking, tab, res, cfg, sk, nS, ak, eo, opts) => {
     // v4.86: rastros para a Copa do Brasil 2027 (Critério 1 = Série A 2027; Critério 2 = campeão da C)
     if (sk === 'B') extraStats.__accTrace = [];
     if (sk === 'C') extraStats.__finTrace = [];
+    // v4.91: rebaixados da B e acessos da C por simulação — fecham o encadeamento A↔B↔C↔D
+    // por sorteio de que a aba Estados (buildUF2027) precisa.
+    if (sk === 'B') extraStats.__rebTrace = [];
+    if (sk === 'C') extraStats.__accTrace = [];
   }
   const ptsAtPos = Array.from({
     length: times.length
@@ -1954,6 +1986,7 @@ const simMC_single = (times, ranking, tab, res, cfg, sk, ak, eo, lg, mc, mf, ct,
     // Top-2 de cada grupo acessam; 1º de cada grupo joga a final (título Série C)
     [resA[0], resA[1], resB[0], resB[1]].forEach(r => extraStats[r.time].q4++);
     ufTally([resA[0].time, resA[1].time, resB[0].time, resB[1].time], 'acesso'); // v4.55
+    if (extraStats.__accTrace) extraStats.__accTrace.push(resA[0].time, resA[1].time, resB[0].time, resB[1].time); // v4.91
     // Final Série C: 1º A × 1º B em ida e volta, agregado de gols, empate → pênaltis.
     // Mandante da volta = melhor campanha (aproximação: melhor pontuação na fase
     // de grupos do quadrangular; usamos P como tiebreaker).
@@ -2074,6 +2107,7 @@ const simMC_finalize = (times, ct, pts, posF, ptsAtPos, nS, elFinal, extraStats,
     // v4.68: nomes dos rebaixados, achatados (nRebN por simulação, na ordem dos sorteios).
     rebTrace: extraStats && extraStats.__rebTrace || null,
     // v4.86: acessos da B (4 por sim: 1º, 2º, vencedores do playoff) e final da C ([campeão, vice] por sim).
+    // v4.91: a B também emite rebTrace (4 por sim) e a C accTrace (4 por sim: top-2 de cada grupo).
     accTrace: extraStats && extraStats.__accTrace || null,
     finTrace: extraStats && extraStats.__finTrace || null,
     cortes: {
@@ -2134,6 +2168,10 @@ const simMC_async = (times, ranking, tab, res, cfg, sk, nS, ak, eo, onProgress, 
     // v4.86: rastros para a Copa do Brasil 2027 (Critério 1 = Série A 2027; Critério 2 = campeão da C)
     if (sk === 'B') extraStats.__accTrace = [];
     if (sk === 'C') extraStats.__finTrace = [];
+    // v4.91: rebaixados da B e acessos da C por simulação — fecham o encadeamento A↔B↔C↔D
+    // por sorteio de que a aba Estados (buildUF2027) precisa.
+    if (sk === 'B') extraStats.__rebTrace = [];
+    if (sk === 'C') extraStats.__accTrace = [];
   }
   const ptsAtPos = Array.from({
     length: times.length
@@ -14494,6 +14532,10 @@ function build2027Alloc(dashD, dashC, rncProj, cfg) {
 
     const tot = UFS.reduce((a, u) => a + cnt[u], 0);
     if (tot !== C.total) erros++;
+    // v4.91: gancho por sorteio — d (índice da D), j (índice da C pareada), rebaixados da C,
+    // promovidos da D e a contagem da D 2027 por UF. É o que deixa o buildUF2027 montar as
+    // outras divisões em cima do MESMO cenário, sem duplicar o waterfall.
+    if (C.onDraw) C.onDraw(d, j, reb, prom, cnt);
     UFS.forEach(u => {
       acc[u].total[Math.min(cnt[u], SD27_MAXK)]++;
       SD27_SOURCES.forEach(s => { if (s.key !== 'total') acc[u][s.key][Math.min(src[u][s.key], SD27_MAXK)]++; });
@@ -14722,6 +14764,147 @@ const SD26_POR_UF = (() => {
   SD_TD.forEach(t => c[t.u] = (c[t.u] || 0) + 1);
   return c;
 })();
+
+// ====== CLUBES POR ESTADO EM CADA DIVISÃO NACIONAL EM 2027 (v4.91) ======
+// Quantos clubes de cada UF jogam cada Série em 2027 — a distribuição inteira, não só a
+// esperança. A esperança sairia das probabilidades por clube (é linear); P(exatamente k) não:
+// Grêmio e Inter caírem juntos é um evento conjunto, e um playoff da B entre dois clubes do
+// mesmo estado dá a esse estado exatamente um acesso em TODO cenário, coisa que somar
+// marginais não enxerga. Então cada sorteio monta as quatro divisões de 2027 de uma vez:
+//   A27 = A26 − 4 rebaixados + 4 acessos da B                              (20)
+//   B27 = B26 − 4 acessos − 4 rebaixados + 4 vindos da A + 4 vindos da C   (20)
+//   C27 = C26 − 4 acessos − 2 rebaixados + 4 vindos da B + 6 vindos da D   (24)
+//   D27 = as 96 vagas do Art. 2º, sorteio a sorteio (build2027Alloc)       (96)
+// A, B, C e D são simulações independentes no modelo (não compartilham jogo), então parear
+// o sorteio d de cada uma é amostra exata da conjunta, como no buildCB2027. A e B entram
+// alinhadas por índice (d % n): com o mesmo nº de sims em todas as séries, as esperanças
+// reproduzem z4/bAccess do dashboard sem ruído de reamostragem. A Série C usa o MESMO
+// sorteio que o build2027Alloc pareou com a D (gancho onDraw) — senão o rebaixado da C
+// sairia da C27 num cenário e entraria na D27 em outro.
+// Precisa dos rastros A.rebTrace, B.accTrace, B.rebTrace, C.accTrace, C.rebTrace e D.trace.
+const UF27_DIVS = [{ key: 'A', label: 'Série A' }, { key: 'B', label: 'Série B' }, { key: 'C', label: 'Série C' }, { key: 'D', label: 'Série D' }];
+const UF27_MAXK = 48;
+function buildUF2027(dash, rncProj, cfg) {
+  if (!dash || !dash.A || !dash.B || !dash.C || !dash.D || !rncProj) return null;
+  const rA = dash.A.rebTrace, aB = dash.B.accTrace, rB = dash.B.rebTrace, aC = dash.C.accTrace, rC = dash.C.rebTrace;
+  if (!rA || !aB || !rB || !aC || !rC || !dash.D.trace || !dash.D.trace.n) return null;
+  const nA = rA.length / 4, nB = Math.min(aB.length, rB.length) / 4, nC = rC.length / 2;
+  if (!nA || !nB || !nC || aC.length !== 4 * nC) return null;
+
+  const UFS = Object.keys(EST_QUOTA_2027).sort();
+  const nU = UFS.length;
+  const ix = {};
+  UFS.forEach((u, i) => ix[u] = i);
+  const KS = ['A', 'B', 'C', 'D', 'tot'];
+  const base = {};
+  KS.forEach(k => base[k] = new Array(nU).fill(0));
+  // Clubes de 2026 com UF e divisão de origem. m* conta as MUDANÇAS de divisão por sorteio
+  // (mA = foi para a A, ...); a permanência sai por diferença no fim.
+  const clubes = {};
+  const semUF = [];
+  [['A', Object.keys(SA_RANKING)], ['B', Object.keys(SB_RANKING)], ['C', Object.keys(SC_RANKING)], ['D', SD_TIMES]].forEach(par => par[1].forEach(t => {
+    const u = ufOfTeam(t);
+    if (ix[u] == null) { semUF.push(t); return; }
+    clubes[t] = { u: u, i: ix[u], s26: par[0], mA: 0, mB: 0, mC: 0, mD: 0 };
+    base[par[0]][ix[u]]++;
+    base.tot[ix[u]]++;
+  }));
+
+  const hist = {};
+  KS.forEach(k => hist[k] = UFS.map(() => new Array(UF27_MAXK + 1).fill(0)));
+  const cA = new Array(nU), cB = new Array(nU), cC = new Array(nU);
+  const tam = { A: 0, B: 0, C: 0, D: 0 };
+  let erros = 0, n = 0;
+  const onDraw = (d, j, reb, prom, cnt) => {
+    for (let i = 0; i < nU; i++) { cA[i] = base.A[i]; cB[i] = base.B[i]; cC[i] = base.C[i]; }
+    let ruim = j < 0 ? 1 : 0;
+    const oA = (d % nA) * 4, oB = (d % nB) * 4, oC = j * 4;
+    for (let k = 0; k < 4; k++) {
+      let c = clubes[rA[oA + k]];                                   // cai da A para a B
+      if (c) { cA[c.i]--; cB[c.i]++; c.mB++; } else ruim = 1;
+      c = clubes[aB[oB + k]];                                       // sobe da B para a A
+      if (c) { cB[c.i]--; cA[c.i]++; c.mA++; } else ruim = 1;
+      c = clubes[rB[oB + k]];                                       // cai da B para a C
+      if (c) { cB[c.i]--; cC[c.i]++; c.mC++; } else ruim = 1;
+      c = clubes[aC[oC + k]];                                       // sobe da C para a B
+      if (c) { cC[c.i]--; cB[c.i]++; c.mB++; } else ruim = 1;
+    }
+    // cai da C para a D: na D27 quem o conta é o próprio build2027Alloc (Critério 1, em cnt)
+    for (const t of reb) { const c = clubes[t]; if (c) { cC[c.i]--; c.mD++; } else ruim = 1; }
+    // sobe da D para a C
+    prom.forEach(t => { const c = clubes[t]; if (c) { cC[c.i]++; c.mC++; } else ruim = 1; });
+    for (let i = 0; i < nU; i++) {
+      const a = cA[i], b = cB[i], c3 = cC[i], dd = cnt[UFS[i]] || 0;
+      if (a < 0 || b < 0 || c3 < 0) { ruim = 1; continue; }
+      hist.A[i][Math.min(a, UF27_MAXK)]++;
+      hist.B[i][Math.min(b, UF27_MAXK)]++;
+      hist.C[i][Math.min(c3, UF27_MAXK)]++;
+      hist.D[i][Math.min(dd, UF27_MAXK)]++;
+      hist.tot[i][Math.min(a + b + c3 + dd, UF27_MAXK)]++;
+      tam.A += a; tam.B += b; tam.C += c3; tam.D += dd;
+    }
+    if (ruim) erros++;
+    n++;
+  };
+  const alloc = build2027Alloc(dash.D, dash.C, rncProj, Object.assign({}, cfg || {}, { onDraw: onDraw }));
+  if (!alloc || !n) return null;
+
+  const dist = arr => {
+    let mx = 0;
+    for (let k = arr.length - 1; k > 0; k--) if (arr[k]) { mx = k; break; }
+    const pcts = [];
+    let E = 0;
+    for (let k = 0; k <= mx; k++) { pcts.push(arr[k] / n * 100); E += arr[k] * k; }
+    return { pcts: pcts, E: E / n };
+  };
+  const ufDist = UFS.map((u, i) => {
+    const o = { uf: u, n26: {} };
+    KS.forEach(k => { o.n26[k] = base[k][i]; o[k] = dist(hist[k][i]); });
+    return o;
+  });
+
+  // Probabilidade por clube, dos MESMOS sorteios — é o que explica cada número da tabela:
+  // somando os clubes de um estado dá exatamente a esperança dele (na D, menos as vagas que
+  // ainda não têm dono: copa estadual em disputa conta para o estado, mas não tem nome).
+  const pD = {};
+  (alloc.clubProb || []).forEach(c => { pD[c.n + '|' + c.u] = c.p; });
+  const pc = v => { const p = v / n * 100; return p < 1e-9 ? 0 : p; };
+  const porUF = {};
+  UFS.forEach(u => porUF[u] = []);
+  const visto = {};
+  Object.keys(clubes).forEach(t => {
+    const c = clubes[t];
+    const o = { n: t, u: c.u, s26: c.s26, A: 0, B: 0, C: 0, D: 0 };
+    if (c.s26 === 'A') { o.B = pc(c.mB); o.A = Math.max(0, 100 - o.B); }
+    else if (c.s26 === 'B') { o.A = pc(c.mA); o.C = pc(c.mC); o.B = Math.max(0, 100 - o.A - o.C); }
+    else if (c.s26 === 'C') { o.B = pc(c.mB); o.D = pc(c.mD); o.C = Math.max(0, 100 - o.B - o.D); }
+    else { o.C = pc(c.mC); o.D = pD[t + '|' + c.u] || 0; }
+    o.fora = Math.max(0, 100 - o.A - o.B - o.C - o.D);
+    if (o.fora < 1e-9) o.fora = 0;
+    visto[t + '|' + c.u] = 1;
+    porUF[c.u].push(o);
+  });
+  // Quem não joga divisão nacional em 2026 e entra na D 2027 (estadual, copa ou Ranking).
+  (alloc.clubProb || []).forEach(c => {
+    if (visto[c.n + '|' + c.u] || !porUF[c.u]) return;
+    porUF[c.u].push({ n: c.n, u: c.u, s26: null, A: 0, B: 0, C: 0, D: c.p, fora: Math.max(0, 100 - c.p) });
+  });
+  const ordem = { A: 0, B: 1, C: 2, D: 3 };
+  UFS.forEach(u => porUF[u].sort((a, b) => (a.s26 ? ordem[a.s26] : 4) - (b.s26 ? ordem[b.s26] : 4) || a.n.localeCompare(b.n)));
+
+  const soma = k => base[k].reduce((s, v) => s + v, 0);
+  return {
+    ufDist: ufDist,
+    clubes: porUF,
+    nDraws: n,
+    erros: erros + (alloc.erros || 0),
+    semUF: semUF,
+    alinhado: nA === n && nB === n,
+    tam: { A: tam.A / n, B: tam.B / n, C: tam.C / n, D: tam.D / n },
+    tam26: { A: soma('A'), B: soma('B'), C: soma('C'), D: soma('D') },
+    eSemDono: alloc.eSemDono
+  };
+}
 
 // ============================================================================
 // COMPONENTES UI — helpers reutilizáveis
@@ -15248,7 +15431,7 @@ const Classificados2027View = ({
   });
 
   const mx = Math.max(1, ...comp.map(r => Math.abs(r.d)));
-  const thc = (k, label, align) => h(SortHeader, { k: k, label: label, sort: stComp.sort, onClick: stComp.onSort, align: align || 'center' });
+  const thc = (k, label, align) => h(SortHeader, { k: k, label: label, sort: stComp.sort, onClick: stComp.toggle, align: align || 'center' });
   const comparativo = h("div", { className: "overflow-x-auto" },
     h("table", { className: "text-xs w-full max-w-2xl" },
       h("thead", null, h("tr", { className: "text-slate-400 border-b border-slate-700" },
@@ -21007,7 +21190,7 @@ function RankingNacionalSim({
       h("input", { type: "checkbox", checked: soSim, onChange: e => setSoSim(e.target.checked), className: "accent-emerald-500" }),
       "só quem joga em 2026"));
 
-  const th = (k, label, align) => h(SortHeader, { k: k, label: label, sort: st.sort, onClick: st.onSort, align: align || 'center' });
+  const th = (k, label, align) => h(SortHeader, { k: k, label: label, sort: st.sort, onClick: st.toggle, align: align || 'center' });
   const cabTabela = h("thead", null, h("tr", { className: "text-slate-400 border-b border-slate-700" },
     th('pos27', '#'), th('n', 'Clube', 'left'), th('serie', 'Série 26'), th('s27', 'Série 27'), th('cb27', 'CdB 27'),
     th('rnc26', 'RNC 2026'), th('s5', 'Σ 21-25'), th('p26', 'P26'), th('rnc27', 'RNC 2027'),
@@ -21079,6 +21262,187 @@ function RankingNacionalSim({
   return h("div", { className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50" },
     cabecalho, abas,
     vis === 'proj' ? h("div", null, barra, tabela, notaTabela) : dados);
+}
+// === Aba Estados (v4.91) ===
+// Quantos clubes de cada estado em cada divisão nacional em 2027: esperança, P(exatamente k)
+// e, ao abrir um estado, os clubes que explicam o número. Tudo sai de buildUF2027 — um passe
+// de acoplamento sobre os rastros do dashboard, sem Monte Carlo próprio.
+const UF27_COR = { A: 'text-yellow-300', B: 'text-sky-300', C: 'text-orange-300', D: 'text-emerald-300' };
+const uf27Certo = d => d.pcts.some(p => p >= 100 - 1e-9);
+const uf27Pct = p => p <= 0 ? '·' : p >= 99.95 ? '100' : p < 0.05 ? '~0' : p < 9.95 ? p.toFixed(1) : String(Math.round(p));
+function Estados2027Sim({
+  dash
+}) {
+  const h = React.createElement;
+  const [vis, setVis] = useState('resumo');
+  const [aberta, setAberta] = useState(null);
+  const [ord, setOrd] = useState({ key: 'E', dir: 'desc' });
+  const R = useMemo(() => {
+    try {
+      const proj = dash ? buildRNC(dash) : null;
+      return proj ? buildUF2027(dash, proj, null) : null;
+    } catch (e) {
+      console.error('UF2027', e);
+      return null;
+    }
+  }, [dash]);
+  const linhas = useMemo(() => !R ? [] : R.ufDist.map(r => ({ uf: r.uf, A: r.A.E, B: r.B.E, C: r.C.E, D: r.D.E, tot: r.tot.E, r: r })), [R]);
+  const st = useSortable(linhas, 'tot', 'desc');
+  if (!R) return h("div", { className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50" },
+    h("p", { className: "text-slate-400 text-center py-8" },
+      "Rode \"⚡ Simular Tudo\" com as Séries A, B, C e D marcadas para projetar quantos clubes cada estado terá em cada divisão em 2027."));
+
+  const abre = uf => setAberta(a => a === uf ? null : uf);
+  const fechadas = UF27_DIVS.filter(d => R.ufDist.every(r => uf27Certo(r[d.key])));
+  const abertas = UF27_DIVS.filter(d => fechadas.indexOf(d) < 0);
+
+  const cabecalho = h("div", { className: "mb-3" },
+    h("h2", { className: "text-base font-semibold text-emerald-300" }, "Clubes por estado em cada divisão — projeção 2027"),
+    h("p", { className: "text-[11px] text-slate-400 mt-1 leading-relaxed" },
+      "Cada sorteio do Monte Carlo monta as quatro divisões de 2027 de uma vez — quem cai, quem sobe e as 96 vagas da Série D — e conta os clubes de cada estado. ",
+      h("span", { className: "text-slate-300" }, "E"), " é o número esperado; as probabilidades são de o estado ter ",
+      h("span", { className: "text-slate-300" }, "exatamente k"), " clubes na divisão (",
+      R.nDraws.toLocaleString('pt-BR'), " sorteios)."),
+    fechadas.length > 0 && h("p", { className: "text-[11px] text-slate-500 mt-1" },
+      "Já sem incerteza no modelo: ", h("span", { className: "text-slate-300" }, fechadas.map(d => d.label).join(' · ')),
+      abertas.length > 0 && ". Ainda em aberto: ",
+      abertas.length > 0 && h("span", { className: "text-amber-300" }, abertas.map(d => d.label).join(' · ')), "."),
+    R.erros > 0 && h("p", { className: "text-[11px] text-amber-400 mt-1" },
+      "⚠️ ", R.erros, " sorteio(s) não fecharam a conta das divisões — os números abaixo podem estar levemente fora."));
+
+  const seletor = h("div", { className: "flex flex-wrap gap-1 mb-3 bg-slate-800/40 rounded-xl p-1 max-w-xl" },
+    [{ id: 'resumo', l: 'Resumo' }].concat(UF27_DIVS.map(d => ({ id: d.key, l: d.label }))).map(t =>
+      h("button", {
+        key: t.id, onClick: () => setVis(t.id),
+        className: `flex-1 py-1 px-2.5 rounded-md text-xs font-medium whitespace-nowrap ${vis === t.id ? 'bg-emerald-600/80 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`
+      }, t.l)));
+
+  // Clubes do estado: de onde vêm e a chance de cada divisão em 2027.
+  const detalhe = (uf, foco) => {
+    const cs = R.clubes[uf] || [];
+    const r = R.ufDist.find(x => x.uf === uf);
+    const emAberto = r.D.E - cs.reduce((s, c) => s + c.D, 0) / 100;
+    const sing = Math.abs(emAberto - 1) < 0.005;
+    // width:0 + min-width:100%: o painel preenche a célula sem entrar na largura intrínseca
+    // da tabela de fora — senão um nome comprido empurra a coluna Total para fora da tela.
+    return h("div", { className: "bg-slate-900/60 rounded-lg p-2 my-1 border border-slate-700/40 text-left", style: { width: 0, minWidth: '100%' } },
+      h("p", { className: "text-[10px] text-slate-500 mb-1" }, "Clubes de ", uf, " — chance (%) de cada divisão em 2027"),
+      h("div", { className: "overflow-x-auto" },
+        h("table", { className: "text-[11px]" },
+          h("thead", null, h("tr", { className: "text-slate-500" },
+            h("th", { className: "text-left font-medium py-0.5 pr-2" }, "Clube"),
+            h("th", { className: "font-medium px-1" }, "2026"),
+            UF27_DIVS.map(d => h("th", { key: d.key, className: "font-medium px-1 text-right " + (foco === d.key ? UF27_COR[d.key] : '') }, d.key)),
+            h("th", { className: "font-medium px-1 text-right" }, "fora"))),
+          h("tbody", null, cs.map(c => h("tr", { key: c.n, className: "border-t border-slate-800/70" },
+            h("td", { className: "py-0.5 pr-2 whitespace-nowrap text-slate-200" }, h(Badge, { name: c.n, size: 16 }), c.n),
+            h("td", { className: "text-center px-1" }, c.s26
+              ? h("span", { className: "font-bold " + UF27_COR[c.s26] }, c.s26)
+              : h("span", { className: "text-slate-600" }, "—")),
+            UF27_DIVS.map(d => h("td", {
+              key: d.key,
+              className: "text-right font-mono px-1 " + (c[d.key] > 0 ? UF27_COR[d.key] : 'text-slate-700') + (foco === d.key && c[d.key] > 0 ? ' font-bold' : '')
+            }, uf27Pct(c[d.key]))),
+            h("td", { className: "text-right font-mono px-1 " + (c.fora > 0 ? 'text-slate-400' : 'text-slate-700') }, uf27Pct(c.fora))))))),
+      emAberto > 0.005 && h("p", { className: "text-[10px] text-amber-300/90 mt-1" },
+        "+ ", Math.abs(emAberto - Math.round(emAberto)) < 0.005 ? Math.round(emAberto) : emAberto.toFixed(2),
+        sing ? " vaga de " : " vagas de ", uf,
+        sing ? " na Série D ainda sem dono conhecido — conta para o estado, mas ainda não tem nome." : " na Série D ainda sem dono conhecido — contam para o estado, mas ainda não têm nome."));
+  };
+
+  // --- Resumo: UF × divisão ---
+  const celula = (d, n26, key) => {
+    const certo = uf27Certo(d);
+    const cor = d.E > n26 + 0.005 ? 'text-emerald-300' : d.E < n26 - 0.005 ? 'text-rose-300' : d.E === 0 ? 'text-slate-700' : 'text-slate-200';
+    const todos = d.pcts.map((p, i) => [i, p]).filter(x => x[1] > 0);
+    const tit = '2026: ' + n26 + ' · 2027: ' + todos.map(x => x[0] + ' (' + x[1].toFixed(1) + '%)').join(', ');
+    const tops = certo ? [] : todos.slice().sort((a, b) => b[1] - a[1]).slice(0, 3).sort((a, b) => a[0] - b[0]);
+    return h("td", { key: key, className: "py-1 px-1 text-center align-top", title: tit },
+      h("div", { className: "font-mono font-semibold " + cor }, certo ? (d.E === 0 && n26 === 0 ? '·' : Math.round(d.E)) : d.E.toFixed(2)),
+      !certo && h("div", { className: "text-[9px] leading-tight text-slate-400 font-mono" },
+        tops.map(x => h("span", { key: x[0], className: "inline-block mx-0.5 whitespace-nowrap" }, x[0], ":", uf27Pct(x[1]), "%")),
+        todos.length > 3 && h("span", { className: "text-slate-600" }, "…")));
+  };
+  const COLS = UF27_DIVS.map(d => d.key).concat('tot');
+  const thR = (k, label, align, cls) => h(SortHeader, { k: k, label: label, sort: st.sort, onClick: st.toggle, align: align || 'center', className: 'py-1 px-1 ' + (cls || '') });
+  const resumo = h("div", { className: "overflow-x-auto" },
+    h("table", { className: "text-xs w-full max-w-3xl" },
+      h("thead", null, h("tr", { className: "border-b border-slate-700" },
+        thR('uf', 'UF', 'left'),
+        UF27_DIVS.map(d => h(SortHeader, { key: d.key, k: d.key, label: d.label, sort: st.sort, onClick: st.toggle, align: 'center', className: 'py-1 px-1' })),
+        thR('tot', 'Total'))),
+      h("tbody", null, st.sorted.map(l => [
+        h("tr", { key: l.uf, onClick: () => abre(l.uf), className: "border-b border-slate-800/50 cursor-pointer hover:bg-slate-700/20" },
+          h("td", { className: "py-1 px-1 font-semibold text-slate-200 whitespace-nowrap align-top" },
+            h("span", { className: "text-slate-500 text-[9px] mr-1" }, aberta === l.uf ? '▾' : '▸'), l.uf),
+          COLS.map(k => celula(l.r[k], l.r.n26[k], k))),
+        aberta === l.uf && h("tr", { key: l.uf + '-det' }, h("td", { colSpan: 6 }, detalhe(l.uf, null)))
+      ])),
+      h("tfoot", null, h("tr", { className: "border-t border-slate-600 text-slate-400" },
+        h("td", { className: "py-1 px-1 font-semibold" }, "Brasil"),
+        UF27_DIVS.map(d => h("td", { key: d.key, className: "py-1 px-1 text-center font-mono", title: '2026: ' + R.tam26[d.key] },
+          Math.round(R.tam[d.key] * 100) / 100)),
+        h("td", { className: "py-1 px-1 text-center font-mono", title: '2026: ' + (R.tam26.A + R.tam26.B + R.tam26.C + R.tam26.D) },
+          Math.round((R.tam.A + R.tam.B + R.tam.C + R.tam.D) * 100) / 100)))));
+
+  // --- Uma divisão: P(exatamente k) por estado ---
+  const porDivisao = k => {
+    let kMin = Infinity, kMax = 0;
+    R.ufDist.forEach(r => r[k].pcts.forEach((p, i) => { if (p > 0) { kMin = Math.min(kMin, i); kMax = Math.max(kMax, i); } }));
+    if (kMin === Infinity) kMin = 0;
+    const ks = [];
+    for (let i = kMin; i <= kMax; i++) ks.push(i);
+    const valor = (r, key) => key === 'uf' ? r.uf : key === 'n26' ? r.n26[k] : key === 'E' ? r[k].E : key === 'd' ? r[k].E - r.n26[k] : (r[k].pcts[+key.slice(1)] || 0);
+    const rows = R.ufDist.slice().sort((a, b) => {
+      const va = valor(a, ord.key), vb = valor(b, ord.key);
+      const c = typeof va === 'string' ? va.localeCompare(vb) : va - vb;
+      return (ord.dir === 'asc' ? c : -c) || a.uf.localeCompare(b.uf);
+    });
+    const onSort = key => setOrd(o => ({ key: key, dir: o.key === key && o.dir === 'desc' ? 'asc' : 'desc' }));
+    const th = (key, label, cls) => h(SortHeader, { key: key, k: key, label: label, sort: ord, onClick: onSort, align: key === 'uf' ? 'left' : 'right', className: 'py-1 px-1 sm:px-2 ' + (cls || '') });
+    return h("div", null,
+      h("div", { className: "overflow-x-auto" },
+        h("table", { className: "text-xs w-full max-w-3xl" },
+          h("thead", null, h("tr", { className: "border-b border-slate-700" },
+            // E e Δ ANTES das colunas de k: no celular a esperança não pode ficar fora da tela
+            th('uf', 'UF'), th('n26', '2026', 'text-slate-500'), th('E', 'E', UF27_COR[k]), th('d', 'Δ'),
+            ks.map(i => th('k' + i, String(i))))),
+          h("tbody", null, rows.map(r => {
+            const dlt = r[k].E - r.n26[k];
+            const vazio = r[k].E === 0 && r.n26[k] === 0;
+            return [
+              h("tr", { key: r.uf, onClick: () => abre(r.uf), className: "border-b border-slate-800/40 cursor-pointer hover:bg-slate-700/20" + (vazio ? ' opacity-40' : '') },
+                h("td", { className: "py-1 px-1 sm:px-2 font-semibold text-slate-200 whitespace-nowrap" },
+                  h("span", { className: "text-slate-500 text-[9px] mr-1" }, aberta === r.uf ? '▾' : '▸'), r.uf),
+                h("td", { className: "py-1 px-1 sm:px-2 text-right font-mono text-slate-500" }, r.n26[k]),
+                h("td", { className: "py-1 px-1 sm:px-2 text-right font-mono font-semibold " + UF27_COR[k] }, r[k].E.toFixed(2)),
+                h("td", { className: "py-1 px-1 sm:px-2 text-right font-mono whitespace-nowrap " + (dlt > 0.005 ? 'text-emerald-400' : dlt < -0.005 ? 'text-rose-400' : 'text-slate-600') },
+                  Math.abs(dlt) < 0.005 ? '–' : (dlt > 0 ? '+' : '−') + Math.abs(dlt).toFixed(2)),
+                ks.map(i => {
+                  const p = r[k].pcts[i] || 0;
+                  return h("td", { key: i, className: "py-1 px-1 sm:px-2 text-right font-mono text-slate-200", style: { background: sdHeat(p) } }, uf27Pct(p));
+                })),
+              aberta === r.uf && h("tr", { key: r.uf + '-det' }, h("td", { colSpan: ks.length + 4 }, detalhe(r.uf, k)))
+            ];
+          })))),
+      h("p", { className: "text-[10px] text-slate-500 mt-2 italic" },
+        "P(k) = % dos sorteios em que o estado tem exatamente k clubes na ", UF27_DIVS.find(d => d.key === k).label,
+        " 2027. · = 0%, ~0 = <0,05%. Δ = E − 2026. Clique nos cabeçalhos para ordenar."));
+  };
+
+  const rodape = h("div", { className: "text-[10px] text-slate-500 mt-3 leading-relaxed space-y-1" },
+    h("p", null, "Toque num estado para ver os clubes. No resumo, ",
+      h("span", { className: "text-emerald-300" }, "verde"), " = mais clubes que em 2026, ",
+      h("span", { className: "text-rose-300" }, "vermelho"), " = menos; sob o número, as contagens mais prováveis (k:%)."),
+    h("p", null, "Premissas: Série A e B com 20 clubes, Série C com 24 (20 − 4 que sobem − 2 que caem + 4 da B + 6 da D) e Série D com 96 vagas pelos quatro critérios da aba Série D → Class. 2027 — o regulamento da D 2027 ainda não existe, e a vaga pelo Ranking segue o RNC 2027 projetado, sem incerteza própria.",
+      R.eSemDono > 0.005 ? (Math.abs(R.eSemDono - 1) < 0.005
+        ? " Das 96, 1 ainda não tem dono conhecido e entra na conta do estado mesmo assim."
+        : " Das 96, " + (Math.round(R.eSemDono * 100) / 100) + " ainda não têm dono conhecido e entram na conta do estado mesmo assim.") : ""));
+
+  return h("div", { className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50" },
+    cabecalho, seletor,
+    vis === 'resumo' ? resumo : porDivisao(vis),
+    rodape);
 }
 // === Aba Evolução (v4.80) ===
 // Recalcula o Monte Carlo "como se" só os resultados até cada rodada (A/B/C) ou fase do
@@ -21814,6 +22178,10 @@ function SimuladorUnificado() {
     l: 'Ranking CBF',
     e: '📊'
   }, {
+    id: 'uf27',
+    l: 'Estados',
+    e: '🗺️'
+  }, {
     id: 'h2h',
     l: 'Confronto',
     e: '⚔️'
@@ -22154,6 +22522,8 @@ function SimuladorUnificado() {
     dash: dash,
     mergedRes: mergedRes
   }), tab === 'rnc' && /*#__PURE__*/React.createElement(RankingNacionalSim, {
+    dash: dash
+  }), tab === 'uf27' && /*#__PURE__*/React.createElement(Estados2027Sim, {
     dash: dash
   }), tab === 'evolucao' && /*#__PURE__*/React.createElement(EvolucaoSim, {
     cfg: cfg,

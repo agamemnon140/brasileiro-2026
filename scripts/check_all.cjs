@@ -26,7 +26,8 @@ const HARNESSES = [
   'evolucao',         // mascara de fases (D/CB) e truncamento por rodada (A/B/C) da aba Evolucao
   'quad_c',           // 2a fase da C: grupos, placares e final REAIS do quad_c dentro do simMC
   'cb_ko',           // Copa BR quartas->final (CB_AUTO.ko, cbKoPlan, mascaras) e fase2 do 1 Sim de B/C
-  'cb27'             // Copa BR 2027: rastros A/B/C, 128 vagas fecham, garantido nunca desmentido pelo MC
+  'cb27',            // Copa BR 2027: rastros A/B/C, 128 vagas fecham, garantido nunca desmentido pelo MC
+  'uf2027'           // aba Estados: divisoes de 2027 fecham 20/20/24/96 por sorteio, conjunta por UF, clubes somam E
 ];
 
 let falhas = 0;
