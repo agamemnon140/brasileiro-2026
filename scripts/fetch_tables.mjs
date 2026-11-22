@@ -147,9 +147,15 @@ async function fetchLigaGweb(serie) {
 }
 
 // 2ª fase da C no GWEB: nas rodadas 1-6, "GRUPO A" é a 1ª fase (10 jogos/rodada) e "GRUPO B"/
-// "GRUPO C" são os quadrangulares (2 jogos/rodada cada); a final deve chegar como grupo "FINAL"
-// (formato ainda não visto — vai para fase FINAL com a rodada do próprio registro). Devolve as
-// mesmas linhas que sanitizeQuadC produz do PDF, então a mesclagem é a mesma.
+// "GRUPO C" são os quadrangulares (2 jogos/rodada cada). A FINAL NÃO vem como "FINAL": visto em
+// 10/2026, a API a lista como "GRUPO D", rodadas 1 (ida) e 2 (volta) — e é assim que ela está
+// gravada no results.json (fase 'Q', grupo 'D'). Quem a reconhece é o app (applyQuadCAuto,
+// v4.92: "grupo" de 2 clubes, um de cada quadrangular). Este passe NÃO converte para fase
+// 'FINAL' de propósito: a chave de mescla é fase|casa|fora, então converter duplicaria as duas
+// linhas já gravadas. Limite conhecido: sanitizeQuadC só guarda pênaltis em linha de fase
+// 'FINAL' — uma final decidida nos pênaltis que venha por aqui chega sem eles (em 2026 foi
+// 3x2 no agregado). O ramo /FINAL/ fica para o caso de a API um dia nomear a fase.
+// Devolve as mesmas linhas que sanitizeQuadC produz do PDF, então a mesclagem é a mesma.
 async function fetchQuadCGweb() {
   const rows = [];
   let ignorados = new Set();

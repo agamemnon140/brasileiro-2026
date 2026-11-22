@@ -9,7 +9,19 @@
 // então o top-8 é fixo e os grupos sintéticos podem ser construídos com a regra do app.
 // Placares sintéticos: g[i] vence g[j] (i < j) em casa e fora por 2x0 → 1º e 2º de cada grupo
 // são determinísticos (18 e 12 pts) e q4 tem de dar 100/100/0/0.
+//
+// v4.92: a final chega em DOIS formatos — fase 'FINAL' (passe do PDF) e "GRUPO D" (a API de
+// jogos da CBF lista a decisão como mais um grupo: fase 'Q', grupo 'D', rodadas 1 e 2). Este
+// harness só testava o primeiro, e a final real de 2026, que veio no segundo, ficou um mês
+// ignorada com tudo verde aqui. Agora os dois têm de dar o mesmo resultado, e há um teste
+// sobre o results.json de verdade: se a final está lá inteira, o campeão sai com 100%.
+const fs = require('fs');
+const path = require('path');
 const { runWithEngine } = require('./engine.cjs');
+let LIVE = {};
+try { LIVE = JSON.parse(fs.readFileSync(process.env.RESULTS || path.join(__dirname, '..', 'results.json'), 'utf8')); } catch (e) {}
+const LIVE_QUAD = Array.isArray(LIVE.quad_c) ? LIVE.quad_c : [];
+const LIVE_C = (LIVE.results || []).filter(r => r && r.serie === 'C').map(r => ({ c: r.casa, f: r.fora, gc: +r.gc, gf: +r.gf, r: +r.rodada }));
 
 const NS = parseInt(process.env.NS || '400', 10);
 
@@ -57,8 +69,32 @@ const src = `
   // jogo com data futura/sem placar: gc null não conta como disputado
   applyQuadCAuto([{ ...rows[0], gc: null, gf: null }, ...rows.slice(1)]);
   const nNull = QUAD_C_AUTO.n, groupsNull = QUAD_C_AUTO.groups;
+  // v4.92 — a MESMA final no formato do GWEB: fase 'Q', grupo 'D', rodadas 1 e 2
+  const comoD = r => ({ ...r, fase: 'Q', grupo: 'D' });
+  applyQuadCAuto([...rows, comoD(ida), comoD(volta)]);
+  const gweb = { n: QUAD_C_AUTO.n, finalG: QUAD_C_AUTO.finalG.slice(), labels: QUAD_C_AUTO.labels, pernas: Object.keys(QUAD_C_AUTO.final).length,
+    jogoFantasma: !!(QUAD_C_AUTO.games[ida.casa + '>' + ida.fora] || QUAD_C_AUTO.games[volta.casa + '>' + volta.fora]),
+    ehFinal: quadCIsFinal(comoD(ida)), naoEhFinal: quadCIsFinal(rows[0]) };
+  const finD = runC();
+  applyQuadCAuto([...rows, comoD(ida)]);
+  const finDIda = runC();
+  // "grupo" de 2 clubes do MESMO quadrangular não é final: fica como estava (jogo de grupo)
+  applyQuadCAuto([...rows, { ...comoD(ida), casa: gA[0], fora: gA[1] }]);
+  const mesmo = { finalG: QUAD_C_AUTO.finalG.slice(), pernas: Object.keys(QUAD_C_AUTO.final).length, labels: QUAD_C_AUTO.labels };
+  // dados ao vivo: o quad_c do results.json como ele É, sobre a liga real
+  let live = null;
+  const LQ = ${JSON.stringify(LIVE_QUAD)}, LC = ${JSON.stringify(LIVE_C)};
+  if (LQ.length) {
+    applyQuadCAuto(LQ);
+    const pernas = LQ.filter(r => quadCIsFinal(r) && r.gc != null);
+    live = { n: QUAD_C_AUTO.n, grupos: !!QUAD_C_AUTO.groups, finalG: QUAD_C_AUTO.finalG.slice(), pernas: pernas.map(r => ({ casa: r.casa, fora: r.fora, gc: +r.gc, gf: +r.gf, pen_c: r.pen_c, pen_f: r.pen_f, rodada: +r.rodada })),
+      nGrupo: LQ.filter(r => !quadCIsFinal(r) && r.gc != null).length };
+    const P = {};
+    simMC(times, SC_RANKING, T, mergeRes(SC_RES, LC), cfg, 'C', ${NS}, 'conservador', false).probs.forEach(p => P[p.time] = p);
+    live.P = P;
+  }
   applyQuadCAuto([]);
-  return { top8, gA, gB, ninth, labels, groups, nGames, base, grp, grpIgnore, badP, groupsBad, fin, finIda, finPen, nNull, groupsNull, nRes: full.length };
+  return { top8, gA, gB, ninth, labels, groups, nGames, base, grp, grpIgnore, badP, groupsBad, fin, finIda, finPen, nNull, groupsNull, gweb, finD, finDIda, mesmo, live, nRes: full.length };
 `;
 const E = runWithEngine(src);
 
@@ -101,6 +137,38 @@ check(E.finIda[E.gA[0]].qChamp > 50 && E.finIda[E.gA[0]].qChamp < 100, `só a id
 check(E.finIda[E.gB[0]].qChamp > 0, `só a ida real: qChamp(${E.gB[0]}) > 0 (deu ${E.finIda[E.gB[0]].qChamp.toFixed(2)})`);
 check(near(sum(E.finIda, 'qChamp'), 100), `ΣqChamp = 100 (deu ${sum(E.finIda, 'qChamp').toFixed(3)})`);
 check(near(E.finPen[E.gB[0]].qChamp, 100), `agregado 1x1, pênaltis 3x4 do PDF: qChamp(${E.gB[0]}) = 100 (deu ${E.finPen[E.gB[0]].qChamp.toFixed(3)})`);
+
+console.log('\n(6) final no formato do GWEB ("GRUPO D": fase Q, grupo D, rodadas 1 e 2)');
+check(E.gweb.finalG.join('') === 'D' && E.gweb.pernas === 2, `grupo D reconhecido como final, 2 pernas (finalG = [${E.gweb.finalG.join(',')}], pernas = ${E.gweb.pernas})`);
+check(E.gweb.n === 24 && !E.gweb.jogoFantasma, `as pernas não contam como jogo de grupo (n = ${E.gweb.n})`);
+check(E.gweb.labels && E.gweb.labels.join('') === 'BC', 'os quadrangulares seguem sendo B e C');
+check(E.gweb.ehFinal && !E.gweb.naoEhFinal, 'quadCIsFinal: linha do grupo D sim, linha de quadrangular não');
+check(near(E.finD[E.gA[0]].qChamp, 100) && near(sum(E.finD, 'qChamp'), 100), `ida+volta reais: qChamp(${E.gA[0]}) = 100, igual ao formato do PDF (deu ${E.finD[E.gA[0]].qChamp.toFixed(3)})`);
+check(E.finDIda[E.gA[0]].qChamp > 50 && E.finDIda[E.gA[0]].qChamp < 100, `só a ida real: 50 < qChamp(${E.gA[0]}) < 100 (deu ${E.finDIda[E.gA[0]].qChamp.toFixed(2)})`);
+check(E.mesmo.finalG.length === 0 && E.mesmo.pernas === 0 && E.mesmo.labels && E.mesmo.labels.join('') === 'BC', '"grupo" de 2 clubes do MESMO quadrangular não vira final');
+
+console.log('\n(7) results.json real');
+if (!E.live) console.log('  skip sem quad_c no results.json');
+else {
+  const L = E.live;
+  check(L.grupos, 'os dois quadrangulares são reconhecidos');
+  check(L.n === L.nGrupo, `QUAD_C_AUTO.n = jogos de grupo com placar (${L.n} = ${L.nGrupo})`);
+  check(L.n <= 24, `no máximo 24 jogos de grupo (deu ${L.n})`);
+  if (L.pernas.length === 2) {
+    // campeão pelo agregado (ou pelos pênaltis da volta), calculado aqui, sem nome fixo
+    const gols = {};
+    L.pernas.forEach(p => { gols[p.casa] = (gols[p.casa] || 0) + p.gc; gols[p.fora] = (gols[p.fora] || 0) + p.gf; });
+    const [x, y] = Object.keys(gols);
+    const volta = L.pernas.slice().sort((a, b) => a.rodada - b.rodada)[1];
+    const camp = gols[x] !== gols[y] ? (gols[x] > gols[y] ? x : y)
+      : (volta.pen_c != null && volta.pen_f != null ? (volta.pen_c > volta.pen_f ? volta.casa : volta.fora) : null);
+    console.log(`      final: ${L.pernas.map(p => `${p.casa} ${p.gc}x${p.gf} ${p.fora}`).join(' · ')} → ${camp || 'empate sem pênaltis gravados'}`);
+    if (camp) {
+      check(near(L.P[camp].qChamp, 100), `final completa: qChamp(${camp}) = 100 (deu ${L.P[camp].qChamp.toFixed(3)})`);
+      check(near(sum(L.P, 'qChamp'), 100), `ΣqChamp = 100 (deu ${sum(L.P, 'qChamp').toFixed(3)})`);
+    }
+  } else console.log(`      final ainda incompleta no results.json (${L.pernas.length} perna(s)) — título segue simulado`);
+}
 
 console.log(ok ? '\nRESULT: PASS' : '\nRESULT: FAIL');
 process.exit(ok ? 0 : 1);

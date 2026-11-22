@@ -31,7 +31,40 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.91
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.92
+// v4.92 (22/11/2026): FINAL DA SÉRIE C IGNORADA — A API DA CBF A ENTREGA COMO "GRUPO D".
+//        O app dava o título da C em aberto (Ferroviária ~62% / Maringá ~38%) um mês depois de o
+//        Maringá ser campeão (1×1 em Maringá em 17/10, 2×1 em Araraquara em 24/10; 3×2 no
+//        agregado). Os dois jogos ESTAVAM no results.json desde 19/10 e 26/10 — só que como
+//        fase 'Q', grupo 'D', rodadas 1 e 2: a API de jogos da CBF (GWEB) não tem uma fase
+//        "FINAL", ela lista a decisão como mais um grupo depois dos quadrangulares B e C. O
+//        scraper esperava o nome "FINAL" (formato "ainda não visto", dizia o comentário), o
+//        regex ^GRUPO [B-D]$ aceitou o D como quadrangular, e applyQuadCAuto só reconhecia
+//        fase === 'FINAL': as duas pernas viraram "jogos de grupo" de um grupo de 2 clubes
+//        (QUAD_C_AUTO.n = 26, final = {}) e o Monte Carlo seguiu sorteando a final.
+//        Correção no APP, sem tocar no results.json (dado da automação não se edita à mão):
+//        applyQuadCAuto passa a reconhecer a final pela ESTRUTURA — um "grupo" com exatamente 2
+//        clubes, um de cada quadrangular — além da fase 'FINAL' que o passe do PDF produz. A
+//        rodada do registro (1 = ida, 2 = volta) já é a convenção de quadCFinalLegs. As letras
+//        reconhecidas ficam em QUAD_C_AUTO.finalG; quadCIsFinal(r) é o teste único, usado também
+//        pelo log da Config (as linhas apareciam como "QD1"/"QD2", agora "F·i"/"F·v"). Grupo de 2
+//        clubes do MESMO quadrangular não é final e segue como antes.
+//        Efeitos: título da C = Maringá 100% (o card do dashboard passa a "Definido", com campeão
+//        e vice; a aba Série C mostra a final 3–2 travada); Copa do Brasil 2027 — a vaga de
+//        campeão da Série C (3ª fase) deixa de ser sorteada entre os dois finalistas, e a nota
+//        fixa "a Série C ainda está no quadrangular" (escrita em 27/09) passa a ler o resultado.
+//        O Ranking CBF NÃO muda: buildRNC pontua A/B/C pela posição da fase de liga (posF), não
+//        pela classificação final — a Ferroviária entra como 3ª da 1ª fase, não como vice.
+//        Scraper: lógica INALTERADA de propósito — passar a gravar fase 'FINAL' mudaria a chave
+//        (fase|casa|fora) e duplicaria os dois jogos, e a API da CBF não é alcançável de onde
+//        esta correção foi feita para testar uma migração. Só o comentário foi corrigido. Fica
+//        registrado o limite: sanitizeQuadC só guarda pênaltis em linha de fase 'FINAL', então
+//        uma final decidida nos pênaltis que venha pelo GWEB chegaria sem eles (não foi o caso).
+//        A Action estava vermelha desde 19/10 por isso: o harness cb_ko compara os jogos de
+//        grupo travados (24) com QUAD_C_AUTO.n, que tinha virado 26. Volta a passar sem mexer no
+//        harness. quad_c.cjs ganhou o formato do GWEB (mesmo resultado que o do PDF), o guard do
+//        grupo de 2 do mesmo quadrangular e um teste sobre o results.json real: havendo final
+//        completa, o campeão do agregado tem de sair com 100%.
 // v4.91 (22/11/2026): ABA "ESTADOS" — QUANTOS CLUBES DE CADA UF EM CADA DIVISÃO NACIONAL EM 2027.
 //        Aba nova "🗺️ Estados": número esperado de clubes de cada estado nas Séries A, B, C e D
 //        de 2027 e a distribuição P(exatamente k). Visão "Resumo" (UF × divisão: E, as contagens
@@ -300,7 +333,7 @@ const {
 //        o slot "em disputa", até uma rodada de pesquisa notar. APP_VERSION vira const
 //        colada neste cabeçalho — o rodapé já ficou preso duas vezes (v4.59, v4.73) por
 //        ser string solta.
-const APP_VERSION = 'v4.91';
+const APP_VERSION = 'v4.92';
 // v4.77 (19/08/2026): FILA DE SUCESSÃO nos 27 estados (antes 14 com fonte, 11 sem folga
 //        alguma sobre a cota) + coluna Copa do Brasil 2027 na aba Ranking CBF.
 //        A rodada de pesquisa corrigiu a ordem campeão/vice em SETE estados (AC, AP, MS,
@@ -1605,26 +1638,45 @@ const cbR16Eff = (userMap, autoMap, idx) => {
 // 1º vira o grupo A do app, o 2º o B), games = placares por 'casa>fora', final = pernas por
 // 'casa>fora'. Precedência: resultado REAL > edição do usuário (jogo disputado não se edita;
 // a UI trava o campo).
-let QUAD_C_AUTO = { groups: null, labels: null, games: {}, final: {}, n: 0 };
+// v4.92: a FINAL chega em dois formatos. O passe do PDF grava fase 'FINAL'; a API de jogos da
+// CBF (GWEB) não tem essa fase e lista a decisão como mais um grupo — "GRUPO D", rodadas 1 e 2,
+// gravado como fase 'Q' / grupo 'D'. Então a final também é reconhecida pela ESTRUTURA: um
+// "grupo" com exatamente 2 clubes, um de cada quadrangular (finalG guarda as letras). Sem isso
+// as duas pernas viravam jogos de um grupo-fantasma e o MC seguia sorteando um título decidido.
+let QUAD_C_AUTO = { groups: null, labels: null, games: {}, final: {}, finalG: [], n: 0 };
+const quadCIsFinal = r => !!r && (r.fase === 'FINAL' || QUAD_C_AUTO.finalG.indexOf(String(r.grupo || '').toUpperCase()) >= 0);
 function applyQuadCAuto(rows) {
-  QUAD_C_AUTO = { groups: null, labels: null, games: {}, final: {}, n: 0 };
+  QUAD_C_AUTO = { groups: null, labels: null, games: {}, final: {}, finalG: [], n: 0 };
   if (!Array.isArray(rows) || !rows.length) return QUAD_C_AUTO;
+  const validas = rows.filter(r => r && r.casa && r.fora && r.casa !== r.fora);
+  // 1º passe: quem joga em cada "grupo" — é o que define os quadrangulares e, deles, a final.
   const byG = {};
-  for (const r of rows) {
-    if (!r || !r.casa || !r.fora || r.casa === r.fora) continue;
+  for (const r of validas) {
+    const g = String(r.grupo || '').toUpperCase();
+    if (r.fase === 'FINAL' || !g) continue;
+    (byG[g] = byG[g] || new Set()).add(r.casa); byG[g].add(r.fora);
+  }
+  const letters = Object.keys(byG).filter(g => byG[g].size === 4).sort();
+  if (letters.length === 2) {
+    QUAD_C_AUTO.groups = letters.map(g => [...byG[g]]);
+    QUAD_C_AUTO.labels = letters;
+    QUAD_C_AUTO.finalG = Object.keys(byG).filter(g => {
+      if (byG[g].size !== 2) return false;
+      const lado = [...byG[g]].map(t => letters.findIndex(l => byG[l].has(t)));
+      return lado[0] >= 0 && lado[1] >= 0 && lado[0] !== lado[1];
+    });
+  }
+  // 2º passe: placares, já sabendo o que é final.
+  for (const r of validas) {
     const gc = r.gc == null ? null : Number(r.gc), gf = r.gf == null ? null : Number(r.gf);
     const played = Number.isInteger(gc) && Number.isInteger(gf);
-    if (r.fase === 'FINAL') {
+    if (quadCIsFinal(r)) {
       if (played) QUAD_C_AUTO.final[r.casa + '>' + r.fora] = { gc, gf, pen_c: r.pen_c == null ? null : Number(r.pen_c), pen_f: r.pen_f == null ? null : Number(r.pen_f), rodada: Number(r.rodada) || 0 };
       continue;
     }
-    const g = String(r.grupo || '').toUpperCase();
-    if (!g) continue;
-    (byG[g] = byG[g] || new Set()).add(r.casa); byG[g].add(r.fora);
+    if (!String(r.grupo || '')) continue;
     if (played) { QUAD_C_AUTO.games[r.casa + '>' + r.fora] = [gc, gf]; QUAD_C_AUTO.n++; }
   }
-  const letters = Object.keys(byG).filter(g => byG[g].size === 4).sort();
-  if (letters.length === 2) { QUAD_C_AUTO.groups = letters.map(g => [...byG[g]]); QUAD_C_AUTO.labels = letters; }
   return QUAD_C_AUTO;
 }
 // Grupos reais só valem quando os 8 classificados da simulação são exatamente os 8 da CBF (na
@@ -19524,7 +19576,7 @@ function CopaBrasil2027({ dash, mergedRes }) {
   const secC2 = box('3ª fase — campeões de 2026 (6 vagas)', h('div', { className: 'space-y-1' }, R.c2.map(x => h('div', { key: x.k, className: 'text-xs flex flex-wrap items-baseline gap-1 border-b border-slate-700/30 py-1' },
     h('span', { className: 'w-44 shrink-0 text-amber-300' }, x.k),
     x.certo ? h('span', null, '✓ ', h(TN, { name: x.certo })) : x.st !== 'ok' ? h('span', { className: 'text-slate-400' }, 'em disputa' + (x.dt ? ' — até ' + x.dt.slice(8, 10) + '/' + x.dt.slice(5, 7) : '') + (x.obs ? ' · ' + x.obs : '')) : h('span', { className: 'flex flex-wrap' }, x.dist.slice(0, 6).map(distRow))))),
-    'Copa regional cujo campeão fica na Série A 2027 passa a vaga ao próximo da classificação final daquela copa; a Série C ainda está no quadrangular.');
+    'Copa regional cujo campeão fica na Série A 2027 passa a vaga ao próximo da classificação final daquela copa; ' + ((R.c2.find(x => x.k === 'Série C 2026') || { dist: [] }).dist.some(d => d.n && d.p >= 99.95) ? 'a Série C já tem campeão.' : 'a Série C ainda está em disputa.'));
   const ufRows = R.ufs.filter(U => !(soAbertas || soVagas) || U.abertas > 0);
   const gar = new Set(R.clubes.filter(c => c.garantido).map(c => c.n));
   const dm = dt => dt ? dt.slice(8, 10) + '/' + dt.slice(5, 7) : null;
@@ -22579,7 +22631,7 @@ function SimuladorUnificado() {
     className: "space-y-0.5 max-h-[320px] overflow-y-auto"
   }, [...resMeta.results, ...(resMeta.quadC || []).filter(r => r && r.gc != null).map(r => ({
     serie: 'C',
-    rodada: r.fase === 'FINAL' ? 'F\xB7' + (Number(r.rodada) === 2 ? 'v' : 'i') : 'Q' + (r.grupo || '') + r.rodada,
+    rodada: quadCIsFinal(r) ? 'F\xB7' + (Number(r.rodada) === 2 ? 'v' : 'i') : 'Q' + (r.grupo || '') + r.rodada,
     casa: r.casa,
     gc: r.gc,
     gf: r.gf,
