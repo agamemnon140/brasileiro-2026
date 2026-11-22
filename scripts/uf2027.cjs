@@ -13,6 +13,13 @@
 //     diferença é exatamente o que ainda não tem dono (copa estadual em disputa).
 // (5) O gancho não mexeu na Série D: a contagem por UF é idêntica à do build2027Alloc puro
 //     (mesma seed), ou seja, aos números da aba Série D → Class. 2027.
+// (6) v4.93 — somas de divisões: as 15 combinações (A+B, A+B+C...) são recontadas AQUI, sorteio
+//     a sorteio, a partir dos rastros crus e do pareamento que o gancho expõe, e o histograma
+//     por UF tem de sair idêntico. É a conjunta de novo: a soma A+B de um estado não se obtém
+//     dos histogramas de A e de B.
+// (7) v4.93 — histórico (UF_HIST): cada coluna fecha o nº de clubes da edição, as janelas das
+//     combinações são as esperadas, e as regras de recorde/mínimo/empate valem em casos
+//     construídos à mão.
 const fs = require('fs');
 const path = require('path');
 const { loadEngine } = require('./engine.cjs');
@@ -20,6 +27,7 @@ const { loadEngine } = require('./engine.cjs');
 const NS = parseInt(process.env.NS || '400', 10);
 const E = loadEngine(['DEFAULT_CFG', 'simMC', 'simMC_D', 'simMC_CB', 'parseTab', 'buildRNC', 'build2027Alloc', 'buildUF2027',
   'mergeRes', 'applyQuadCAuto', 'applySdKoAuto', 'ufOfTeam', 'EST_QUOTA_2027', 'UF27_DIVS', 'SD_TIMES',
+  'UF27_COMBOS', 'UF_HIST', 'UF_HIST_FIM', 'ufHistY0', 'ufHistSerie', 'ufHistTam', 'ufHistRec', 'ufHistSelos',
   'SA_RANKING', 'SA_TAB', 'SA_NM', 'SA_DATES', 'SA_RES', 'SB_RANKING', 'SB_TAB', 'SB_NM', 'SB_DATES', 'SB_RES',
   'SC_RANKING', 'SC_TAB', 'SC_NM', 'SC_DATES', 'SC_RES']);
 let results = {};
@@ -154,6 +162,96 @@ check(piorD < 1e-9, `D 2027 por UF idêntica à do build2027Alloc (desvio máx $
 const R2 = E.buildUF2027(dash, rnc, null);
 check(JSON.stringify(R2.ufDist) === JSON.stringify(R.ufDist) && JSON.stringify(R2.clubes) === JSON.stringify(R.clubes), 'duas execuções idênticas (reprodutível)');
 check(E.buildUF2027({ A: dash.A, B: dash.B, C: dash.C, D: null }, rnc, null) === null, 'sem a Série D simulada devolve null (a aba pede para rodar tudo)');
+
+console.log('\n(6) somas de divisões recontadas dos rastros');
+const COMBOS = E.UF27_COMBOS.filter(Boolean);
+check(COMBOS.length === 15 && new Set(COMBOS).size === 15 && E.UF27_COMBOS[15] === 'ABCD' && E.UF27_COMBOS[5] === 'AC', `15 combinações, indexadas pela máscara (${COMBOS.join(' ')})`);
+check(R.ufDist.every(r => COMBOS.every(k => r[k] && r.n26[k] != null)), 'toda UF traz as 15 combinações');
+check(R.ufDist.every(r => r.tot === r.ABCD && r.n26.tot === r.n26.ABCD), '`tot` é o mesmo objeto que `ABCD`');
+check(R.ufDist.every(r => COMBOS.every(k => near(r[k].pcts.reduce((a, p) => a + p, 0), 100, 1e-6))), 'Σ P(k) = 100 em toda UF e combinação');
+check(R.ufDist.every(r => COMBOS.every(k => near(r[k].E, k.split('').reduce((a, d) => a + r[d].E, 0), 1e-9))), 'E[soma] = soma das esperanças');
+check(R.ufDist.every(r => COMBOS.every(k => r.n26[k] === k.split('').reduce((a, d) => a + r.n26[d], 0))), 'base de 2026 aditiva');
+// captura do pareamento (d, j) e do cenário da D de cada sorteio, pelo mesmo gancho que o app usa
+const cap = [];
+E.build2027Alloc(dash.D, dash.C, rnc, { onDraw: (d, j, reb, prom, cnt) => cap.push({ d, j, reb: reb.slice(), prom: [...prom], cnt: Object.assign({}, cnt) }) });
+check(cap.length === NS, `gancho chamado uma vez por sorteio (${cap.length})`);
+const base4 = { A: {}, B: {}, C: {}, D: {} };
+UFS.forEach(u => { for (const k of 'ABCD') base4[k][u] = 0; });
+[['A', Object.keys(E.SA_RANKING)], ['B', Object.keys(E.SB_RANKING)], ['C', Object.keys(E.SC_RANKING)]].forEach(([k, ts]) => ts.forEach(t => base4[k][E.ufOfTeam(t)]++));
+const meu = {};
+UFS.forEach(u => { meu[u] = {}; COMBOS.forEach(k => meu[u][k] = []); });
+for (const c of cap) {
+  const a = Object.assign({}, base4.A), b = Object.assign({}, base4.B), cc = Object.assign({}, base4.C);
+  const uf = t => E.ufOfTeam(t);
+  for (let k = 0; k < 4; k++) {
+    let t = dash.A.rebTrace[4 * c.d + k]; a[uf(t)]--; b[uf(t)]++;
+    t = dash.B.accTrace[4 * c.d + k]; b[uf(t)]--; a[uf(t)]++;
+    t = dash.B.rebTrace[4 * c.d + k]; b[uf(t)]--; cc[uf(t)]++;
+    t = dash.C.accTrace[4 * c.j + k]; cc[uf(t)]--; b[uf(t)]++;
+  }
+  c.reb.forEach(t => cc[uf(t)]--);
+  c.prom.forEach(t => cc[uf(t)]++);
+  UFS.forEach(u => {
+    const v = { A: a[u], B: b[u], C: cc[u], D: c.cnt[u] || 0 };
+    COMBOS.forEach(k => { const s = k.split('').reduce((x, d) => x + v[d], 0); meu[u][k][s] = (meu[u][k][s] || 0) + 1; });
+  });
+}
+let piorCb = 0, piorOnde = '';
+UFS.forEach(u => COMBOS.forEach(k => {
+  const mx = Math.max(meu[u][k].length, row[u][k].pcts.length);
+  for (let i = 0; i < mx; i++) {
+    const dv = Math.abs((meu[u][k][i] || 0) / NS * 100 - (row[u][k].pcts[i] || 0));
+    if (dv > piorCb) { piorCb = dv; piorOnde = u + '·' + k; }
+  }
+}));
+check(piorCb < 1e-9, `P(k) das 15 combinações × 27 UFs idêntico ao recontado (desvio máx ${piorCb.toExponential(2)}${piorOnde ? ' em ' + piorOnde : ''})`);
+const tamEsp = { A: 20, B: 20, C: 24, D: 96 };
+check(COMBOS.every(k => near(R.ufDist.reduce((a, r) => a + r[k].E, 0), k.split('').reduce((a, d) => a + tamEsp[d], 0), 1e-9)), 'Σ sobre as UFs de cada soma = tamanho das divisões somadas (A+B+C+D = 160)');
+// onde a conjunta morde: A+B de um estado cujos clubes só trocam entre A e B é constante
+const varDist = d => d.pcts.reduce((a, p, k) => a + p / 100 * (k - d.E) * (k - d.E), 0);
+const mord = UFS.map(u => ({ u, vAB: varDist(row[u].AB), vSoma: varDist(row[u].A) + varDist(row[u].B) })).filter(x => x.vSoma > 1e-6).sort((x, y) => (y.vSoma - y.vAB) - (x.vSoma - x.vAB));
+console.log('      variância de A+B vs var(A) + var(B): ' + (mord.length ? mord.slice(0, 5).map(x => `${x.u} ${x.vAB.toFixed(3)} vs ${x.vSoma.toFixed(3)}`).join(' · ') : 'nenhuma UF com incerteza'));
+
+console.log('\n(7) histórico (UF_HIST)');
+let furo = [];
+for (const k of 'ABCD') {
+  const Hk = E.UF_HIST[k], n = E.UF_HIST_FIM - Hk.y0 + 1;
+  if (Hk.n.length !== n) furo.push(`${k}: n tem ${Hk.n.length} anos, esperado ${n}`);
+  Object.keys(Hk.uf).forEach(u => {
+    if (UFS.indexOf(u) < 0) furo.push(`${k}: UF desconhecida ${u}`);
+    if (!/^\d+$/.test(Hk.uf[u]) || Hk.uf[u].length !== n) furo.push(`${k}/${u}: string com ${Hk.uf[u].length} dígitos, esperado ${n}`);
+  });
+  for (let i = 0; i < n; i++) {
+    const soma = Object.keys(Hk.uf).reduce((a, u) => a + (+Hk.uf[u][i] || 0), 0);
+    if (soma !== Hk.n[i]) furo.push(`${k} ${Hk.y0 + i}: soma ${soma} ≠ ${Hk.n[i]} clubes`);
+  }
+}
+check(furo.length === 0, `cada temporada de A/B/C/D fecha o nº de clubes da edição${furo.length ? ' — ' + furo.slice(0, 4).join('; ') : ''}`);
+check(E.UF_HIST.A.n.slice(0, 4).join() === '24,24,22,20' && E.UF_HIST.C.n[4] === 21 && E.UF_HIST.D.n[0] === 39 && E.UF_HIST.D.n[7] === 68 && E.UF_HIST.D.n[16] === 64,
+  'tamanhos conhecidos: A 24/24/22/20 em 2003–06, C 21 em 2013, D 39 em 2009, 68 em 2016 e 64 em 2025');
+check(E.ufHistY0('A') === 2003 && E.ufHistY0('B') === 2006 && E.ufHistY0('AB') === 2006 && E.ufHistY0('ABC') === 2009 && E.ufHistY0('D') === 2009 && E.ufHistY0('ABCD') === 2009,
+  'janela de uma soma = a mais curta (A 2003, A+B 2006, A+B+C 2009)');
+const sSP = E.ufHistSerie('A', 'SP', row.SP.n26);
+check(sSP.y0 === 2003 && sSP.vals.length === 24 && sSP.vals[1] === 7 && sSP.vals[23] === row.SP.n26.A, `SP na Série A: 24 temporadas, 7 em 2004, 2026 = base do app (${sSP.vals[23]})`);
+const sT = E.ufHistSerie('ABCD', 'SP', row.SP.n26);
+check(sT.vals.length === 18 && sT.vals[17] === row.SP.n26.ABCD && sT.vals[0] === 6 + 5 + 2 + 3, `SP no total: 18 temporadas, 16 clubes em 2009, 2026 = ${sT.vals[17]}`);
+check(E.ufHistSerie('C', 'SP', row.SP.n26).vals[10] === 0, 'Série C de 2019 sem paulista');
+const tT = E.ufHistTam('ABCD');
+check(tT.length === 17 && tT[0] === 99 && tT[16] === 124 && E.ufHistTam('AB')[0] === 40, `tamanho das edições somadas: 99 clubes em 2009, 124 em 2025 (${tT[0]}, ${tT[16]})`);
+check(UFS.every(u => COMBOS.every(k => { const s = E.ufHistSerie(k, u, row[u].n26); return s.vals.length === 2026 - s.y0 + 1 && s.vals.every(v => Number.isInteger(v) && v >= 0); })), 'toda série (UF × combinação) é inteira, sem buraco, até 2026');
+// regras de recorde / mínimo / empate em casos à mão
+const S = (vals, pcts) => { const rec = E.ufHistRec({ y0: 2020, vals }, pcts); return { rec, t: E.ufHistSelos(rec).map(x => x.t + ':' + Math.round(x.p)).join(' ') }; };
+const c1 = S([2, 3, 3, 1], [0, 0, 0, 0, 100]);
+check(c1.rec.max === 3 && c1.rec.anosMax.join() === '2021,2022' && c1.rec.min === 1 && c1.rec.anosMin.join() === '2023' && c1.t === 'recorde:100', `acima do máximo → recorde certo (${c1.t})`);
+const c2 = S([2, 3, 3, 1], [50, 50]);
+check(c2.t === 'minimo:50 igMin:50', `metade abaixo do mínimo, metade igual → novo mínimo 50% + iguala o mínimo 50% (${c2.t})`);
+const c3 = S([2, 3, 3, 1], [0, 0, 30, 60, 10]);
+check(c3.t === 'recorde:10 igMax:60', `10% acima e 60% igual ao máximo (${c3.t})`);
+check(S([2, 2, 2], [0, 0, 100]).t === '', 'série constante: empatar não vira selo');
+check(S([0, 0, 1], [100]).t === '' && S([0, 0, 0], [100]).t === '', 'mínimo zero: "iguala o mínimo" não vira selo');
+check(S([0, 0, 0], [0, 100]).t === 'recorde:100', 'primeiro clube do estado na divisão é recorde');
+const selosDe = k => R.ufDist.map(r => { const s = E.ufHistSerie(k, r.uf, r.n26); const rec = E.ufHistRec(s, r[k].pcts); const t = E.ufHistSelos(rec).filter(x => x.t === 'recorde' || x.t === 'minimo'); return t.length ? `${r.uf} ${t.map(x => (x.t === 'recorde' ? '▲' : '▼') + (x.p < 99.95 ? Math.round(x.p) + '%' : '')).join('')} (hist ${rec.min}–${rec.max})` : null; }).filter(Boolean);
+for (const k of ['A', 'B', 'C', 'D', 'AB', 'ABC', 'ABCD']) console.log(`      ${k.padEnd(4)} recordes/mínimos: ${selosDe(k).join(' · ') || '—'}`);
 
 console.log('\nresumo (E por UF: A / B / C / D):');
 R.ufDist.slice().sort((a, b) => b.tot.E - a.tot.E).slice(0, 8).forEach(r =>

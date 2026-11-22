@@ -31,7 +31,41 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.92
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.93
+// v4.93 (22/11/2026): ABA ESTADOS — HISTÓRICO, RECORDES, MÍNIMOS E SOMAS DE DIVISÕES.
+//        Cada número da aba Estados passa a vir com o mínimo e o máximo históricos do estado e um
+//        selo quando 2027 pode passar do máximo (▲ recorde), ficar abaixo do mínimo (▼ novo
+//        mínimo) ou empatar (=máx / =mín), com a chance quando não é certo. As visões por divisão
+//        viraram duas, e ambas aceitam QUALQUER soma de divisões (A+B, A+B+C, B+C+D...): um
+//        seletor com quatro botões A/B/C/D liga e desliga cada uma.
+//          · Distribuição 2027 — o P(k) de antes, agora também para somas, com a coluna hist.
+//            (mín–máx + selos). Quando a faixa de k passa de 10 colunas (somas com a D), a matriz
+//            vira uma lista "k: %" por estado.
+//          · Histórico — tabela de calor UF × temporada da combinação, com 2027, mín e máx à
+//            esquerda (no celular são o que precisa ficar à vista; a coluna UF é fixa na rolagem
+//            e os selos vão para baixo do número), a linha "edição" com o nº de clubes das
+//            divisões somadas e, no rodapé, os estados que ficaram fora por não terem clube.
+//        DADOS: UF_HIST traz os clubes por UF em cada temporada — Série A desde 2003, B desde
+//        2006, C e D desde 2009 —, um dígito por ano até 2025; 2026 sai das listas do próprio app.
+//        Numa soma vale a janela mais curta. Fonte: a página de cada temporada na Wikipedia em
+//        inglês, com a soma de cada edição conferida contra o nº de clubes. Nas Séries D de 2016 e
+//        2017 a página não dá o estado de cada clube e cinco foram corrigidos contra as tabelas
+//        de grupos da época (o comentário do UF_HIST lista quais). Uma segunda leitura completa
+//        da Série D na Wikipedia em português ficou por fazer.
+//        MOTOR: buildUF2027 passa a contar, por sorteio, as 15 combinações de divisões (máscara
+//        de bits em UF27_COMBOS) — a soma A+B+C de um estado é conjunta e não sai dos histogramas
+//        de A, B e C separados. `tot` continua existindo como apelido de `ABCD`. ufHistSerie /
+//        ufHistRec / ufHistSelos fazem a comparação; empate só vira selo quando diz algo (valor
+//        maior que zero e histórico não constante — empatar em zero não é notícia).
+//        O que os selos mostram hoje: SP com cerca de 2 chances em 3 de chegar a 7 na Série A (igualaria
+//        2004, quando eram 24 clubes; desde 2006 o teto é 6); PE volta a ter 3 na B (como em
+//        2011); SC bate o próprio recorde na C (4); na D e nas somas com a D quase todo estado
+//        está no máximo porque a divisão foi de 64 para 96 clubes — por isso a linha "edição".
+//        Recorde e mínimo são em nº absoluto de clubes, não em proporção.
+//        Harness uf2027.cjs: as 15 combinações × 27 UFs são recontadas dos rastros brutos por um
+//        segundo caminho e têm de sair idênticas; a esperança é aditiva e `tot` = `ABCD`; UF_HIST
+//        fecha o nº de clubes de cada edição; âncoras do histórico (SP 7 na A em 2004) e casos
+//        montados à mão para recorde, mínimo e empates.
 // v4.92 (22/11/2026): FINAL DA SÉRIE C IGNORADA — A API DA CBF A ENTREGA COMO "GRUPO D".
 //        O app dava o título da C em aberto (Ferroviária ~62% / Maringá ~38%) um mês depois de o
 //        Maringá ser campeão (1×1 em Maringá em 17/10, 2×1 em Araraquara em 24/10; 3×2 no
@@ -333,7 +367,7 @@ const {
 //        o slot "em disputa", até uma rodada de pesquisa notar. APP_VERSION vira const
 //        colada neste cabeçalho — o rodapé já ficou preso duas vezes (v4.59, v4.73) por
 //        ser string solta.
-const APP_VERSION = 'v4.92';
+const APP_VERSION = 'v4.93';
 // v4.77 (19/08/2026): FILA DE SUCESSÃO nos 27 estados (antes 14 com fonte, 11 sem folga
 //        alguma sobre a cota) + coluna Copa do Brasil 2027 na aba Ranking CBF.
 //        A rodada de pesquisa corrigiu a ordem campeão/vice em SETE estados (AC, AP, MS,
@@ -14836,6 +14870,96 @@ const SD26_POR_UF = (() => {
 // Precisa dos rastros A.rebTrace, B.accTrace, B.rebTrace, C.accTrace, C.rebTrace e D.trace.
 const UF27_DIVS = [{ key: 'A', label: 'Série A' }, { key: 'B', label: 'Série B' }, { key: 'C', label: 'Série C' }, { key: 'D', label: 'Série D' }];
 const UF27_MAXK = 48;
+// As 15 combinações de divisões, indexadas pela máscara de bits (A=1, B=2, C=4, D=8):
+// UF27_COMBOS[5] === 'AC', UF27_COMBOS[15] === 'ABCD'. O índice 0 fica vazio de propósito.
+const UF27_COMBOS = (() => {
+  const o = [];
+  for (let m = 1; m < 16; m++) o[m] = (m & 1 ? 'A' : '') + (m & 2 ? 'B' : '') + (m & 4 ? 'C' : '') + (m & 8 ? 'D' : '');
+  return o;
+})();
+
+// ====== HISTÓRICO: CLUBES POR UF EM CADA DIVISÃO, POR TEMPORADA (v4.93) ======
+// Um dígito por temporada, de y0 a 2025; n = nº de clubes de cada edição (a soma de cada coluna).
+// 2026 NÃO está aqui: sai das listas do próprio app (n26 do buildUF2027), para o histórico e o
+// simulador nunca discordarem sobre a temporada atual.
+// Janelas: Série A desde 2003 (pontos corridos; 24 clubes em 2003-04, 22 em 2005, 20 desde
+// 2006), B desde 2006 (20 clubes), C e D desde 2009 (ano em que a D nasceu e a C passou a 20).
+// Fonte: a página de cada temporada na Wikipedia em inglês, lida uma a uma em 22/11/2026, com a
+// soma de cada edição conferida contra o nº de clubes. A UF é a da FEDERAÇÃO pela qual o clube
+// joga, não a da cidade (Luziânia é Goiás no mapa e DF na tabela). Série D: as páginas de 2016 e
+// 2017 não trazem o estado de cada clube e a primeira leitura errou cinco — São José-RS e
+// Portuguesa-RJ contados em SP (2016), São Paulo-RS em SP (2017), Luziânia em GO (2016-17) e
+// São Francisco-PA em RR (2016) —, corrigidos contra as tabelas de grupos publicadas na época.
+// Os zeros estranhos são reais: o Acre não teve clube em 2009, Goiás e Roraima em 2010,
+// Rondônia e Roraima em 2011 (federações sem representante; as vagas foram redistribuídas).
+const UF_HIST = {
+  A: { y0: 2003, n: [24, 24, 22, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20],
+    uf: { AL: '00000000000000001000000', BA: '21000111112201221110122', CE: '10110001100000012222112', DF: '00100000000000000000000', GO: '11111112111110101212110', MG: '22212322322223232122322', MT: '00000000000000000011110', PA: '11100000000000000000000', PE: '00012220021112110110001', PR: '33322221212222221212210', RJ: '34444434444333444423444', RN: '00001000000000000000000', RS: '33233222222222122232233', SC: '22111111211342212011010', SP: '67664466465455544555546' } },
+  B: { y0: 2006, n: [20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20],
+    uf: { AL: '11101121011121222111', AM: '10000000000000000011', BA: '01111110021001111100', CE: '12221112211110000110', DF: '22211000000000000000', GO: '10121211213232021223', MA: '00000000111010111100', MG: '11012132221211212112', MT: '00000000111101100001', PA: '21000001011110010012', PB: '00010000000000000000', PE: '21002301221201112110', PR: '11112121112224232123', RJ: '00021100121000021001', RN: '10221122210100000100', RS: '00110000001321211100', SC: '12211134213232323333', SE: '00000000000000110000', SP: '68756755432246424673' } },
+  C: { y0: 2009, n: [20, 20, 20, 20, 21, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20],
+    uf: { AC: '11101000011000000', AL: '21101211200000111', AM: '00000000000111200', BA: '00000000010111000', CE: '11231121101123121', DF: '11111000000000000', GO: '00012110000101111', MA: '10001000202100010', MG: '21111122222210121', MT: '21122111121000000', PA: '23221211112212210', PB: '01111211112212111', PE: '11021111132110112', PI: '00000001000011100', PR: '00000010010110112', RJ: '01233311211111110', RN: '02101012022001111', RS: '23211232113223232', SC: '22210000110221212', SE: '10000011111001112', SP: '21223435420252124', TO: '00100000000000000' } },
+  D: { y0: 2009, n: [39, 40, 40, 40, 40, 41, 40, 68, 68, 68, 68, 68, 68, 64, 64, 64, 64],
+    uf: { AC: '01111212222322222', AL: '11111112232222222', AM: '11211112222222232', AP: '11111112222221111', BA: '22222223334334333', CE: '11112113222233534', DF: '13221212222222222', ES: '11111112222222222', GO: '20222233333333334', MA: '12111112232232223', MG: '32223323334343343', MS: '11111112222221111', MT: '12211112222322222', PA: '12211113222222222', PB: '11121122222232322', PE: '22223223334323222', PI: '11111112322222232', PR: '22222223333334333', RJ: '32222234343333333', RN: '11211212322422232', RO: '11011112222221111', RR: '10011112222222111', RS: '32332224333333434', SC: '23222223334333333', SE: '12111112222222222', SP: '32233334654455444', TO: '11111112222221222' } }
+};
+const UF_HIST_FIM = 2025;
+// Janela de uma combinação = a mais curta entre as divisões que ela soma.
+const ufHistY0 = combo => {
+  let y = 0;
+  for (const k of combo) if (UF_HIST[k].y0 > y) y = UF_HIST[k].y0;
+  return y;
+};
+// Série de uma UF numa combinação ('A', 'ABC', 'ABCD'...): vals[i] = clubes em y0 + i, até 2026.
+// n26 = o objeto n26 da linha do buildUF2027 (a base do app por divisão).
+function ufHistSerie(combo, uf, n26) {
+  const y0 = ufHistY0(combo), vals = [];
+  for (let y = y0; y <= UF_HIST_FIM; y++) {
+    let s = 0;
+    for (const k of combo) { const str = UF_HIST[k].uf[uf]; if (str) s += +str[y - UF_HIST[k].y0]; }
+    vals.push(s);
+  }
+  let s26 = 0;
+  for (const k of combo) s26 += n26[k] || 0;
+  vals.push(s26);
+  return { y0: y0, vals: vals };
+}
+// Nº de clubes das edições somadas na combinação, de y0 a 2025 — sem isso "recorde" engana:
+// a Série D foi de 40 a 96 clubes no período.
+function ufHistTam(combo) {
+  const y0 = ufHistY0(combo), out = [];
+  for (let y = y0; y <= UF_HIST_FIM; y++) {
+    let s = 0;
+    for (const k of combo) s += UF_HIST[k].n[y - UF_HIST[k].y0];
+    out.push(s);
+  }
+  return out;
+}
+// Máximo e mínimo da série e a chance de 2027 ficar acima, igual ou abaixo (pcts em %).
+function ufHistRec(serie, pcts) {
+  const v = serie.vals;
+  let mx = v[0], mn = v[0];
+  for (const x of v) { if (x > mx) mx = x; if (x < mn) mn = x; }
+  const anos = alvo => { const o = []; v.forEach((x, i) => { if (x === alvo) o.push(serie.y0 + i); }); return o; };
+  let pAcima = 0, pIgMax = 0, pAbaixo = 0, pIgMin = 0;
+  pcts.forEach((p, k) => {
+    if (k > mx) pAcima += p; else if (k === mx) pIgMax += p;
+    if (k < mn) pAbaixo += p; else if (k === mn) pIgMin += p;
+  });
+  return { max: mx, anosMax: anos(mx), min: mn, anosMin: anos(mn), pAcima: pAcima, pIgMax: pIgMax, pAbaixo: pAbaixo, pIgMin: pIgMin };
+}
+// Selos, do mais para o menos notável. Empate só entra quando diz algo: máximo e mínimo
+// maiores que zero e série não constante — num estado que sempre teve 2 clubes, "iguala o
+// máximo" não é notícia, e "iguala o mínimo" de zero valeria para metade do mapa.
+function ufHistSelos(rec) {
+  const o = [], L = 0.05;
+  if (rec.pAcima > L) o.push({ t: 'recorde', p: rec.pAcima });
+  if (rec.pAbaixo > L) o.push({ t: 'minimo', p: rec.pAbaixo });
+  if (rec.max !== rec.min) {
+    if (rec.pIgMax > L && rec.max > 0) o.push({ t: 'igMax', p: rec.pIgMax });
+    if (rec.pIgMin > L && rec.min > 0) o.push({ t: 'igMin', p: rec.pIgMin });
+  }
+  return o;
+}
 function buildUF2027(dash, rncProj, cfg) {
   if (!dash || !dash.A || !dash.B || !dash.C || !dash.D || !rncProj) return null;
   const rA = dash.A.rebTrace, aB = dash.B.accTrace, rB = dash.B.rebTrace, aC = dash.C.accTrace, rC = dash.C.rebTrace;
@@ -14847,9 +14971,8 @@ function buildUF2027(dash, rncProj, cfg) {
   const nU = UFS.length;
   const ix = {};
   UFS.forEach((u, i) => ix[u] = i);
-  const KS = ['A', 'B', 'C', 'D', 'tot'];
   const base = {};
-  KS.forEach(k => base[k] = new Array(nU).fill(0));
+  ['A', 'B', 'C', 'D'].forEach(k => base[k] = new Array(nU).fill(0));
   // Clubes de 2026 com UF e divisão de origem. m* conta as MUDANÇAS de divisão por sorteio
   // (mA = foi para a A, ...); a permanência sai por diferença no fim.
   const clubes = {};
@@ -14859,11 +14982,13 @@ function buildUF2027(dash, rncProj, cfg) {
     if (ix[u] == null) { semUF.push(t); return; }
     clubes[t] = { u: u, i: ix[u], s26: par[0], mA: 0, mB: 0, mC: 0, mD: 0 };
     base[par[0]][ix[u]]++;
-    base.tot[ix[u]]++;
   }));
 
-  const hist = {};
-  KS.forEach(k => hist[k] = UFS.map(() => new Array(UF27_MAXK + 1).fill(0)));
+  // v4.93: um histograma por COMBINAÇÃO de divisões (máscara de bits, ver UF27_COMBOS). A soma
+  // A+B+C de um estado não sai dos histogramas de A, B e C separados — é conjunta —, então as
+  // 15 somas são contadas aqui, sorteio a sorteio.
+  const hist = [];
+  for (let m = 1; m < 16; m++) hist[m] = UFS.map(() => new Array(UF27_MAXK + 1).fill(0));
   const cA = new Array(nU), cB = new Array(nU), cC = new Array(nU);
   const tam = { A: 0, B: 0, C: 0, D: 0 };
   let erros = 0, n = 0;
@@ -14888,11 +15013,10 @@ function buildUF2027(dash, rncProj, cfg) {
     for (let i = 0; i < nU; i++) {
       const a = cA[i], b = cB[i], c3 = cC[i], dd = cnt[UFS[i]] || 0;
       if (a < 0 || b < 0 || c3 < 0) { ruim = 1; continue; }
-      hist.A[i][Math.min(a, UF27_MAXK)]++;
-      hist.B[i][Math.min(b, UF27_MAXK)]++;
-      hist.C[i][Math.min(c3, UF27_MAXK)]++;
-      hist.D[i][Math.min(dd, UF27_MAXK)]++;
-      hist.tot[i][Math.min(a + b + c3 + dd, UF27_MAXK)]++;
+      for (let m = 1; m < 16; m++) {
+        const sm = (m & 1 ? a : 0) + (m & 2 ? b : 0) + (m & 4 ? c3 : 0) + (m & 8 ? dd : 0);
+        hist[m][i][sm < UF27_MAXK ? sm : UF27_MAXK]++;
+      }
       tam.A += a; tam.B += b; tam.C += c3; tam.D += dd;
     }
     if (ruim) erros++;
@@ -14911,7 +15035,12 @@ function buildUF2027(dash, rncProj, cfg) {
   };
   const ufDist = UFS.map((u, i) => {
     const o = { uf: u, n26: {} };
-    KS.forEach(k => { o.n26[k] = base[k][i]; o[k] = dist(hist[k][i]); });
+    for (let m = 1; m < 16; m++) {
+      const k = UF27_COMBOS[m];
+      o.n26[k] = (m & 1 ? base.A[i] : 0) + (m & 2 ? base.B[i] : 0) + (m & 4 ? base.C[i] : 0) + (m & 8 ? base.D[i] : 0);
+      o[k] = dist(hist[m][i]);
+    }
+    o.tot = o.ABCD; o.n26.tot = o.n26.ABCD;   // nome antigo do total, mantido
     return o;
   });
 
@@ -21315,20 +21444,32 @@ function RankingNacionalSim({
     cabecalho, abas,
     vis === 'proj' ? h("div", null, barra, tabela, notaTabela) : dados);
 }
-// === Aba Estados (v4.91) ===
+// === Aba Estados (v4.91; histórico, mínimos e combinações de divisões na v4.93) ===
 // Quantos clubes de cada estado em cada divisão nacional em 2027: esperança, P(exatamente k)
-// e, ao abrir um estado, os clubes que explicam o número. Tudo sai de buildUF2027 — um passe
-// de acoplamento sobre os rastros do dashboard, sem Monte Carlo próprio.
+// e, ao abrir um estado, os clubes que explicam o número. Desde a v4.93 cada número vem com o
+// mínimo e o máximo históricos (UF_HIST) e um selo quando 2027 pode bater ou igualar um deles,
+// e as visões "Distribuição" e "Histórico" aceitam QUALQUER soma de divisões (A+B, A+B+C...).
+// Tudo sai de buildUF2027 — um passe de acoplamento sobre os rastros do dashboard, sem Monte
+// Carlo próprio.
 const UF27_COR = { A: 'text-yellow-300', B: 'text-sky-300', C: 'text-orange-300', D: 'text-emerald-300' };
 const uf27Certo = d => d.pcts.some(p => p >= 100 - 1e-9);
 const uf27Pct = p => p <= 0 ? '·' : p >= 99.95 ? '100' : p < 0.05 ? '~0' : p < 9.95 ? p.toFixed(1) : String(Math.round(p));
+const uf27ComboNome = c => c.length === 4 ? 'Séries A + B + C + D' : c.length === 1 ? 'Série ' + c : 'Séries ' + c.split('').join(' + ');
+const UF27_SELO = {
+  recorde: { cls: 'bg-emerald-500/20 text-emerald-300', curto: '▲', longo: 'recorde', dica: 'acima do máximo histórico' },
+  minimo: { cls: 'bg-rose-500/20 text-rose-300', curto: '▼', longo: 'novo mínimo', dica: 'abaixo do mínimo histórico' },
+  igMax: { cls: 'text-slate-400', curto: '=máx', longo: 'iguala o máx.', dica: 'igual ao máximo histórico' },
+  igMin: { cls: 'text-slate-400', curto: '=mín', longo: 'iguala o mín.', dica: 'igual ao mínimo histórico' }
+};
 function Estados2027Sim({
   dash
 }) {
   const h = React.createElement;
   const [vis, setVis] = useState('resumo');
+  const [combo, setCombo] = useState('A');
   const [aberta, setAberta] = useState(null);
   const [ord, setOrd] = useState({ key: 'E', dir: 'desc' });
+  const [ordH, setOrdH] = useState({ key: 'E', dir: 'desc' });
   const R = useMemo(() => {
     try {
       const proj = dash ? buildRNC(dash) : null;
@@ -21338,7 +21479,20 @@ function Estados2027Sim({
       return null;
     }
   }, [dash]);
-  const linhas = useMemo(() => !R ? [] : R.ufDist.map(r => ({ uf: r.uf, A: r.A.E, B: r.B.E, C: r.C.E, D: r.D.E, tot: r.tot.E, r: r })), [R]);
+  // Histórico de (UF, combinação) sob demanda: série, máximo/mínimo e selos. O cache morre com R.
+  const hist = useMemo(() => {
+    const c = {};
+    return (r, cb) => {
+      const k = cb + '|' + r.uf;
+      if (!c[k]) {
+        const s = ufHistSerie(cb, r.uf, r.n26);
+        const rec = ufHistRec(s, r[cb].pcts);
+        c[k] = { s: s, rec: rec, selos: ufHistSelos(rec) };
+      }
+      return c[k];
+    };
+  }, [R]);
+  const linhas = useMemo(() => !R ? [] : R.ufDist.map(r => ({ uf: r.uf, A: r.A.E, B: r.B.E, C: r.C.E, D: r.D.E, tot: r.ABCD.E, r: r })), [R]);
   const st = useSortable(linhas, 'tot', 'desc');
   if (!R) return h("div", { className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50" },
     h("p", { className: "text-slate-400 text-center py-8" },
@@ -21347,14 +21501,24 @@ function Estados2027Sim({
   const abre = uf => setAberta(a => a === uf ? null : uf);
   const fechadas = UF27_DIVS.filter(d => R.ufDist.every(r => uf27Certo(r[d.key])));
   const abertas = UF27_DIVS.filter(d => fechadas.indexOf(d) < 0);
+  const alterna = k => setCombo(c => {
+    const n = c.indexOf(k) >= 0 ? c.replace(k, '') : c + k;
+    return n ? 'ABCD'.split('').filter(x => n.indexOf(x) >= 0).join('') : c;
+  });
+  const anosTxt = a => a.length <= 3 ? a.join(', ') : a.length + ' vezes, a última em ' + a[a.length - 1];
+  const selo = (s, curto) => h("span", {
+    key: s.t,
+    title: (s.p < 99.95 ? uf27Pct(s.p) + '% de chance de ficar ' : 'Fica ') + UF27_SELO[s.t].dica,
+    className: "inline-block rounded px-1 text-[9px] leading-tight whitespace-nowrap font-sans font-medium " + UF27_SELO[s.t].cls
+  }, (curto ? UF27_SELO[s.t].curto : UF27_SELO[s.t].longo) + (s.p < 99.95 ? ' ' + uf27Pct(s.p) + '%' : ''));
 
   const cabecalho = h("div", { className: "mb-3" },
     h("h2", { className: "text-base font-semibold text-emerald-300" }, "Clubes por estado em cada divisão — projeção 2027"),
     h("p", { className: "text-[11px] text-slate-400 mt-1 leading-relaxed" },
       "Cada sorteio do Monte Carlo monta as quatro divisões de 2027 de uma vez — quem cai, quem sobe e as 96 vagas da Série D — e conta os clubes de cada estado. ",
       h("span", { className: "text-slate-300" }, "E"), " é o número esperado; as probabilidades são de o estado ter ",
-      h("span", { className: "text-slate-300" }, "exatamente k"), " clubes na divisão (",
-      R.nDraws.toLocaleString('pt-BR'), " sorteios)."),
+      h("span", { className: "text-slate-300" }, "exatamente k"), " clubes (",
+      R.nDraws.toLocaleString('pt-BR'), " sorteios). Cada número é comparado com o histórico do estado."),
     fechadas.length > 0 && h("p", { className: "text-[11px] text-slate-500 mt-1" },
       "Já sem incerteza no modelo: ", h("span", { className: "text-slate-300" }, fechadas.map(d => d.label).join(' · ')),
       abertas.length > 0 && ". Ainda em aberto: ",
@@ -21363,11 +21527,24 @@ function Estados2027Sim({
       "⚠️ ", R.erros, " sorteio(s) não fecharam a conta das divisões — os números abaixo podem estar levemente fora."));
 
   const seletor = h("div", { className: "flex flex-wrap gap-1 mb-3 bg-slate-800/40 rounded-xl p-1 max-w-xl" },
-    [{ id: 'resumo', l: 'Resumo' }].concat(UF27_DIVS.map(d => ({ id: d.key, l: d.label }))).map(t =>
+    [{ id: 'resumo', l: 'Resumo' }, { id: 'dist', l: 'Distribuição 2027' }, { id: 'hist', l: 'Histórico' }].map(t =>
       h("button", {
         key: t.id, onClick: () => setVis(t.id),
         className: `flex-1 py-1 px-2.5 rounded-md text-xs font-medium whitespace-nowrap ${vis === t.id ? 'bg-emerald-600/80 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`
       }, t.l)));
+
+  // Divisões somadas nas visões "Distribuição" e "Histórico": qualquer combinação, ao menos uma.
+  const seletorDiv = h("div", { className: "flex items-center flex-wrap gap-1.5 mb-3" },
+    h("span", { className: "text-xs text-slate-400" }, "Somar divisões:"),
+    UF27_DIVS.map(d => {
+      const on = combo.indexOf(d.key) >= 0;
+      return h("button", {
+        key: d.key, onClick: () => alterna(d.key), 'aria-pressed': on, title: d.label,
+        className: `w-8 py-1 rounded-md text-xs font-bold border ${on ? 'bg-slate-700 border-slate-400 ' + UF27_COR[d.key] : 'border-slate-700 text-slate-600 hover:text-slate-300'}`
+      }, d.key);
+    }),
+    h("span", { className: "text-xs text-slate-200 font-medium ml-1" }, uf27ComboNome(combo)),
+    h("span", { className: "text-[10px] text-slate-500" }, "· histórico desde ", ufHistY0(combo)));
 
   // Clubes do estado: de onde vêm e a chance de cada divisão em 2027.
   const detalhe = (uf, foco) => {
@@ -21375,6 +21552,7 @@ function Estados2027Sim({
     const r = R.ufDist.find(x => x.uf === uf);
     const emAberto = r.D.E - cs.reduce((s, c) => s + c.D, 0) / 100;
     const sing = Math.abs(emAberto - 1) < 0.005;
+    const naFoco = k => !!foco && foco.indexOf(k) >= 0;
     // width:0 + min-width:100%: o painel preenche a célula sem entrar na largura intrínseca
     // da tabela de fora — senão um nome comprido empurra a coluna Total para fora da tela.
     return h("div", { className: "bg-slate-900/60 rounded-lg p-2 my-1 border border-slate-700/40 text-left", style: { width: 0, minWidth: '100%' } },
@@ -21384,7 +21562,7 @@ function Estados2027Sim({
           h("thead", null, h("tr", { className: "text-slate-500" },
             h("th", { className: "text-left font-medium py-0.5 pr-2" }, "Clube"),
             h("th", { className: "font-medium px-1" }, "2026"),
-            UF27_DIVS.map(d => h("th", { key: d.key, className: "font-medium px-1 text-right " + (foco === d.key ? UF27_COR[d.key] : '') }, d.key)),
+            UF27_DIVS.map(d => h("th", { key: d.key, className: "font-medium px-1 text-right " + (naFoco(d.key) ? UF27_COR[d.key] : '') }, d.key)),
             h("th", { className: "font-medium px-1 text-right" }, "fora"))),
           h("tbody", null, cs.map(c => h("tr", { key: c.n, className: "border-t border-slate-800/70" },
             h("td", { className: "py-0.5 pr-2 whitespace-nowrap text-slate-200" }, h(Badge, { name: c.n, size: 16 }), c.n),
@@ -21393,7 +21571,7 @@ function Estados2027Sim({
               : h("span", { className: "text-slate-600" }, "—")),
             UF27_DIVS.map(d => h("td", {
               key: d.key,
-              className: "text-right font-mono px-1 " + (c[d.key] > 0 ? UF27_COR[d.key] : 'text-slate-700') + (foco === d.key && c[d.key] > 0 ? ' font-bold' : '')
+              className: "text-right font-mono px-1 " + (c[d.key] > 0 ? UF27_COR[d.key] : 'text-slate-700') + (naFoco(d.key) && c[d.key] > 0 ? ' font-bold' : '')
             }, uf27Pct(c[d.key]))),
             h("td", { className: "text-right font-mono px-1 " + (c.fora > 0 ? 'text-slate-400' : 'text-slate-700') }, uf27Pct(c.fora))))))),
       emAberto > 0.005 && h("p", { className: "text-[10px] text-amber-300/90 mt-1" },
@@ -21403,19 +21581,25 @@ function Estados2027Sim({
   };
 
   // --- Resumo: UF × divisão ---
-  const celula = (d, n26, key) => {
+  const celula = (r, cb) => {
+    const d = r[cb], n26 = r.n26[cb], hi = hist(r, cb), rec = hi.rec;
     const certo = uf27Certo(d);
     const cor = d.E > n26 + 0.005 ? 'text-emerald-300' : d.E < n26 - 0.005 ? 'text-rose-300' : d.E === 0 ? 'text-slate-700' : 'text-slate-200';
     const todos = d.pcts.map((p, i) => [i, p]).filter(x => x[1] > 0);
-    const tit = '2026: ' + n26 + ' · 2027: ' + todos.map(x => x[0] + ' (' + x[1].toFixed(1) + '%)').join(', ');
+    const tit = '2026: ' + n26 + ' · 2027: ' + todos.map(x => x[0] + ' (' + x[1].toFixed(1) + '%)').join(', ')
+      + ' · histórico desde ' + hi.s.y0 + ': mínimo ' + rec.min + ' (' + anosTxt(rec.anosMin) + '), máximo ' + rec.max + ' (' + anosTxt(rec.anosMax) + ')';
     const tops = certo ? [] : todos.slice().sort((a, b) => b[1] - a[1]).slice(0, 3).sort((a, b) => a[0] - b[0]);
-    return h("td", { key: key, className: "py-1 px-1 text-center align-top", title: tit },
-      h("div", { className: "font-mono font-semibold " + cor }, certo ? (d.E === 0 && n26 === 0 ? '·' : Math.round(d.E)) : d.E.toFixed(2)),
+    const vazio = certo && d.E === 0 && rec.max === 0;
+    return h("td", { key: cb, className: "py-1 px-1 text-center align-top", title: tit },
+      h("div", { className: "font-mono font-semibold " + cor }, vazio ? '·' : certo ? Math.round(d.E) : d.E.toFixed(2),
+        hi.selos.length > 0 && h("span", { className: "ml-1" }, selo(hi.selos[0], true))),
       !certo && h("div", { className: "text-[9px] leading-tight text-slate-400 font-mono" },
         tops.map(x => h("span", { key: x[0], className: "inline-block mx-0.5 whitespace-nowrap" }, x[0], ":", uf27Pct(x[1]), "%")),
-        todos.length > 3 && h("span", { className: "text-slate-600" }, "…")));
+        todos.length > 3 && h("span", { className: "text-slate-600" }, "…")),
+      !vazio && h("div", { className: "text-[9px] leading-tight text-slate-500 font-mono whitespace-nowrap" },
+        h("span", { className: "hidden sm:inline font-sans" }, "hist. "), rec.min === rec.max ? rec.max : rec.min + '–' + rec.max));
   };
-  const COLS = UF27_DIVS.map(d => d.key).concat('tot');
+  const COLS = ['A', 'B', 'C', 'D', 'ABCD'];
   const thR = (k, label, align, cls) => h(SortHeader, { k: k, label: label, sort: st.sort, onClick: st.toggle, align: align || 'center', className: 'py-1 px-1 ' + (cls || '') });
   const resumo = h("div", { className: "overflow-x-auto" },
     h("table", { className: "text-xs w-full max-w-3xl" },
@@ -21427,7 +21611,7 @@ function Estados2027Sim({
         h("tr", { key: l.uf, onClick: () => abre(l.uf), className: "border-b border-slate-800/50 cursor-pointer hover:bg-slate-700/20" },
           h("td", { className: "py-1 px-1 font-semibold text-slate-200 whitespace-nowrap align-top" },
             h("span", { className: "text-slate-500 text-[9px] mr-1" }, aberta === l.uf ? '▾' : '▸'), l.uf),
-          COLS.map(k => celula(l.r[k], l.r.n26[k], k))),
+          COLS.map(k => celula(l.r, k))),
         aberta === l.uf && h("tr", { key: l.uf + '-det' }, h("td", { colSpan: 6 }, detalhe(l.uf, null)))
       ])),
       h("tfoot", null, h("tr", { className: "border-t border-slate-600 text-slate-400" },
@@ -21437,14 +21621,18 @@ function Estados2027Sim({
         h("td", { className: "py-1 px-1 text-center font-mono", title: '2026: ' + (R.tam26.A + R.tam26.B + R.tam26.C + R.tam26.D) },
           Math.round((R.tam.A + R.tam.B + R.tam.C + R.tam.D) * 100) / 100)))));
 
-  // --- Uma divisão: P(exatamente k) por estado ---
-  const porDivisao = k => {
+  // --- Distribuição: P(exatamente k) por estado, para a combinação escolhida ---
+  const distribuicao = cb => {
     let kMin = Infinity, kMax = 0;
-    R.ufDist.forEach(r => r[k].pcts.forEach((p, i) => { if (p > 0) { kMin = Math.min(kMin, i); kMax = Math.max(kMax, i); } }));
+    R.ufDist.forEach(r => r[cb].pcts.forEach((p, i) => { if (p > 0) { kMin = Math.min(kMin, i); kMax = Math.max(kMax, i); } }));
     if (kMin === Infinity) kMin = 0;
+    // Somando divisões a faixa de k abre demais (SP ~20, AC ~3): acima de 10 colunas a matriz
+    // vira uma lista "k: %" por estado, que diz o mesmo sem 20 colunas vazias.
+    const emLista = kMax - kMin + 1 > 10;
     const ks = [];
-    for (let i = kMin; i <= kMax; i++) ks.push(i);
-    const valor = (r, key) => key === 'uf' ? r.uf : key === 'n26' ? r.n26[k] : key === 'E' ? r[k].E : key === 'd' ? r[k].E - r.n26[k] : (r[k].pcts[+key.slice(1)] || 0);
+    if (!emLista) for (let i = kMin; i <= kMax; i++) ks.push(i);
+    const valor = (r, key) => key === 'uf' ? r.uf : key === 'n26' ? r.n26[cb] : key === 'E' ? r[cb].E : key === 'd' ? r[cb].E - r.n26[cb]
+      : key === 'max' ? hist(r, cb).rec.max : (r[cb].pcts[+key.slice(1)] || 0);
     const rows = R.ufDist.slice().sort((a, b) => {
       const va = valor(a, ord.key), vb = valor(b, ord.key);
       const c = typeof va === 'string' ? va.localeCompare(vb) : va - vb;
@@ -21452,48 +21640,126 @@ function Estados2027Sim({
     });
     const onSort = key => setOrd(o => ({ key: key, dir: o.key === key && o.dir === 'desc' ? 'asc' : 'desc' }));
     const th = (key, label, cls) => h(SortHeader, { key: key, k: key, label: label, sort: ord, onClick: onSort, align: key === 'uf' ? 'left' : 'right', className: 'py-1 px-1 sm:px-2 ' + (cls || '') });
+    const corE = cb.length === 1 ? UF27_COR[cb] : 'text-white';
     return h("div", null,
       h("div", { className: "overflow-x-auto" },
         h("table", { className: "text-xs w-full max-w-3xl" },
           h("thead", null, h("tr", { className: "border-b border-slate-700" },
             // E e Δ ANTES das colunas de k: no celular a esperança não pode ficar fora da tela
-            th('uf', 'UF'), th('n26', '2026', 'text-slate-500'), th('E', 'E', UF27_COR[k]), th('d', 'Δ'),
-            ks.map(i => th('k' + i, String(i))))),
+            th('uf', 'UF'), th('n26', '2026', 'text-slate-500'), th('E', 'E', corE), th('d', 'Δ'), th('max', 'hist.', 'text-slate-500'),
+            emLista ? h("th", { className: "py-1 px-1 sm:px-2 text-left font-medium text-slate-400" }, "P(k) em 2027") : ks.map(i => th('k' + i, String(i))))),
           h("tbody", null, rows.map(r => {
-            const dlt = r[k].E - r.n26[k];
-            const vazio = r[k].E === 0 && r.n26[k] === 0;
+            const dlt = r[cb].E - r.n26[cb];
+            const hi = hist(r, cb);
+            const vazio = r[cb].E === 0 && r.n26[cb] === 0 && hi.rec.max === 0;
             return [
               h("tr", { key: r.uf, onClick: () => abre(r.uf), className: "border-b border-slate-800/40 cursor-pointer hover:bg-slate-700/20" + (vazio ? ' opacity-40' : '') },
                 h("td", { className: "py-1 px-1 sm:px-2 font-semibold text-slate-200 whitespace-nowrap" },
                   h("span", { className: "text-slate-500 text-[9px] mr-1" }, aberta === r.uf ? '▾' : '▸'), r.uf),
-                h("td", { className: "py-1 px-1 sm:px-2 text-right font-mono text-slate-500" }, r.n26[k]),
-                h("td", { className: "py-1 px-1 sm:px-2 text-right font-mono font-semibold " + UF27_COR[k] }, r[k].E.toFixed(2)),
+                h("td", { className: "py-1 px-1 sm:px-2 text-right font-mono text-slate-500" }, r.n26[cb]),
+                h("td", { className: "py-1 px-1 sm:px-2 text-right font-mono font-semibold " + corE }, r[cb].E.toFixed(2)),
                 h("td", { className: "py-1 px-1 sm:px-2 text-right font-mono whitespace-nowrap " + (dlt > 0.005 ? 'text-emerald-400' : dlt < -0.005 ? 'text-rose-400' : 'text-slate-600') },
                   Math.abs(dlt) < 0.005 ? '–' : (dlt > 0 ? '+' : '−') + Math.abs(dlt).toFixed(2)),
-                ks.map(i => {
-                  const p = r[k].pcts[i] || 0;
-                  return h("td", { key: i, className: "py-1 px-1 sm:px-2 text-right font-mono text-slate-200", style: { background: sdHeat(p) } }, uf27Pct(p));
-                })),
-              aberta === r.uf && h("tr", { key: r.uf + '-det' }, h("td", { colSpan: ks.length + 4 }, detalhe(r.uf, k)))
+                h("td", {
+                  className: "py-1 px-1 sm:px-2 text-right font-mono text-slate-500 whitespace-nowrap",
+                  title: 'Desde ' + hi.s.y0 + ': mínimo ' + hi.rec.min + ' (' + anosTxt(hi.rec.anosMin) + '), máximo ' + hi.rec.max + ' (' + anosTxt(hi.rec.anosMax) + ')'
+                }, hi.rec.min === hi.rec.max ? hi.rec.max : hi.rec.min + '–' + hi.rec.max,
+                  hi.selos.map(s => h("span", { key: s.t, className: "ml-1" }, selo(s, true)))),
+                emLista
+                  ? h("td", { className: "py-1 px-1 sm:px-2 text-left font-mono text-slate-200" },
+                      r[cb].pcts.map((p, i) => p > 0 ? h("span", { key: i, className: "inline-block mr-2 px-1 rounded whitespace-nowrap", style: { background: sdHeat(p) } }, i, ": ", uf27Pct(p), "%") : null))
+                  : ks.map(i => {
+                      const p = r[cb].pcts[i] || 0;
+                      return h("td", { key: i, className: "py-1 px-1 sm:px-2 text-right font-mono text-slate-200", style: { background: sdHeat(p) } }, uf27Pct(p));
+                    })),
+              aberta === r.uf && h("tr", { key: r.uf + '-det' }, h("td", { colSpan: (emLista ? 1 : ks.length) + 5 }, detalhe(r.uf, cb)))
             ];
           })))),
       h("p", { className: "text-[10px] text-slate-500 mt-2 italic" },
-        "P(k) = % dos sorteios em que o estado tem exatamente k clubes na ", UF27_DIVS.find(d => d.key === k).label,
-        " 2027. · = 0%, ~0 = <0,05%. Δ = E − 2026. Clique nos cabeçalhos para ordenar."));
+        "P(k) = % dos sorteios em que o estado tem exatamente k clubes em ", uf27ComboNome(cb),
+        " em 2027. · = 0%, ~0 = <0,05%. Δ = E − 2026. hist. = mínimo–máximo do estado desde ", ufHistY0(cb), ". Clique nos cabeçalhos para ordenar."));
+  };
+
+  // --- Histórico: clubes do estado por temporada, na combinação escolhida ---
+  const historico = cb => {
+    const y0 = ufHistY0(cb);
+    const tam = ufHistTam(cb);
+    const tam26 = cb.split('').reduce((s, k) => s + R.tam26[k], 0), tam27 = cb.split('').reduce((s, k) => s + R.tam[k], 0);
+    const todas = R.ufDist.map(r => ({ r: r, hi: hist(r, cb) }));
+    const com = todas.filter(x => x.hi.rec.max > 0 || x.r[cb].E > 0);
+    const sem = todas.filter(x => com.indexOf(x) < 0).map(x => x.r.uf).sort();
+    const nAnos = com.length ? com[0].hi.s.vals.length : 0;
+    let vMax = 1;
+    com.forEach(x => { x.hi.s.vals.forEach(v => { if (v > vMax) vMax = v; }); if (x.r[cb].E > vMax) vMax = x.r[cb].E; });
+    const valor = (x, key) => key === 'uf' ? x.r.uf : key === 'E' ? x.r[cb].E : key === 'min' ? x.hi.rec.min : key === 'max' ? x.hi.rec.max : x.hi.s.vals[+key.slice(1)];
+    const rows = com.slice().sort((a, b) => {
+      const va = valor(a, ordH.key), vb = valor(b, ordH.key);
+      const c = typeof va === 'string' ? va.localeCompare(vb) : va - vb;
+      return (ordH.dir === 'asc' ? c : -c) || b.r[cb].E - a.r[cb].E || a.r.uf.localeCompare(b.r.uf);
+    });
+    const onSort = key => setOrdH(o => ({ key: key, dir: o.key === key && o.dir === 'desc' ? 'asc' : 'desc' }));
+    const th = (key, label, cls) => h(SortHeader, { key: key, k: key, label: label, sort: ordH, onClick: onSort, align: key === 'uf' ? 'left' : 'right', className: 'py-1 px-1 ' + (cls || '') });
+    const fixa = "sticky left-0 z-10 bg-slate-900 ";
+    const extremo = (v, anos) => h("td", { className: "py-1 px-1 text-right font-mono text-slate-300 whitespace-nowrap", title: anosTxt(anos) },
+      v, h("span", { className: "text-slate-600 text-[9px] ml-0.5" }, "'" + String(anos[anos.length - 1]).slice(2)));
+    return h("div", null,
+      h("div", { className: "overflow-x-auto" },
+        h("table", { className: "text-xs" },
+          h("thead", null, h("tr", { className: "border-b border-slate-700" },
+            h(SortHeader, { k: 'uf', label: 'UF', sort: ordH, onClick: onSort, align: 'left', className: 'py-1 px-1 ' + fixa }),
+            th('E', '2027', cb.length === 1 ? UF27_COR[cb] : 'text-white'), th('min', 'mín', 'text-slate-500'), th('max', 'máx', 'text-slate-500'),
+            Array.from({ length: nAnos }, (_, i) => th('y' + i, "'" + String(y0 + i).slice(2), 'font-normal text-slate-500')))),
+          h("tbody", null, rows.map(x => {
+            const r = x.r, d = r[cb], certo = uf27Certo(d);
+            const ks = d.pcts.map((p, i) => p > 0 ? i : -1).filter(i => i >= 0);
+            return [
+              h("tr", { key: r.uf, onClick: () => abre(r.uf), className: "border-b border-slate-800/40 cursor-pointer hover:bg-slate-700/20" },
+                h("td", { className: "py-1 px-1 font-semibold text-slate-200 whitespace-nowrap " + fixa },
+                  h("span", { className: "text-slate-500 text-[9px] mr-1" }, aberta === r.uf ? '▾' : '▸'), r.uf),
+                h("td", { className: "py-1 px-1 text-right font-mono whitespace-nowrap" },
+                  h("span", { className: "font-semibold " + (cb.length === 1 ? UF27_COR[cb] : 'text-white') }, certo ? Math.round(d.E) : d.E.toFixed(2)),
+                  !certo && h("span", { className: "text-slate-500 text-[10px] ml-1" }, "(", ks[0], "–", ks[ks.length - 1], ")"),
+                  x.hi.selos.length > 0 && h("span", { className: "block sm:inline" }, x.hi.selos.map(s => h("span", { key: s.t, className: "ml-1" },
+                    h("span", { className: "sm:hidden" }, selo(s, true)), h("span", { className: "hidden sm:inline" }, selo(s, false)))))),
+                extremo(x.hi.rec.min, x.hi.rec.anosMin),
+                extremo(x.hi.rec.max, x.hi.rec.anosMax),
+                x.hi.s.vals.map((v, i) => h("td", {
+                  key: i, title: r.uf + ' · ' + (y0 + i) + ': ' + v,
+                  className: "py-1 px-1 text-center font-mono " + (v ? 'text-slate-200' : 'text-slate-700'),
+                  style: { background: v ? sdHeat(v / vMax * 100) : 'transparent', minWidth: 22 }
+                }, v || '·'))),
+              aberta === r.uf && h("tr", { key: r.uf + '-det' }, h("td", { colSpan: nAnos + 4 }, detalhe(r.uf, cb)))
+            ];
+          })),
+          h("tfoot", null, h("tr", { className: "border-t border-slate-600 text-slate-500", title: "Nº de clubes das edições somadas — o tamanho das divisões mudou ao longo do período" },
+            h("td", { className: "py-1 px-1 whitespace-nowrap text-[10px] " + fixa }, "edição"),
+            h("td", { className: "py-1 px-1 text-right font-mono" }, Math.round(tam27)),
+            h("td", null), h("td", null),
+            tam.concat(tam26).map((v, i) => h("td", { key: i, className: "py-1 px-1 text-center font-mono text-[10px]" }, v)))))),
+      h("p", { className: "text-[10px] text-slate-500 mt-2 italic" },
+        "Clubes do estado em ", uf27ComboNome(cb), " em cada temporada, de ", y0, " a 2026; quanto mais escuro, mais clubes. mín e máx trazem o último ano em que ocorreram. ",
+        "A linha \"edição\" é o total de clubes das divisões somadas: recorde e mínimo são em nº absoluto, e o tamanho das edições mudou",
+        cb.indexOf('D') >= 0 ? " (a Série D tinha cerca de 40 clubes até 2015, 68 em 2016–21, 64 em 2022–25 e 96 desde 2026)" : cb.indexOf('C') >= 0 ? " (a Série C teve 21 clubes em 2013 e passa a 24 em 2027)" : cb.indexOf('A') >= 0 ? " (a Série A tinha 24 clubes em 2003–04 e 22 em 2005)" : "", ".",
+        sem.length > 0 && " Fora da tabela, sem nenhum clube em " + uf27ComboNome(cb) + " no período nem em 2027: " + sem.join(', ') + "."));
   };
 
   const rodape = h("div", { className: "text-[10px] text-slate-500 mt-3 leading-relaxed space-y-1" },
-    h("p", null, "Toque num estado para ver os clubes. No resumo, ",
-      h("span", { className: "text-emerald-300" }, "verde"), " = mais clubes que em 2026, ",
-      h("span", { className: "text-rose-300" }, "vermelho"), " = menos; sob o número, as contagens mais prováveis (k:%)."),
-    h("p", null, "Premissas: Série A e B com 20 clubes, Série C com 24 (20 − 4 que sobem − 2 que caem + 4 da B + 6 da D) e Série D com 96 vagas pelos quatro critérios da aba Série D → Class. 2027 — o regulamento da D 2027 ainda não existe, e a vaga pelo Ranking segue o RNC 2027 projetado, sem incerteza própria.",
+    h("p", null, "Toque num estado para ver os clubes. No resumo, a cor do número compara com 2026 (",
+      h("span", { className: "text-emerald-300" }, "verde"), " = mais clubes, ",
+      h("span", { className: "text-rose-300" }, "vermelho"), " = menos); sob ele, as contagens mais prováveis (k:%) e o mínimo–máximo histórico."),
+    h("p", null, "Selos comparam 2027 com o histórico do estado: ",
+      selo({ t: 'recorde', p: 100 }, false), " passa do máximo, ", selo({ t: 'minimo', p: 100 }, false), " fica abaixo do mínimo, ",
+      selo({ t: 'igMax', p: 100 }, false), " e ", selo({ t: 'igMin', p: 100 }, false),
+      " empatam; com %, é a chance de acontecer. No resumo: ▲, ▼, =máx, =mín. Histórico: Série A desde 2003, B desde 2006, C e D desde 2009 — numa soma de divisões vale a janela mais curta."),
+    h("p", null, "Premissas de 2027: Série A e B com 20 clubes, Série C com 24 (20 − 4 que sobem − 2 que caem + 4 da B + 6 da D) e Série D com 96 vagas pelos quatro critérios da aba Série D → Class. 2027 — o regulamento da D 2027 ainda não existe, e a vaga pelo Ranking segue o RNC 2027 projetado, sem incerteza própria.",
       R.eSemDono > 0.005 ? (Math.abs(R.eSemDono - 1) < 0.005
         ? " Das 96, 1 ainda não tem dono conhecido e entra na conta do estado mesmo assim."
         : " Das 96, " + (Math.round(R.eSemDono * 100) / 100) + " ainda não têm dono conhecido e entram na conta do estado mesmo assim.") : ""));
 
   return h("div", { className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50" },
     cabecalho, seletor,
-    vis === 'resumo' ? resumo : porDivisao(vis),
+    vis !== 'resumo' && seletorDiv,
+    vis === 'resumo' ? resumo : vis === 'dist' ? distribuicao(combo) : historico(combo),
     rodape);
 }
 // === Aba Evolução (v4.80) ===
