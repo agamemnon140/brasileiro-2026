@@ -1,14 +1,15 @@
 {
   "schema": 2,
-  "updated_at": "2026-11-26T02:13:13.443Z",
+  "updated_at": "2026-11-26T16:44:57.822Z",
   "last_run": {
-    "at": "2026-11-26T02:13:13.443Z",
-    "corrigidos": 4,
-    "added": 1,
+    "at": "2026-11-26T16:44:57.822Z",
+    "corrigidos": 0,
+    "added": 0,
     "ko_added": 0,
     "quad_added": 0,
     "cb_added": 0,
-    "total_new": 1,
+    "po_added": 2,
+    "total_new": 2,
     "dates": 640,
     "dates_changed": false
   },
@@ -5841,6 +5842,56 @@
       "pen_f": null,
       "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260613/rodada/N/fase",
       "confirmed_at": "2026-10-26T19:37:31.131Z"
+    }
+  ],
+  "po_b": [
+    {
+      "leg": "ida",
+      "data": "22/11",
+      "casa": "Atlético-GO",
+      "fora": "Vila Nova",
+      "gc": 1,
+      "gf": 1,
+      "pen_c": null,
+      "pen_f": null,
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260612/rodada/1/fase",
+      "confirmed_at": "2026-11-26T16:43:04.494Z"
+    },
+    {
+      "leg": "ida",
+      "data": "22/11",
+      "casa": "Criciúma",
+      "fora": "Fortaleza",
+      "gc": 1,
+      "gf": 0,
+      "pen_c": null,
+      "pen_f": null,
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260612/rodada/1/fase",
+      "confirmed_at": "2026-11-26T16:43:04.494Z"
+    },
+    {
+      "leg": "volta",
+      "data": "28/11",
+      "casa": "Fortaleza",
+      "fora": "Criciúma",
+      "gc": null,
+      "gf": null,
+      "pen_c": null,
+      "pen_f": null,
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260612/rodada/2/fase",
+      "confirmed_at": null
+    },
+    {
+      "leg": "volta",
+      "data": "27/11",
+      "casa": "Vila Nova",
+      "fora": "Atlético-GO",
+      "gc": null,
+      "gf": null,
+      "pen_c": null,
+      "pen_f": null,
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260612/rodada/2/fase",
+      "confirmed_at": null
     }
   ],
   "dates": [
