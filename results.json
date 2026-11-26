@@ -1,16 +1,16 @@
 {
   "schema": 2,
-  "updated_at": "2026-11-26T01:32:51.791Z",
+  "updated_at": "2026-11-26T02:13:13.443Z",
   "last_run": {
-    "at": "2026-11-26T01:32:51.791Z",
+    "at": "2026-11-26T02:13:13.443Z",
     "corrigidos": 4,
-    "added": 4,
+    "added": 1,
     "ko_added": 0,
     "quad_added": 0,
     "cb_added": 0,
-    "total_new": 4,
+    "total_new": 1,
     "dates": 640,
-    "dates_changed": true
+    "dates_changed": false
   },
   "results": [
     {
@@ -1331,7 +1331,7 @@
       "gf": 2,
       "fora": "Vila Nova",
       "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260612/rodada/22/fase",
-      "confirmed_at": "2026-11-26T01:28:46.614Z",
+      "confirmed_at": "2026-11-26T02:12:47.664Z",
       "corrigido_de": "1-1"
     },
     {
@@ -1752,7 +1752,7 @@
       "gf": 2,
       "fora": "Fortaleza",
       "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260612/rodada/24/fase",
-      "confirmed_at": "2026-11-26T01:28:46.614Z",
+      "confirmed_at": "2026-11-26T02:12:47.664Z",
       "corrigido_de": "1-0"
     },
     {
@@ -4645,6 +4645,16 @@
       "fora": "Palmeiras",
       "source": "https://stcbfsiteprdimgbrs.blob.core.windows.net/img-site/cdn/Tabela_Detalhada_BSA_2026_25_11_d5826c3a93.pdf",
       "confirmed_at": "2026-11-26T01:32:50.223Z"
+    },
+    {
+      "serie": "A",
+      "rodada": 36,
+      "casa": "Atlético-MG",
+      "gc": 1,
+      "gf": 1,
+      "fora": "Corinthians",
+      "source": "https://www.cbf.com.br/api/cbf/jogos/campeonato/1260611/rodada/36/fase",
+      "confirmed_at": "2026-11-26T02:12:03.206Z"
     }
   ],
   "ko_d": [
