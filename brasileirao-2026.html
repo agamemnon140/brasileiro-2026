@@ -31,7 +31,41 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.93
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.94
+// v4.94 (26/11/2026): MATRIZ PONTOS × POSIÇÃO no detalhamento do Monte Carlo (Séries A, B e C).
+//        A matriz que já existia responde "em que posição termina o time X". Faltava a mesma
+//        leitura pela PONTUAÇÃO, nos dois sentidos, num bloco novo logo abaixo dela:
+//          · Por pontos → posição — mapa de calor com linha = pontuação final e coluna =
+//            posição. De todos os times que terminaram uma simulação com 42 pontos, em que %
+//            ficaram em cada posição (a linha soma 100%). Duas colunas-resumo dão a chance de
+//            terminar no G (G4 na A, G2 na B, G8 na C) e no Z com aquela pontuação — o
+//            "número mágico" lido direto. Linha apagada = pontuação rara (menos de 0,5% das
+//            sims, mín. 10 casos), em que o percentual é ruído.
+//          · Por posição → pontos — uma linha por posição: mediana, faixa p10–p90 (de TODAS
+//            as posições; a tabela de cortes só mostra cinco) e uma caixinha de calor por
+//            pontuação com a % das simulações em que quem ficou ali terminou com ela. É lista
+//            e não matriz de propósito: com a pontuação nas colunas seriam até ~100 colunas e
+//            a zona de rebaixamento ficaria sempre fora da tela, no celular e no desktop
+//            (mesma saída da aba Estados na v4.93 quando o k passa de 10 colunas).
+//        As duas são a MESMA contagem conjunta com denominadores diferentes: no primeiro
+//        sentido divide-se pelo nº de times-simulação com aquela pontuação, no segundo pelo
+//        nº de simulações. A leitura é "um time qualquer", não um time específico: a linha dos
+//        42 pontos junta todo mundo que pode chegar a 42, na proporção em que cada um chega.
+//        Pontuações que não saem em nenhuma simulação somem do eixo e viram uma marca (⋮) —
+//        com a temporada no fim a faixa possível de cada time tem poucos pontos de largura.
+//        MOTOR: nenhuma mudança no sorteio. simMC_single já guardava ptsAtPos (os pontos de
+//        quem terminou em cada posição, por simulação) para os percentis de `cortes`;
+//        simMC_finalize agora também o condensa em rMC.ptsPos = {lo, hi, nS, m}, com
+//        m[p − lo][pos] = nº de simulações em que a posição pos terminou com p pontos
+//        (buildPtsPos). ptsPosAxis monta o eixo de pontuações com as lacunas e ptsPosPctl tira
+//        o percentil pela mesma regra de `cortes`, então a mediana da lista e o p50 dos
+//        cortes nunca divergem. A aba Evolução não guarda nada disso (evoReduce só lê probs).
+//        Harness pts_pos.cjs: cada posição soma nS; o total por pontuação é recontado pelos
+//        ptsSamples de cada time (segundo caminho) e tem de sair idêntico; os percentis batem
+//        com `cortes`; a média de pontos não sobe quando a posição piora; a matriz time ×
+//        posição continua somando 100. Roda na Série A de hoje, num recorte de meio de
+//        temporada (19 rodadas) e sem rodada nenhuma, que é onde a distribuição abre de
+//        verdade, e nas Séries B e C com a fase de liga encerrada.
 // v4.93 (22/11/2026): ABA ESTADOS — HISTÓRICO, RECORDES, MÍNIMOS E SOMAS DE DIVISÕES.
 //        Cada número da aba Estados passa a vir com o mínimo e o máximo históricos do estado e um
 //        selo quando 2027 pode passar do máximo (▲ recorde), ficar abaixo do mínimo (▼ novo
@@ -367,7 +401,7 @@ const {
 //        o slot "em disputa", até uma rodada de pesquisa notar. APP_VERSION vira const
 //        colada neste cabeçalho — o rodapé já ficou preso duas vezes (v4.59, v4.73) por
 //        ser string solta.
-const APP_VERSION = 'v4.93';
+const APP_VERSION = 'v4.94';
 // v4.77 (19/08/2026): FILA DE SUCESSÃO nos 27 estados (antes 14 com fonte, 11 sem folga
 //        alguma sobre a cota) + coluna Copa do Brasil 2027 na aba Ranking CBF.
 //        A rodada de pesquisa corrigiu a ordem campeão/vice em SETE estados (AC, AP, MS,
@@ -2124,6 +2158,69 @@ const simMC_single = (times, ranking, tab, res, cfg, sk, ak, eo, lg, mc, mf, ct,
     if (extraStats.__finTrace) extraStats.__finTrace.push(camp, camp === fa ? fb : fa); // v4.86: [campeão, vice]
   }
 };
+// v4.94: contagem CONJUNTA pontos × posição. ptsAtPos[pos] = pontos de quem terminou na
+// posição pos em cada simulação (uma entrada por sim). Devolve {lo, hi, nS, m} com
+// m[p - lo][pos] = nº de simulações em que a posição pos terminou com p pontos. Cada coluna
+// (posição) soma nS; a soma de uma linha é o nº de times-simulação com aquela pontuação.
+// Laço explícito em vez de Math.min/max(...arr): mesmo cuidado do minMax().
+const buildPtsPos = (ptsAtPos, nS) => {
+  let lo = Infinity,
+    hi = -Infinity;
+  for (const a of ptsAtPos) for (let k = 0; k < a.length; k++) {
+    const v = a[k];
+    if (v < lo) lo = v;
+    if (v > hi) hi = v;
+  }
+  if (!(hi >= lo)) return null;
+  const nPos = ptsAtPos.length;
+  const m = Array.from({
+    length: hi - lo + 1
+  }, () => new Array(nPos).fill(0));
+  for (let i = 0; i < nPos; i++) {
+    const a = ptsAtPos[i];
+    for (let k = 0; k < a.length; k++) m[a[k] - lo][i]++;
+  }
+  return {
+    lo,
+    hi,
+    nS,
+    m
+  };
+};
+// Eixo de pontuações da matriz, da maior para a menor, só com as que ocorreram; `null` marca
+// um salto (pontuações que nenhuma simulação produziu). tot[p - lo] = times-simulação com p.
+const ptsPosAxis = pp => {
+  const tot = pp.m.map(r => {
+    let s = 0;
+    for (let i = 0; i < r.length; i++) s += r[i];
+    return s;
+  });
+  const axis = [];
+  let prev = null;
+  for (let p = pp.hi; p >= pp.lo; p--) {
+    if (!tot[p - pp.lo]) continue;
+    if (prev != null && prev - p > 1) axis.push(null);
+    axis.push(p);
+    prev = p;
+  }
+  return {
+    axis,
+    tot
+  };
+};
+// Percentil dos pontos de quem termina na posição pos (0-based), pela MESMA regra do pctl de
+// simMC_finalize — s[floor(n·q)] na amostra ordenada —, para nunca divergir de rMC.cortes.
+const ptsPosPctl = (pp, pos, q) => {
+  let n = 0;
+  for (let p = pp.lo; p <= pp.hi; p++) n += pp.m[p - pp.lo][pos];
+  const k = Math.floor(n * q);
+  let acc = 0;
+  for (let p = pp.lo; p <= pp.hi; p++) {
+    acc += pp.m[p - pp.lo][pos];
+    if (acc > k) return p;
+  }
+  return pp.hi;
+};
 const simMC_finalize = (times, ct, pts, posF, ptsAtPos, nS, elFinal, extraStats, atFinal, dfFinal, ranking, initAD, nReb) => {
   const pctl = (arr, q) => {
     if (!arr.length) return 0;
@@ -2196,6 +2293,8 @@ const simMC_finalize = (times, ct, pts, posF, ptsAtPos, nS, elFinal, extraStats,
     // v4.91: a B também emite rebTrace (4 por sim) e a C accTrace (4 por sim: top-2 de cada grupo).
     accTrace: extraStats && extraStats.__accTrace || null,
     finTrace: extraStats && extraStats.__finTrace || null,
+    // v4.94: contagem conjunta pontos × posição (matriz do detalhamento do Monte Carlo).
+    ptsPos: buildPtsPos(ptsAtPos, nS),
     cortes: {
       titulo: pc(0),
       g4: pc(3),
@@ -15324,6 +15423,116 @@ const heatColor = t => {
   return `rgba(${r},${g},${b},${alpha.toFixed(3)})`;
 };
 
+// v4.94: MATRIZ PONTOS × POSIÇÃO (detalhamento do Monte Carlo de A/B/C). A PONTUAÇÃO FINAL no
+// lugar do time, lida nos dois sentidos a partir da mesma contagem conjunta rMC.ptsPos — só
+// muda o denominador:
+//   'pts' — o mesmo mapa de calor da matriz time × posição: linha = pontuação, coluna =
+//           posição. Dos times-simulação que terminaram com p pontos, em que % ficaram em
+//           cada posição (a linha soma 100%), mais a chance de G e de Z com aquela pontuação.
+//   'pos' — uma linha por posição: mediana, faixa p10–p90 e uma caixinha de calor por
+//           pontuação, com a % das simulações em que quem ficou ali terminou com ela. É lista
+//           e não matriz de propósito: com a pontuação nas colunas seriam até ~100 colunas e
+//           a zona de rebaixamento ficaria sempre fora da tela.
+const PtsPosMatrix = ({ pp, meta }) => {
+  const [modo, setModo] = useState('pts');
+  const { axis, tot } = useMemo(() => ptsPosAxis(pp), [pp]);
+  const h = React.createElement;
+  const nPos = pp.m[0].length;
+  const gN = meta.zonas && meta.zonas.g4 || 4;
+  const nReb = meta.nReb || 4;
+  const zIni = nPos - nReb;
+  const raro = Math.max(10, pp.nS * 0.005); // abaixo disso a linha é ruído
+  const posIdx = Array.from({ length: nPos }, (_, i) => i);
+  const zCls = i => i < gN ? 'text-blue-300' : i >= zIni ? 'text-red-300' : 'text-slate-400';
+  const troca = h('div', { className: 'flex bg-slate-800/60 rounded-lg p-0.5 border border-slate-600/50 w-fit mt-2' },
+    [['pts', 'Por pontos → posição'], ['pos', 'Por posição → pontos']].map(([v, l]) => h('button', {
+      key: v,
+      onClick: () => setModo(v),
+      className: 'px-2 py-0.5 rounded-md text-[11px] ' + (modo === v ? 'bg-emerald-600/80 text-white shadow' : 'text-slate-400 hover:text-white')
+    }, l)));
+  const nota = t => h('p', { className: 'text-[10px] text-slate-500 mt-1 mb-1 italic' }, t);
+
+  if (modo === 'pos') {
+    const vals = axis.filter(p => p != null);
+    return h('div', null, troca,
+      nota('Cada linha é uma posição final: com quantos pontos termina quem fica ali. Em cada caixa, a pontuação em cima e embaixo a % das simulações (só as de 0,5% para cima); contorno = mediana. Sob a mediana, a faixa p10–p90, que cobre 80% das simulações.'),
+      h('div', { className: 'mt-2 text-[10px]' },
+        h('div', { className: 'flex items-end gap-2 pb-1 text-slate-400 font-bold border-b border-slate-700' },
+          h('div', { className: 'w-7 shrink-0' }, 'Pos'),
+          h('div', { className: 'w-12 shrink-0 text-center leading-tight' }, 'med.', h('div', { className: 'text-[9px] font-normal' }, 'p10–p90')),
+          h('div', null, 'pontos · % das simulações')),
+        posIdx.map(i => {
+          const med = ptsPosPctl(pp, i, 0.5),
+            p10 = ptsPosPctl(pp, i, 0.1),
+            p90 = ptsPosPctl(pp, i, 0.9);
+          const borda = i === gN - 1 ? 'border-blue-400/40' : i === zIni - 1 ? 'border-red-400/50' : 'border-slate-700/20';
+          return h('div', { key: i, className: 'flex items-start gap-2 py-1 border-b ' + borda },
+            h('div', { className: 'w-7 shrink-0 pt-0.5 font-mono font-medium ' + zCls(i) }, i + 1, '°'),
+            h('div', { className: 'w-12 shrink-0 text-center font-mono leading-tight' },
+              h('div', { className: 'font-bold' }, med),
+              h('div', { className: 'text-[9px] text-slate-400' }, p10 === p90 ? p10 : p10 + '–' + p90)),
+            h('div', { className: 'flex flex-wrap gap-0.5 min-w-0' }, vals.map(p => {
+              const v = pp.m[p - pp.lo][i] / pp.nS * 100;
+              if (v < 0.5) return null;
+              return h('span', {
+                key: p,
+                className: 'inline-flex flex-col items-center w-7 py-0.5 rounded-sm font-mono leading-none' + (p === med ? ' ring-1 ring-inset ring-white/50' : ''),
+                style: { backgroundColor: heatColor(v / 100) },
+                title: (i + 1) + 'º com ' + p + ' pts: ' + v.toFixed(1) + '%'
+              }, h('span', { className: 'font-semibold' }, p), h('span', { className: 'text-[9px] text-slate-300 mt-0.5' }, Math.round(v), '%'));
+            })));
+        })));
+  }
+
+  const fmt = v => v <= 0 ? '–' : v < 0.5 ? '<1' : v > 99.5 && v < 100 ? '>99' : Math.round(v);
+  const colBorda = i => i === gN ? ' border-l border-blue-400/40' : i === zIni ? ' border-l border-red-400/50' : '';
+  const cab = borda => h('tr', { className: 'text-slate-400 ' + borda + ' border-slate-700' },
+    h('th', { className: 'text-left py-1 px-1 sticky left-0 bg-slate-900' }, 'Pts'),
+    h('th', { className: 'text-center py-1 px-1 text-blue-300', title: 'Chance de terminar entre os ' + gN + ' primeiros com essa pontuação' }, 'G' + gN),
+    h('th', { className: 'text-center py-1 px-1 text-red-300 border-r border-slate-700/50', title: 'Chance de terminar entre os ' + nReb + ' últimos com essa pontuação' }, 'Z' + nReb),
+    posIdx.map(i => h('th', { key: i, className: 'text-center py-1 px-0.5 min-w-[24px] ' + zCls(i) + colBorda(i) }, i + 1, '°')));
+  const linhas = axis.map((p, k) => {
+    if (p == null) return h('tr', { key: 'g' + k },
+      h('td', { className: 'px-1 text-slate-600 leading-none sticky left-0 bg-slate-900', title: 'Pontuações que não saíram em nenhuma simulação' }, '⋮'),
+      h('td', { colSpan: nPos + 2 }));
+    const row = pp.m[p - pp.lo],
+      n = tot[p - pp.lo];
+    let g = 0,
+      z = 0;
+    for (let i = 0; i < nPos; i++) {
+      if (i < gN) g += row[i];
+      if (i >= zIni) z += row[i];
+    }
+    const pg = g / n * 100,
+      pz = z / n * 100,
+      fraco = n < raro,
+      dim = fraco ? ' opacity-50' : '';
+    return h('tr', { key: p, className: 'border-b border-slate-700/20' },
+      h('td', {
+        className: 'py-0.5 px-1 font-mono font-medium sticky left-0 bg-slate-900 whitespace-nowrap' + (fraco ? ' text-slate-500' : ''),
+        title: p + ' pts: ' + n.toLocaleString() + ' caso(s) em ' + pp.nS.toLocaleString() + ' sims' + (fraco ? ' — pontuação rara' : '')
+      }, p),
+      h('td', { className: 'text-center px-1 font-mono ' + (pg >= 0.5 ? 'text-blue-300' : 'text-slate-600') + dim }, fmt(pg)),
+      h('td', { className: 'text-center px-1 font-mono border-r border-slate-700/50 ' + (pz >= 0.5 ? 'text-red-300' : 'text-slate-600') + dim }, fmt(pz)),
+      posIdx.map(i => {
+        const v = row[i] / n * 100;
+        return h('td', {
+          key: i,
+          className: 'text-center px-0.5 font-mono transition-colors' + colBorda(i) + dim,
+          style: { backgroundColor: heatColor(v / 100) },
+          title: p + ' pts → ' + (i + 1) + 'º: ' + v.toFixed(1) + '%'
+        }, v < 0.5 ? '' : Math.round(v));
+      }));
+  });
+  return h('div', null, troca,
+    nota('Cada linha é uma pontuação final, cada coluna uma posição: de todos os times que terminaram uma simulação com aquela pontuação, quantos % ficaram em cada posição (a linha soma 100%). G' + gN + ' e Z' + nReb + ' = chance de terminar na zona com aquela pontuação. Linha apagada = pontuação rara, percentuais pouco confiáveis. ⋮ = pontuações que não saíram em nenhuma simulação.'),
+    h('div', { className: 'overflow-x-auto mt-2' },
+      h('table', { className: 'text-[10px]' },
+        h('thead', null, cab('border-b')),
+        h('tbody', null, linhas),
+        axis.length > 15 && h('tfoot', null, cab('border-t')))));
+};
+
 // Sparkline dos últimos N jogos de um time: quadrinhos coloridos V (verde),
 // E (amarelo), D (vermelho). Ordem: mais antigo → mais recente.
 const FormStreak = ({
@@ -17993,7 +18202,14 @@ function LeagueSim({
       backgroundColor: heatColor(v / 100)
     },
     title: `${p.time} em ${pi + 1}º: ${v.toFixed(1)}%`
-  }, v < 0.5 ? '' : Math.round(v)))))))))))), aba === 'fase2' && /*#__PURE__*/React.createElement(LeaguePhaseEdit, { serie: meta.key, probs: rMC && rMC.probs || null }), aba === 'chaves' && /*#__PURE__*/React.createElement("div", {
+  }, v < 0.5 ? '' : Math.round(v))))))))), rMC.ptsPos && /*#__PURE__*/React.createElement("details", {
+    className: "mt-2"
+  }, /*#__PURE__*/React.createElement("summary", {
+    className: "text-xs text-emerald-400 cursor-pointer hover:underline"
+  }, "Matriz pontos \xD7 posi\xE7\xE3o (mapa de calor)"), /*#__PURE__*/React.createElement(PtsPosMatrix, {
+    pp: rMC.ptsPos,
+    meta: meta
+  }))))), aba === 'fase2' && /*#__PURE__*/React.createElement(LeaguePhaseEdit, { serie: meta.key, probs: rMC && rMC.probs || null }), aba === 'chaves' && /*#__PURE__*/React.createElement("div", {
     className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"
   }, !rMC ? /*#__PURE__*/React.createElement("p", {
     className: "text-slate-400 text-center py-8"
