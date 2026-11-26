@@ -21,12 +21,17 @@
 //
 // Casos: Série A hoje (results.json), Série A com 19 rodadas e com 0 (é onde a distribuição
 // abre de verdade), Séries B e C hoje (liga encerrada: matriz degenerada tem de fechar igual).
+//
+// (8) Série D (v4.96): rMC.ptsPosGr, pontos da fase de grupos × posição NO GRUPO, 16 grupos
+//     somados. Cada posição soma nS × 16; o total por pontuação é recontado pelos ptsSamples
+//     dos 96 times; a coluna de cada posição fecha com a soma dos posGr dos times; a média de
+//     pontos não sobe quando a posição piora; ptsPosFromCounts num caso à mão.
 const fs = require('fs');
 const path = require('path');
 const { loadEngine } = require('./engine.cjs');
 
 const NS = parseInt(process.env.NS || '400', 10);
-const E = loadEngine(['DEFAULT_CFG', 'simMC', 'parseTab', 'mergeRes', 'applyQuadCAuto', 'buildPtsPos', 'ptsPosAxis', 'ptsPosPctl',
+const E = loadEngine(['DEFAULT_CFG', 'simMC', 'simMC_D', 'SD_GRUPOS', 'parseTab', 'mergeRes', 'applyQuadCAuto', 'buildPtsPos', 'ptsPosFromCounts', 'ptsPosAxis', 'ptsPosPctl',
   'SA_RANKING', 'SA_TAB', 'SA_NM', 'SA_DATES', 'SA_RES', 'SA_META', 'SB_RANKING', 'SB_TAB', 'SB_NM', 'SB_DATES', 'SB_RES', 'SB_META',
   'SC_RANKING', 'SC_TAB', 'SC_NM', 'SC_DATES', 'SC_RES', 'SC_META']);
 let results = {};
@@ -145,6 +150,40 @@ check(ax.tot[10 - 3] === 3 && ax.tot[7 - 3] === 2 && ax.tot[5 - 3] === 0, 'totai
 check(E.ptsPosPctl(pp, 0, 0.5) === 10 && E.ptsPosPctl(pp, 1, 0.5) === 9 && E.ptsPosPctl(pp, 2, 0.5) === 4 && E.ptsPosPctl(pp, 0, 0.9) === 12 && E.ptsPosPctl(pp, 2, 0.1) === 3,
   'percentis: medianas 10 / 9 / 4, p90 do 1º = 12, p10 do 3º = 3');
 check(E.buildPtsPos([[], []], 0) === null, 'sem simulações devolve null (a tela não monta o bloco)');
+
+// (8) Série D: pontos × posição no grupo
+{
+  const r = E.simMC_D(cfg, NS, 'conservador', false);
+  const pp = r.ptsPosGr, nG = E.SD_GRUPOS.length, nT = r.probs.length;
+  console.log(`\n(8) Série D — fase de grupos, ${nG} grupos, ${nT} times, NS=${NS}`);
+  if (!pp) check(false, 'simMC_D não emitiu ptsPosGr');
+  else {
+    const col = [0, 0, 0, 0, 0, 0];
+    let total = 0, larg = true;
+    pp.m.forEach(row => { if (row.length !== 6) larg = false; row.forEach((v, i) => { col[i] += v; total += v; }); });
+    check(larg && pp.nS === NS * nG && pp.m.length === pp.hi - pp.lo + 1, `dimensões: ${pp.m.length} pontuações (${pp.lo}–${pp.hi}) × 6 posições, amostra por posição = nS × ${nG}`);
+    check(col.every(v => v === NS * nG) && total === NS * nT, `cada posição soma nS × ${nG}; total = nS × ${nT}`);
+    const porPts = {};
+    r.probs.forEach(p => p.ptsSamples.forEach(v => { porPts[v] = (porPts[v] || 0) + 1; }));
+    const { axis, tot } = E.ptsPosAxis(pp);
+    let dif = 0;
+    for (let p = pp.lo; p <= pp.hi; p++) if ((porPts[p] || 0) !== tot[p - pp.lo]) dif++;
+    check(dif === 0, `total por pontuação idêntico ao recontado pelos ptsSamples dos ${nT} times (${dif} divergência(s))`);
+    const somaPosGr = [0, 1, 2, 3, 4, 5].map(i => r.probs.reduce((a, p) => a + p.posGr[i], 0) / 100 * NS);
+    check(somaPosGr.every((v, i) => Math.abs(v - col[i]) < 1e-6), 'coluna de cada posição = soma dos posGr dos times');
+    const media = col.map((_, i) => { let s = 0; for (let p = pp.lo; p <= pp.hi; p++) s += p * pp.m[p - pp.lo][i]; return s / (NS * nG); });
+    const med = col.map((_, i) => E.ptsPosPctl(pp, i, 0.5));
+    let sobe = 0;
+    for (let i = 1; i < 6; i++) if (media[i] > media[i - 1] + 1e-9 || med[i] > med[i - 1]) sobe++;
+    check(sobe === 0, `média e mediana não sobem quando a posição piora (1º ${media[0].toFixed(1)} … 6º ${media[5].toFixed(1)})`);
+    check(axis[0] === pp.hi && axis[axis.length - 1] === pp.lo, 'eixo vai da maior à menor pontuação');
+  }
+  const c = []; c[3] = [0, 0, 1]; c[5] = [0, 2, 0]; c[6] = [1, 0, 0]; // esparso: sem 0–2 e sem 4
+  const q = E.ptsPosFromCounts(c, 1);
+  check(q.lo === 3 && q.hi === 6 && JSON.stringify(q.m) === '[[0,0,1],[0,0,0],[0,2,0],[1,0,0]]' && q.nS === 1, 'ptsPosFromCounts: recorta de lo a hi e preenche a pontuação que faltou com zeros');
+  check(E.ptsPosFromCounts([], 5) === null, 'ptsPosFromCounts: contagem vazia devolve null');
+  c[3][0] = 9; check(q.m[0][0] === 0, 'ptsPosFromCounts: devolve cópia (não o acumulador)');
+}
 
 console.log(`\nRESULT: ${ok ? 'PASS' : 'FAIL'}`);
 process.exit(ok ? 0 : 1);

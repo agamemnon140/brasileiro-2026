@@ -31,7 +31,26 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.95
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.96
+// v4.96 (26/11/2026): MATRIZ PONTOS × POSIÇÃO NA SÉRIE D. A v4.94 pôs a leitura pela pontuação
+//        nas Séries A, B e C (o mesmo LeagueSim); faltava a D, que tem motor e aba próprios.
+//        Bloco novo na aba Monte Carlo da Série D, antes da "Visão por Grupo": pontuação final
+//        da FASE DE GRUPOS (10 jogos) × posição no grupo (1º ao 6º), com os 16 grupos somados —
+//        "com 17 pontos, em que posição do grupo?" e "o 4º do grupo termina com quantos
+//        pontos?". Colunas-resumo: chance de avançar (top 4) e de ser eliminado (5º/6º) com
+//        aquela pontuação. É o mesmo componente (PtsPosMatrix), que ganhou rótulos por
+//        parâmetro (`rot`). A amostra por posição é nS × 16: cada simulação tem 16 grupos, logo
+//        16 times em cada posição. Com a fase de grupos encerrada os números são a distribuição
+//        REAL dos 16 grupos de 2026 (cada célula é múltiplo de 1/16), o que é por si só um
+//        retrato de quanto vale cada pontuação nesse formato.
+//        MOTOR: simMC_D_single já ordenava os 16 grupos a cada simulação; passa a contar
+//        pontos × posição num acumulador ao lado do gpts (gpts.pp — contagem, não amostra, e
+//        com as 6 posições: o gpts só guarda as 4 primeiras) e simMC_D_finalize o devolve em
+//        rMC.ptsPosGr no mesmo formato {lo, hi, nS, m} das outras séries (ptsPosFromCounts).
+//        Nenhum sorteio mudou. Harness pts_pos.cjs ganhou a Série D: cada posição soma
+//        nS × 16, o total por pontuação é recontado pelos ptsSamples dos 96 times, a coluna de
+//        cada posição fecha com a soma dos posGr, e a média de pontos não sobe quando a
+//        posição piora.
 // v4.95 (26/11/2026): SÉRIE B — o playoff de acesso passa a ser o REAL, e placar oficial
 //        corrigido passa a chegar a quem já tinha o antigo guardado. Três defeitos, um sintoma
 //        ("os cruzamentos do mata-mata da B estão errados"):
@@ -444,7 +463,7 @@ const {
 //        o slot "em disputa", até uma rodada de pesquisa notar. APP_VERSION vira const
 //        colada neste cabeçalho — o rodapé já ficou preso duas vezes (v4.59, v4.73) por
 //        ser string solta.
-const APP_VERSION = 'v4.95';
+const APP_VERSION = 'v4.96';
 // v4.77 (19/08/2026): FILA DE SUCESSÃO nos 27 estados (antes 14 com fonte, 11 sem folga
 //        alguma sobre a cota) + coluna Copa do Brasil 2027 na aba Ranking CBF.
 //        A rodada de pesquisa corrigiu a ordem campeão/vice em SETE estados (AC, AP, MS,
@@ -2338,6 +2357,27 @@ const buildPtsPos = (ptsAtPos, nS) => {
     m
   };
 };
+// v4.96: o mesmo formato a partir de uma CONTAGEM já pronta — cnt[p] = [nº de vezes em cada
+// posição] (esparso em p). É o caminho da Série D, que conta pontos × posição no grupo direto
+// na simulação. n = amostra por posição (na D, nS × 16 grupos).
+const ptsPosFromCounts = (cnt, n) => {
+  let lo = -1,
+    hi = -1;
+  for (let p = 0; p < cnt.length; p++) if (cnt[p]) {
+    if (lo < 0) lo = p;
+    hi = p;
+  }
+  if (lo < 0) return null;
+  const nPos = cnt[lo].length;
+  const m = [];
+  for (let p = lo; p <= hi; p++) m.push(cnt[p] ? cnt[p].slice() : new Array(nPos).fill(0));
+  return {
+    lo,
+    hi,
+    nS: n,
+    m
+  };
+};
 // Eixo de pontuações da matriz, da maior para a menor, só com as que ocorreram; `null` marca
 // um salto (pontuações que nenhuma simulação produziu). tot[p - lo] = times-simulação com p.
 const ptsPosAxis = pp => {
@@ -2926,6 +2966,8 @@ const simMC_D_single = (cfg, ak, eo, snap, tabD, ct, mc, mf, gpts, ufAcc, ufTeam
       if (pos < 4) ct[row.time].f2++;
       if (pos === 0) ct[row.time].grupoTop1++;
       if (pos < 4 && gpts) gpts[gIdx][pos].push(row.P);
+      // v4.96: contagem conjunta pontos × posição no grupo (as 6 posições, 16 grupos somados)
+      if (gpts && gpts.pp) (gpts.pp[row.P] || (gpts.pp[row.P] = [0, 0, 0, 0, 0, 0]))[pos]++;
     });
   });
   const gruposTop4 = gruposRanked.map(g => g.slice(0, 4).map(c2 => c2.time));
@@ -3196,6 +3238,8 @@ const simMC_D_finalize = (snap, ct, nS, gpts, ufAcc, ufTeams) => {
     })).sort((a, b) => b.ac - a.ac || b.elo - a.elo),
     nSims: nS,
     ptsCutsByGroup,
+    // v4.96: pontos × posição no grupo, 16 grupos somados (amostra por posição = nS × 16).
+    ptsPosGr: gpts && gpts.pp ? ptsPosFromCounts(gpts.pp, nS * SD_GRUPOS.length) : null,
     ufDist: buildUfDist(ufAcc, ufTeams, nS),
     // Traces crus para o passe de acoplamento da Série D 2027 (v4.68).
     trace: ct.__trace ? { g3: ct.__trace.g3, prom: ct.__trace.prom, n: ct.__trace.n } : null
@@ -3259,6 +3303,7 @@ const simMC_D = (cfg, nS, ak, eo, extra, opts) => {
   // gpts[gIdx][pos]: amostras de pontuação dos times que terminaram na (pos+1)ª
   // posição do grupo gIdx, ao longo das nS simulações. pos: 0-3 (1º-4º).
   const gpts = SD_GRUPOS.map(() => [[], [], [], []]);
+  gpts.pp = []; // v4.96: pontos × posição no grupo (contagem), para rMC.ptsPosGr
   const {
     ufTeams,
     ufAcc
@@ -3300,6 +3345,7 @@ const simMC_D_async = (cfg, nS, ak, eo, extra, onProgress, onDone, opts) => {
   // Custo ~120 KB cada em 10k sims, contra os ~7,7 MB que ptsSamples já retém.
   ct.__trace = { g3: new Uint32Array(3 * nS), prom: new Uint32Array(3 * nS), n: 0 };
   const gpts = SD_GRUPOS.map(() => [[], [], [], []]);
+  gpts.pp = []; // v4.96: pontos × posição no grupo (contagem), para rMC.ptsPosGr
   const {
     ufTeams,
     ufAcc
@@ -15578,7 +15624,7 @@ const heatColor = t => {
 //           pontuação, com a % das simulações em que quem ficou ali terminou com ela. É lista
 //           e não matriz de propósito: com a pontuação nas colunas seriam até ~100 colunas e
 //           a zona de rebaixamento ficaria sempre fora da tela.
-const PtsPosMatrix = ({ pp, meta }) => {
+const PtsPosMatrix = ({ pp, meta, rot }) => {
   const [modo, setModo] = useState('pts');
   const { axis, tot } = useMemo(() => ptsPosAxis(pp), [pp]);
   const h = React.createElement;
@@ -15586,6 +15632,10 @@ const PtsPosMatrix = ({ pp, meta }) => {
   const gN = meta.zonas && meta.zonas.g4 || 4;
   const nReb = meta.nReb || 4;
   const zIni = nPos - nReb;
+  // v4.96: rótulos por parâmetro — a Série D usa a matriz para a posição NO GRUPO.
+  const R = rot || {};
+  const rotG = R.g || 'G' + gN, rotZ = R.z || 'Z' + nReb;
+  const unid = R.unid || 'sims', fim = R.fim || 'uma simulação', posTxt = R.pos || 'posição final', pctTxt = R.pct || 'das simulações';
   const raro = Math.max(10, pp.nS * 0.005); // abaixo disso a linha é ruído
   const posIdx = Array.from({ length: nPos }, (_, i) => i);
   const zCls = i => i < gN ? 'text-blue-300' : i >= zIni ? 'text-red-300' : 'text-slate-400';
@@ -15600,12 +15650,12 @@ const PtsPosMatrix = ({ pp, meta }) => {
   if (modo === 'pos') {
     const vals = axis.filter(p => p != null);
     return h('div', null, troca,
-      nota('Cada linha é uma posição final: com quantos pontos termina quem fica ali. Em cada caixa, a pontuação em cima e embaixo a % das simulações (só as de 0,5% para cima); contorno = mediana. Sob a mediana, a faixa p10–p90, que cobre 80% das simulações.'),
+      nota('Cada linha é uma ' + posTxt + ': com quantos pontos termina quem fica ali. Em cada caixa, a pontuação em cima e embaixo a % ' + pctTxt + ' (só as de 0,5% para cima); contorno = mediana. Sob a mediana, a faixa p10–p90, que cobre 80% dos casos.'),
       h('div', { className: 'mt-2 text-[10px]' },
         h('div', { className: 'flex items-end gap-2 pb-1 text-slate-400 font-bold border-b border-slate-700' },
           h('div', { className: 'w-7 shrink-0' }, 'Pos'),
           h('div', { className: 'w-12 shrink-0 text-center leading-tight' }, 'med.', h('div', { className: 'text-[9px] font-normal' }, 'p10–p90')),
-          h('div', null, 'pontos · % das simulações')),
+          h('div', null, 'pontos · % ' + pctTxt)),
         posIdx.map(i => {
           const med = ptsPosPctl(pp, i, 0.5),
             p10 = ptsPosPctl(pp, i, 0.1),
@@ -15633,8 +15683,8 @@ const PtsPosMatrix = ({ pp, meta }) => {
   const colBorda = i => i === gN ? ' border-l border-blue-400/40' : i === zIni ? ' border-l border-red-400/50' : '';
   const cab = borda => h('tr', { className: 'text-slate-400 ' + borda + ' border-slate-700' },
     h('th', { className: 'text-left py-1 px-1 sticky left-0 bg-slate-900' }, 'Pts'),
-    h('th', { className: 'text-center py-1 px-1 text-blue-300', title: 'Chance de terminar entre os ' + gN + ' primeiros com essa pontuação' }, 'G' + gN),
-    h('th', { className: 'text-center py-1 px-1 text-red-300 border-r border-slate-700/50', title: 'Chance de terminar entre os ' + nReb + ' últimos com essa pontuação' }, 'Z' + nReb),
+    h('th', { className: 'text-center py-1 px-1 text-blue-300', title: 'Chance de terminar entre os ' + gN + ' primeiros com essa pontuação' }, rotG),
+    h('th', { className: 'text-center py-1 px-1 text-red-300 border-r border-slate-700/50', title: 'Chance de terminar entre os ' + nReb + ' últimos com essa pontuação' }, rotZ),
     posIdx.map(i => h('th', { key: i, className: 'text-center py-1 px-0.5 min-w-[24px] ' + zCls(i) + colBorda(i) }, i + 1, '°')));
   const linhas = axis.map((p, k) => {
     if (p == null) return h('tr', { key: 'g' + k },
@@ -15655,7 +15705,7 @@ const PtsPosMatrix = ({ pp, meta }) => {
     return h('tr', { key: p, className: 'border-b border-slate-700/20' },
       h('td', {
         className: 'py-0.5 px-1 font-mono font-medium sticky left-0 bg-slate-900 whitespace-nowrap' + (fraco ? ' text-slate-500' : ''),
-        title: p + ' pts: ' + n.toLocaleString() + ' caso(s) em ' + pp.nS.toLocaleString() + ' sims' + (fraco ? ' — pontuação rara' : '')
+        title: p + ' pts: ' + n.toLocaleString() + ' caso(s) em ' + pp.nS.toLocaleString() + ' ' + unid + (fraco ? ' — pontuação rara' : '')
       }, p),
       h('td', { className: 'text-center px-1 font-mono ' + (pg >= 0.5 ? 'text-blue-300' : 'text-slate-600') + dim }, fmt(pg)),
       h('td', { className: 'text-center px-1 font-mono border-r border-slate-700/50 ' + (pz >= 0.5 ? 'text-red-300' : 'text-slate-600') + dim }, fmt(pz)),
@@ -15670,7 +15720,7 @@ const PtsPosMatrix = ({ pp, meta }) => {
       }));
   });
   return h('div', null, troca,
-    nota('Cada linha é uma pontuação final, cada coluna uma posição: de todos os times que terminaram uma simulação com aquela pontuação, quantos % ficaram em cada posição (a linha soma 100%). G' + gN + ' e Z' + nReb + ' = chance de terminar na zona com aquela pontuação. Linha apagada = pontuação rara, percentuais pouco confiáveis. ⋮ = pontuações que não saíram em nenhuma simulação.'),
+    nota('Cada linha é uma pontuação final, cada coluna uma posição: de todos os times que terminaram ' + fim + ' com aquela pontuação, quantos % ficaram em cada posição (a linha soma 100%). ' + rotG + ' e ' + rotZ + ' = chance de terminar na zona com aquela pontuação. Linha apagada = pontuação rara, percentuais pouco confiáveis. ⋮ = pontuações que não saíram em nenhuma simulação.'),
     h('div', { className: 'overflow-x-auto mt-2' },
       h('table', { className: 'text-[10px]' },
         h('thead', null, cab('border-b')),
@@ -19811,7 +19861,27 @@ function SerieDSim({
     }, dF.toFixed(2)), /*#__PURE__*/React.createElement("td", {
       className: `text-center font-mono ${dD > 0.03 ? 'text-red-400' : dD < -0.03 ? 'text-emerald-400' : 'text-slate-400'}`
     }, sgn(dD, 3)));
-  }))))), /*#__PURE__*/React.createElement("details", {
+  }))))), rMC.ptsPosGr && /*#__PURE__*/React.createElement("details", {
+    className: "mt-3"
+  }, /*#__PURE__*/React.createElement("summary", {
+    className: "text-xs text-emerald-400 cursor-pointer hover:underline"
+  }, "Matriz pontos \xD7 posi\xE7\xE3o no grupo \u2014 16 grupos somados (mapa de calor)"), /*#__PURE__*/React.createElement(PtsPosMatrix, {
+    pp: rMC.ptsPosGr,
+    meta: {
+      zonas: {
+        g4: 4
+      },
+      nReb: 2
+    },
+    rot: {
+      g: "Avan\xE7a",
+      z: "Elim.",
+      unid: "posi\xE7\xF5es de grupo simuladas",
+      fim: "a fase de grupos",
+      pos: "posi\xE7\xE3o final no grupo",
+      pct: "dos grupos simulados"
+    }
+  })), /*#__PURE__*/React.createElement("details", {
     className: "mt-3"
   }, /*#__PURE__*/React.createElement("summary", {
     className: "text-xs text-emerald-400 cursor-pointer hover:underline"
