@@ -29,7 +29,8 @@ const HARNESSES = [
   'cb27',            // Copa BR 2027: rastros A/B/C, 128 vagas fecham, garantido nunca desmentido pelo MC
   'uf2027',          // aba Estados: divisoes de 2027 fecham 20/20/24/96 por sorteio, conjunta por UF, clubes somam E
   'pts_pos',         // matriz pontos x posicao: colunas somam nS, total recontado pelos ptsSamples, percentis = cortes
-  'po_b'             // playoff da B: placar oficial substitui o guardado, confrontos/pernas reais no MC e no 1 Sim
+  'po_b',            // playoff da B: placar oficial substitui o guardado, confrontos/pernas reais no MC e no 1 Sim
+  'manual_res'       // placares digitados: contagem por origem e toda chave simUni_* classificada
 ];
 
 let falhas = 0;

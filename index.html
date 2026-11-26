@@ -31,7 +31,29 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.96
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.97
+// v4.97 (26/11/2026): CONFIG — "LIMPAR TODOS OS PLACARES DIGITADOS". Painel novo na aba Config
+//        (entre os parâmetros e o log da automação) que mostra o que este navegador guarda de
+//        placar digitado, por origem, e apaga tudo de uma vez:
+//          · Séries A, B e C — aba Jogos (simUni_userRes, estado do app);
+//          · playoff de acesso da B (simUni_bPO) e quadrangular/final da C (simUni_cQuad);
+//          · mata-mata da Série D (simUni_sdMM) e Copa do Brasil (simUni_cbR16).
+//        Motivo: placar digitado vale mais que o oficial na fase de liga, no mata-mata da D e
+//        na Copa do Brasil (precedência documentada, não mudou) e fica guardado para sempre.
+//        Um palpite esquecido é a explicação mais comum para "a tabela só está errada no meu
+//        navegador" (v4.95), e até aqui a limpeza era aba por aba: "Limpar todos" em cada
+//        Jogos, "Limpar" na Próxima fase, "Restaurar oficiais" no chaveamento da D, "Limpar" na
+//        Copa BR. O botão pede confirmação na própria tela (sem diálogo do navegador), zera
+//        tudo e refaz o "Simular Tudo" sozinho se nenhuma simulação estiver rodando.
+//        Não mexe em: resultados extras do painel de PDF (têm o "Limpar" deles), fila estadual
+//        da Class. 2027 (simUni_est27 — edição de critério, não placar), chaves de API/token.
+//        MANUAL_LS é a lista única das chaves de placar digitado e manualResSummary() conta o
+//        que há em cada origem (entrada com todos os campos apagados não conta). As abas
+//        desmontam ao trocar, então remover a chave basta: cada editor relê o localStorage ao
+//        montar, e os overlays (BC_USER, SD_KO_USER, CB_USER) são refeitos a cada simulação.
+//        Harness manual_res.cjs: contagem por origem, JSON corrompido e entradas vazias; e uma
+//        trava estática — toda chave simUni_* do index.html tem de estar classificada (placar
+//        digitado ou não), para que uma chave nova não fique fora do botão por esquecimento.
 // v4.96 (26/11/2026): MATRIZ PONTOS × POSIÇÃO NA SÉRIE D. A v4.94 pôs a leitura pela pontuação
 //        nas Séries A, B e C (o mesmo LeagueSim); faltava a D, que tem motor e aba próprios.
 //        Bloco novo na aba Monte Carlo da Série D, antes da "Visão por Grupo": pontuação final
@@ -463,7 +485,7 @@ const {
 //        o slot "em disputa", até uma rodada de pesquisa notar. APP_VERSION vira const
 //        colada neste cabeçalho — o rodapé já ficou preso duas vezes (v4.59, v4.73) por
 //        ser string solta.
-const APP_VERSION = 'v4.96';
+const APP_VERSION = 'v4.97';
 // v4.77 (19/08/2026): FILA DE SUCESSÃO nos 27 estados (antes 14 com fonte, 11 sem folga
 //        alguma sobre a cota) + coluna Copa do Brasil 2027 na aba Ranking CBF.
 //        A rodada de pesquisa corrigiu a ordem campeão/vice em SETE estados (AC, AP, MS,
@@ -1637,6 +1659,33 @@ const mergeFetchedRes = (arr, add, oficial) => {
     const i = out.findIndex(e => e.c === n.c && e.f === n.f);
     if (i < 0) out.push(n);
     else if (oficial && (out[i].gc !== n.gc || out[i].gf !== n.gf || n.r && out[i].r !== n.r)) out[i] = n;
+  });
+  return out;
+};
+// v4.97: placares DIGITADOS pelo usuário, onde quer que estejam guardados. Os da fase de liga
+// de A/B/C (aba Jogos) vivem no estado do app (userResAll → simUni_userRes); as outras edições
+// ficam cada uma na sua chave do localStorage e são lidas na hora de simular (refreshBcUser,
+// refreshSdKoUser, refreshCbUser). MANUAL_LS é a lista única dessas chaves — é o que o botão
+// "Limpar todos os placares digitados" da Config apaga. Chave nova de placar digitado entra
+// AQUI (o harness manual_res.cjs falha se aparecer uma simUni_* sem classificação).
+// simUni_est27 (fila estadual da Class. 2027) fica de fora: é edição de critério, não placar.
+const MANUAL_LS = [
+  { key: 'simUni_bPO', label: 'Playoff de acesso da Série B', un: ['confronto', 'confrontos'] },
+  { key: 'simUni_cQuad', label: 'Quadrangular e final da Série C', un: ['jogo', 'jogos'] },
+  { key: 'simUni_sdMM', label: 'Mata-mata da Série D', un: ['confronto', 'confrontos'] },
+  { key: 'simUni_cbR16', label: 'Copa do Brasil', un: ['confronto', 'confrontos'] }
+];
+// O que há de placar digitado, por origem: [{ id, label, n, un }]. getItem = leitor do
+// localStorage (injetável nos harnesses). Só conta entrada com algum valor: apagar um campo
+// na tela deixa um {} para trás, que não é placar.
+const manualResSummary = (userResAll, getItem) => {
+  const temValor = o => !!o && typeof o === 'object' && Object.keys(o).some(k => o[k] != null && o[k] !== '');
+  const out = ['A', 'B', 'C'].map(sk => ({ id: 'liga' + sk, label: 'Série ' + sk + ' — aba Jogos', n: (userResAll && userResAll[sk] || []).length, un: ['placar', 'placares'] }));
+  MANUAL_LS.forEach(m => {
+    let o = null;
+    try { o = JSON.parse(getItem(m.key) || '{}'); } catch (e) { o = null; }
+    const n = o && typeof o === 'object' && !Array.isArray(o) ? Object.keys(o).filter(k => temValor(o[k])).length : 0;
+    out.push({ id: m.key, label: m.label, n, un: m.un });
   });
   return out;
 };
@@ -16533,6 +16582,31 @@ function UpdaterPanel({
     className: "text-xs text-red-400 hover:text-red-300"
   }, "Limpar")));
 }
+// v4.97: painel da aba Config — o que este navegador guarda de placar DIGITADO, por origem, e o
+// botão que apaga tudo. A confirmação é na própria tela (sem window.confirm). `onClear` zera o
+// estado do app e remove as chaves de MANUAL_LS; `rodando` = "Simular Tudo" em andamento.
+const ManualResPanel = ({ userResAll, onClear, rodando }) => {
+  const [conf, setConf] = useState(false);
+  const [feito, setFeito] = useState(0);
+  const h = React.createElement;
+  const itens = manualResSummary(userResAll, k => { try { return localStorage.getItem(k); } catch (e) { return null; } }).filter(i => i.n > 0);
+  const total = itens.reduce((a, i) => a + i.n, 0);
+  const plural = (n, un) => n + ' ' + (n === 1 ? un[0] : un[1]);
+  return h('div', { className: 'bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50 mt-4' },
+    h('h2', { className: 'text-base font-semibold text-emerald-300 mb-1' }, '✎ Placares digitados neste navegador'),
+    h('p', { className: 'text-[11px] text-slate-500 mb-2 italic' }, 'Ficam guardados só neste navegador e entram em todas as simulações. Na fase de liga, no mata-mata da Série D e na Copa do Brasil valem mais que o resultado oficial — se uma tabela ou um chaveamento só está diferente aqui, é o primeiro lugar a olhar.'),
+    total === 0
+      ? h('p', { className: 'text-xs text-slate-400' }, feito > 0 ? '✓ ' + (feito === 1 ? '1 item apagado' : feito + ' itens apagados') + '. ' + (rodando ? 'Refazendo a simulação…' : 'O app está só com os resultados oficiais.') : 'Nenhum placar digitado — o app está só com os resultados oficiais.')
+      : h('div', null,
+        h('ul', { className: 'text-xs text-slate-300 space-y-0.5 mb-3' }, itens.map(i => h('li', { key: i.id, className: 'flex justify-between gap-2 border-b border-slate-700/30 py-0.5' },
+          h('span', null, i.label), h('span', { className: 'font-mono text-amber-300 whitespace-nowrap' }, plural(i.n, i.un))))),
+        conf
+          ? h('div', { className: 'flex flex-wrap items-center gap-2 bg-red-900/20 border border-red-500/40 rounded-lg p-2' },
+            h('span', { className: 'text-xs text-red-200 flex-1 min-w-[160px]' }, 'Apagar ' + (total === 1 ? 'o item acima' : 'os ' + total + ' itens acima') + '? Não dá para desfazer.'),
+            h('button', { onClick: () => { const n = total; onClear(); setConf(false); setFeito(n); }, className: 'px-3 py-1.5 bg-red-600 hover:bg-red-500 rounded-lg text-xs font-semibold text-white' }, 'Apagar tudo'),
+            h('button', { onClick: () => setConf(false), className: 'px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs text-slate-200' }, 'Cancelar'))
+          : h('button', { onClick: () => setConf(true), className: 'px-3 py-1.5 bg-red-900/40 hover:bg-red-900/60 border border-red-500/40 rounded-lg text-xs text-red-200' }, 'Limpar todos os placares digitados')));
+};
 function SettingsTab({
   cfg,
   setCfg,
@@ -17522,7 +17596,7 @@ function LeagueNextPhaseMC({ serie, rMC }) {
     return h('div', null,
       box('Playoff de acesso — chaveamento ' + (oficial ? 'oficial (Tabelas CBF)' : fase1Done ? 'definido' : 'pelas posições já travadas'), h('div', null,
         h('p', { className: 'text-[10px] text-slate-500 mb-2' }, oficial ? 'Confrontos e pernas vêm das Tabelas CBF: placar em verde = perna já disputada, fixa no Monte Carlo; o que falta é simulado. Os 2 vencedores sobem junto com 1º e 2º. Ao lado de cada clube: P(acesso) do Monte Carlo.' : '3º×6º e 4º×5º, ida e volta; os 2 vencedores sobem junto com 1º e 2º. Ao lado de cada clube: P(acesso) do Monte Carlo. Posição ainda em aberto aparece como "a definir" — veja a tabela abaixo.'),
-        diverge ? h('p', { className: 'text-[10px] text-amber-400 mb-2' }, '⚠ A CBF publicou outro chaveamento: ' + PO_B_AUTO.ties.map(p => p.join(' × ')).join(' e ') + '. A classificação deste navegador não fecha com a oficial — confira os placares digitados na aba Jogos.') : null,
+        diverge ? h('p', { className: 'text-[10px] text-amber-400 mb-2' }, '⚠ A CBF publicou outro chaveamento: ' + PO_B_AUTO.ties.map(p => p.join(' × ')).join(' e ') + '. A classificação deste navegador não fecha com a oficial — confira os placares digitados na aba Jogos (ou apague todos na Config).') : null,
         h('div', { className: 'text-[11px] text-blue-300 mb-1' }, 'Acesso direto: ', tn(t6[0]), ' · ', tn(t6[1])),
         bracket)),
       box('Probabilidades por clube', h('div', { className: 'overflow-x-auto' }, h('table', { className: 'w-full text-xs' },
@@ -22602,6 +22676,15 @@ function SimuladorUnificado() {
     ...prev,
     [sk]: typeof upd === 'function' ? upd(prev[sk]) : upd
   })), []);
+  // v4.97: "Limpar todos os placares digitados" (Config). Zera os da aba Jogos (estado) e remove
+  // as chaves das outras edições (MANUAL_LS) — as abas estão desmontadas na Config e cada editor
+  // relê o localStorage ao montar. manualTick avisa o efeito que refaz o "Simular Tudo".
+  const [manualTick, setManualTick] = useState(0);
+  const clearManual = useCallback(() => {
+    setUserResAll({ A: [], B: [], C: [] });
+    MANUAL_LS.forEach(m => { try { localStorage.removeItem(m.key); } catch (e) {} });
+    setManualTick(t => t + 1);
+  }, []);
   // Merge com precedência embutido > manual > buscado — fonte única do "Simular Tudo".
   const mergedRes = useMemo(() => {
     const m = {
@@ -22920,6 +23003,10 @@ function SimuladorUnificado() {
       runAll();
     }
   }, [runAll, resReady]);
+  // v4.97: placares digitados apagados → refaz o "Simular Tudo" (se nada estiver rodando).
+  useEffect(() => {
+    if (manualTick > 0 && !dashBusy && !evoBusy) runAll();
+  }, [manualTick]);
   const tabs = [{
     id: 'serieA',
     l: 'Série A',
@@ -23328,6 +23415,10 @@ function SimuladorUnificado() {
       C: [],
       D: []
     })
+  }), tab === 'config' && /*#__PURE__*/React.createElement(ManualResPanel, {
+    userResAll: userResAll,
+    onClear: clearManual,
+    rodando: dashBusy
   }), tab === 'config' && /*#__PURE__*/React.createElement("div", {
     className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50 mt-4"
   }, /*#__PURE__*/React.createElement("h2", {
