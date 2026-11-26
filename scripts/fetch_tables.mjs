@@ -18,7 +18,8 @@
 //  4. NUNCA sobrescreve placar já gravado — registra conflito e mantém o original
 //  5. teto de jogos novos por execução
 //  6. fase de liga em A/B/C; mata-mata da D → ko_d; oitavas→final da Copa BR → cb; 2ª fase da C
-//     (quadrangulares + final) → quad_c (fixture inteira, placar null no jogo não disputado)
+//     (quadrangulares + final) → quad_c (fixture inteira, placar null no jogo não disputado);
+//     playoff de acesso da B → po_b (idem: as 4 pernas, placar null na não disputada)
 //
 // Mantenha TEAMS/NORM_NAME em sincronia com o app e com scripts/fetch_results.mjs.
 
@@ -127,6 +128,10 @@ async function fetchLigaGweb(serie) {
     const grupos = await fetchGwebRound(GWEB_EDITION[serie], r);
     for (const g of grupos) {
       if (serie === 'C' && !/^GRUPO\s+A$/i.test(String(g.grupo || '').trim())) continue;
+      // v4.95: na B a API lista o "PLAYOFF DE ACESSO" como mais um grupo, nas rodadas 1 e 2.
+      // As idas têm o mesmo par casa|fora de dois jogos da liga (R22 e R24): sem este filtro
+      // toda execução "corrigia" esses placares para os do playoff e de volta. Vão para po_b.
+      if (serie === 'B' && PO_B_GRUPO.test(String(g.grupo || ''))) continue;
       for (const x of g.jogo || []) {
         const md = x.mandante || {}, vs = x.visitante || {};
         if (md.gols == null || md.gols === '' || vs.gols == null || vs.gols === '') continue;
@@ -146,6 +151,38 @@ async function fetchLigaGweb(serie) {
   return out;
 }
 
+// PLAYOFF DE ACESSO da Série B no GWEB (26/11/2026): a API o lista como mais um "grupo" da
+// edição da B — "PLAYOFF DE ACESSO" —, com a ida na rodada 1 e a volta na rodada 2 (os mesmos
+// números das rodadas da liga; jogos 381–384 em 2026). Devolve a fixture INTEIRA, como o
+// quad_c: gc/gf null na perna ainda não disputada (ou em andamento — mesma trava das 3 h), para
+// o app conhecer os confrontos e o mando antes de a bola rolar. Pênaltis em "panaltis" (sic).
+const PO_B_GRUPO = /PLAYOFF/i;
+async function fetchPoBGweb() {
+  const rows = [], fora = new Set();
+  for (let r = 1; r <= 2; r++) {
+    const grupos = await fetchGwebRound(GWEB_EDITION.B, r);
+    for (const g of grupos) {
+      if (!PO_B_GRUPO.test(String(g.grupo || ''))) continue;
+      for (const x of g.jogo || []) {
+        const md = x.mandante || {}, vs = x.visitante || {};
+        const casa = gwebNormS('B', md.nome), fora_ = gwebNormS('B', vs.nome);
+        if (!SETS.B.has(casa)) { fora.add(md.nome); continue; }
+        if (!SETS.B.has(fora_)) { fora.add(vs.nome); continue; }
+        if (casa === fora_) continue;
+        let gc = md.gols == null || md.gols === '' ? null : Number(md.gols);
+        let gf = vs.gols == null || vs.gols === '' ? null : Number(vs.gols);
+        const valido = Number.isInteger(gc) && Number.isInteger(gf) && gc >= 0 && gc <= 14 && gf >= 0 && gf <= 14;
+        if (!valido || !gwebEncerrado(x)) { gc = null; gf = null; }
+        const dm = /^(\d{2})\/(\d{2})\/\d{4}$/.exec(String(x.data || '').trim());
+        const pm = Number(md.panaltis) || 0, pv = Number(vs.panaltis) || 0;
+        const comPen = gc != null && (pm > 0 || pv > 0);
+        rows.push({ leg: (Number(x.rodada) || r) === 2 ? 'volta' : 'ida', data: dm ? `${dm[1]}/${dm[2]}` : null, casa, fora: fora_, gc, gf, pen_c: comPen ? pm : null, pen_f: comPen ? pv : null, source: gwebUrl(GWEB_EDITION.B, r) });
+      }
+    }
+  }
+  if (fora.size) console.error(`::warning::Série B (GWEB): playoff com nome(s) fora da lista do app, jogo ignorado: ${[...fora].join(', ')}`);
+  return rows;
+}
 // 2ª fase da C no GWEB: nas rodadas 1-6, "GRUPO A" é a 1ª fase (10 jogos/rodada) e "GRUPO B"/
 // "GRUPO C" são os quadrangulares (2 jogos/rodada cada). A FINAL NÃO vem como "FINAL": visto em
 // 10/2026, a API a lista como "GRUPO D", rodadas 1 (ida) e 2 (volta) — e é assim que ela está
@@ -593,6 +630,7 @@ async function savePdfCache(urls) {
 
 async function main() {
   // QUAD_GWEB_DRY=1: só consulta o GWEB da 2ª fase da C e imprime o que viria (sem API, sem gravar).
+  // PO_GWEB_DRY=1: idem para o playoff de acesso da B. LIGA_GWEB_DRY=1: fase de liga de A/B/C.
   if (process.env.LIGA_GWEB_DRY) {
     const raw = JSON.parse(await readFile(RESULTS_PATH, 'utf8'));
     const ex = new Map((raw.results || []).map((r) => [dedupKey(r), r]));
@@ -613,6 +651,12 @@ async function main() {
     }
     return;
   }
+  if (process.env.PO_GWEB_DRY) {
+    const ps = await fetchPoBGweb();
+    for (const p of ps) console.log(`${p.leg.padEnd(5)} ${p.data || '--/--'}  ${p.casa} ${p.gc == null ? 'x' : p.gc + ' x ' + p.gf} ${p.fora}${p.pen_c != null ? ' (pên ' + p.pen_c + '-' + p.pen_f + ')' : ''}`);
+    console.log(`${ps.length} perna(s), ${ps.filter((p) => p.gc != null).length} com placar.`);
+    return;
+  }
   if (process.env.QUAD_GWEB_DRY) {
     const qs = await fetchQuadCGweb();
     for (const q of qs) console.log(`${q.fase} ${q.grupo || '-'} R${q.rodada} ${q.data || '--/--'}  ${q.casa} ${q.gc == null ? 'x' : q.gc + ' x ' + q.gf} ${q.fora}${q.pen_c != null ? ' (pên ' + q.pen_c + '-' + q.pen_f + ')' : ''}`);
@@ -621,7 +665,7 @@ async function main() {
   }
   if (!API_KEY) { console.error('ANTHROPIC_API_KEY ausente.'); process.exit(1); }
 
-  let existing = [], existingKo = [], existingDates = [], existingCb = [], existingQuad = [];
+  let existing = [], existingKo = [], existingDates = [], existingCb = [], existingQuad = [], existingPo = [];
   try {
     const raw = JSON.parse(await readFile(RESULTS_PATH, 'utf8'));
     existing = Array.isArray(raw) ? raw : (raw && Array.isArray(raw.results) ? raw.results : []);
@@ -629,7 +673,8 @@ async function main() {
     existingDates = !Array.isArray(raw) && Array.isArray(raw.dates) ? raw.dates : [];
     existingCb = !Array.isArray(raw) && Array.isArray(raw.cb) ? raw.cb : [];
     existingQuad = !Array.isArray(raw) && Array.isArray(raw.quad_c) ? raw.quad_c : [];
-  } catch { existing = []; existingKo = []; existingDates = []; existingCb = []; existingQuad = []; }
+    existingPo = !Array.isArray(raw) && Array.isArray(raw.po_b) ? raw.po_b : [];
+  } catch { existing = []; existingKo = []; existingDates = []; existingCb = []; existingQuad = []; existingPo = []; }
   const byKey = new Map();
   for (const r of existing) byKey.set(dedupKey(r), r);
   const koByKey = new Map();
@@ -703,6 +748,31 @@ async function main() {
   const datesFresh = new Set();
 
   await runQuadCGweb();
+
+  // Playoff de acesso da B (v4.95) → po_b. Chave casa|fora: cada confronto tem uma perna com
+  // cada mandante. A fonte é a própria API da CBF, então ela manda em tudo — fixture, data e
+  // placar (um placar gravado que a API passe a mostrar diferente é corrigido, com aviso);
+  // só não apaga placar gravado se a API voltar sem ele.
+  const poByKey = new Map();
+  for (const r of existingPo) poByKey.set(`${r.casa}|${r.fora}`, r);
+  let poAdded = 0;
+  try {
+    const ps = await fetchPoBGweb();
+    const now = new Date().toISOString();
+    for (const p of ps) {
+      const k = `${p.casa}|${p.fora}`;
+      const prev = poByKey.get(k);
+      if (!prev) { poByKey.set(k, { ...p, confirmed_at: p.gc != null ? now : null }); if (p.gc != null) poAdded++; continue; }
+      const upd = { ...prev, leg: p.leg, data: p.data || prev.data || null, source: p.source };
+      if (p.gc != null && (prev.gc == null || Number(prev.gc) !== p.gc || Number(prev.gf) !== p.gf || (prev.pen_c ?? null) !== p.pen_c || (prev.pen_f ?? null) !== p.pen_f)) {
+        if (prev.gc != null && (Number(prev.gc) !== p.gc || Number(prev.gf) !== p.gf)) console.error(`::warning::Playoff B ${k}: gravado ${prev.gc}-${prev.gf} → oficial ${p.gc}-${p.gf}`);
+        if (prev.gc == null) poAdded++;
+        Object.assign(upd, { gc: p.gc, gf: p.gf, pen_c: p.pen_c, pen_f: p.pen_f, confirmed_at: now });
+      }
+      poByKey.set(k, upd);
+    }
+    console.log(`Série B: playoff de acesso (GWEB) — ${ps.length} perna(s) na fixture, ${ps.filter((p) => p.gc != null).length} com placar; +${poAdded} nova(s).`);
+  } catch (e) { console.error(`::warning::Série B: playoff via GWEB falhou: ${e.message}`); }
 
   // Fase de liga de A/B/C pela API da CBF (autoritativa; corrige placar divergente).
   let ligaCorrigidos = 0;
@@ -924,6 +994,11 @@ async function main() {
   const canonCb = (arr) => JSON.stringify(arr.map((r) => ({ fase: r.fase, gr: r.gr, leg: r.leg, data: r.data, casa: r.casa, fora: r.fora, gc: r.gc, gf: r.gf, pen_c: r.pen_c, pen_f: r.pen_f })).sort((a, b) => cbOrd(a).localeCompare(cbOrd(b))));
   const cbChanged = canonCb(mergedCb) !== canonCb(existingCb);
 
+  const poOrd = (r) => `${r.leg === 'volta' ? 2 : 1}|${r.casa}`;
+  const mergedPo = [...poByKey.values()].sort((a, b) => poOrd(a).localeCompare(poOrd(b)));
+  const canonPo = (arr) => JSON.stringify(arr.map((r) => ({ leg: r.leg, data: r.data, casa: r.casa, fora: r.fora, gc: r.gc, gf: r.gf, pen_c: r.pen_c ?? null, pen_f: r.pen_f ?? null })).sort((a, b) => poOrd(a).localeCompare(poOrd(b))));
+  const poChanged = canonPo(mergedPo) !== canonPo(existingPo);
+
   const quadOrd = (r) => `${r.fase === 'Q' ? '1' : '2'}|${r.grupo || ''}|${r.rodada}|${r.casa}`;
   const mergedQuad = [...quadByKey.values()].sort((a, b) => quadOrd(a).localeCompare(quadOrd(b)));
   const canonQuad = (arr) => JSON.stringify(arr.map((r) => ({ fase: r.fase, grupo: r.grupo, rodada: r.rodada, data: r.data, casa: r.casa, fora: r.fora, gc: r.gc, gf: r.gf, pen_c: r.pen_c, pen_f: r.pen_f })).sort((a, b) => quadOrd(a).localeCompare(quadOrd(b))));
@@ -938,18 +1013,18 @@ async function main() {
   const canonD = (arr) => JSON.stringify(arr.map((d) => ({ serie: d.serie, rodada: d.rodada, casa: d.casa, fora: d.fora, data: d.data })));
   const datesChanged = canonD(mergedDates) !== canonD(existingDates);
 
-  console.log(`Resumo: ${ligaCorrigidos ? ligaCorrigidos + ' placar(es) corrigido(s) pela API da CBF, ' : ''}+${added} liga + ${koAdded} mata-mata D + ${quadAdded} 2ª fase C novos, ${unchanged + koUnchanged + quadUnchanged} iguais, ${skippedBuiltIn + koSkipped} já embutidos no app, ${conflicts.length} conflito(s), ${mergedDates.length} data(s) remarcada(s)${datesChanged ? ' (MUDOU)' : ''}, +${cbAdded} Copa BR nova(s) (${mergedCb.filter((r) => r.gc != null).length}/${mergedCb.length} com placar${cbFixture ? ', +' + cbFixture + ' de chaveamento' : ''}), 2ª fase C: ${mergedQuad.filter((r) => r.gc != null).length}/${mergedQuad.length} disputado(s)${quadChanged ? ' (MUDOU)' : ''}.`);
-  if (canon(merged) === canon(existing) && canonKo(mergedKo) === canonKo(existingKo) && !datesChanged && !cbChanged && !quadChanged) { console.log('Sem mudanças em results.json.'); return; }
+  console.log(`Resumo: ${ligaCorrigidos ? ligaCorrigidos + ' placar(es) corrigido(s) pela API da CBF, ' : ''}+${added} liga + ${koAdded} mata-mata D + ${quadAdded} 2ª fase C + ${poAdded} playoff B novos, ${unchanged + koUnchanged + quadUnchanged} iguais, ${skippedBuiltIn + koSkipped} já embutidos no app, ${conflicts.length} conflito(s), ${mergedDates.length} data(s) remarcada(s)${datesChanged ? ' (MUDOU)' : ''}, +${cbAdded} Copa BR nova(s) (${mergedCb.filter((r) => r.gc != null).length}/${mergedCb.length} com placar${cbFixture ? ', +' + cbFixture + ' de chaveamento' : ''}), 2ª fase C: ${mergedQuad.filter((r) => r.gc != null).length}/${mergedQuad.length} disputado(s)${quadChanged ? ' (MUDOU)' : ''}.`);
+  if (canon(merged) === canon(existing) && canonKo(mergedKo) === canonKo(existingKo) && !datesChanged && !cbChanged && !quadChanged && !poChanged) { console.log('Sem mudanças em results.json.'); return; }
 
   // last_run: quantos jogos ESTA execução acrescentou, para o selo do app mostrar o
   // delta em vez do acumulado. Só é escrito quando houve mudança (o return acima corta
   // execuções sem novidade), então ele sempre descreve a última atualização efetiva.
-  // quad_added e cb_added ENTRAM em total_new: o app consome results.json.quad_c (v4.81) e
+  // quad_added, cb_added e po_added (v4.95) ENTRAM em total_new: o app consome results.json.quad_c (v4.81) e
   // results.json.cb (oitavas desde a v4.64, quartas→final desde a v4.84) e o log da Config lista
   // esses jogos, então o selo "+N resultado(s)" bate com o que a UI mostra.
-  const lastRun = { at: new Date().toISOString(), corrigidos: ligaCorrigidos, added: added, ko_added: koAdded, quad_added: quadAdded, cb_added: cbAdded, total_new: added + koAdded + quadAdded + cbAdded, dates: mergedDates.length, dates_changed: datesChanged };
-  await writeFile(RESULTS_PATH, JSON.stringify({ schema: 2, updated_at: new Date().toISOString(), last_run: lastRun, results: merged, ko_d: mergedKo, cb: mergedCb, quad_c: mergedQuad, dates: mergedDates }, null, 2) + '\n', 'utf8');
-  console.log(`results.json atualizado (${merged.length} resultado(s) de liga + ${mergedKo.length} perna(s) de mata-mata D + ${mergedQuad.length} jogo(s) da 2ª fase C + ${mergedCb.length} da Copa BR + ${mergedDates.length} data(s) remarcada(s); last_run.total_new=${lastRun.total_new}).`);
+  const lastRun = { at: new Date().toISOString(), corrigidos: ligaCorrigidos, added: added, ko_added: koAdded, quad_added: quadAdded, cb_added: cbAdded, po_added: poAdded, total_new: added + koAdded + quadAdded + cbAdded + poAdded, dates: mergedDates.length, dates_changed: datesChanged };
+  await writeFile(RESULTS_PATH, JSON.stringify({ schema: 2, updated_at: new Date().toISOString(), last_run: lastRun, results: merged, ko_d: mergedKo, cb: mergedCb, quad_c: mergedQuad, po_b: mergedPo, dates: mergedDates }, null, 2) + '\n', 'utf8');
+  console.log(`results.json atualizado (${merged.length} resultado(s) de liga + ${mergedKo.length} perna(s) de mata-mata D + ${mergedQuad.length} jogo(s) da 2ª fase C + ${mergedPo.length} perna(s) do playoff B + ${mergedCb.length} da Copa BR + ${mergedDates.length} data(s) remarcada(s); last_run.total_new=${lastRun.total_new}).`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
