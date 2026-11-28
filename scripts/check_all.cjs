@@ -30,7 +30,8 @@ const HARNESSES = [
   'uf2027',          // aba Estados: divisoes de 2027 fecham 20/20/24/96 por sorteio, conjunta por UF, clubes somam E
   'pts_pos',         // matriz pontos x posicao: colunas somam nS, total recontado pelos ptsSamples, percentis = cortes
   'po_b',            // playoff da B: placar oficial substitui o guardado, confrontos/pernas reais no MC e no 1 Sim
-  'manual_res'       // placares digitados: contagem por origem e toda chave simUni_* classificada
+  'manual_res',      // placares digitados: contagem por origem e toda chave simUni_* classificada
+  'vagas_int'        // vagas continentais por cenário (cota fecha, 4 cenários de 2026) e ajuste do time sem objetivo
 ];
 
 let falhas = 0;

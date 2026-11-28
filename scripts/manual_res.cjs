@@ -48,7 +48,8 @@ console.log('\n(2) toda chave simUni_* está classificada');
     simUni_fetchedRes: 'resultados buscados/oficiais (têm o "Limpar" do painel de PDF e são reescritos pelo results.json)',
     simUni_est27: 'fila estadual da Class. 2027 — edição de critério, não placar',
     simUni_apiKey: 'chave da API',
-    simUni_ghToken: 'token do GitHub'
+    simUni_ghToken: 'token do GitHub',
+    simUni_vagasInt: 'resultado de final continental informado e chance assumida trocada no painel de vagas (v4.98) — cenário, não placar de jogo do app'
   };
   const sem = usadas.filter(k => !placar.has(k) && !(k in outras));
   check(sem.length === 0, sem.length ? `chave(s) sem classificação: ${sem.join(', ')} — é placar digitado? então entra em MANUAL_LS; se não, na lista "outras" deste harness` : `${usadas.length} chaves no index.html, todas classificadas`);
