@@ -149,7 +149,7 @@ function mcAgora(E, dados, nSims, nSeeds) {
       }
       // vagas continentais por cenario (o painel da v4.98), media das sementes
       for (const c of (r.vagasInt && r.vagasInt.cen) || []) {
-        const v = vagas[c.id] = vagas[c.id] || { rot: c.rot, on: {}, off: {}, linha: { on: [], off: [] } };
+        const v = vagas[c.id] = vagas[c.id] || { rot: c.rot, peso: c.peso, on: {}, off: {}, linha: { on: [], off: [] } };
         v.linha[nome].push(c.linha);
         for (const t of c.times) (v[nome][t.time] = v[nome][t.time] || { lib: [], sul: [] }, v[nome][t.time].lib.push(t.lib), v[nome][t.time].sul.push(t.sul));
       }
@@ -165,12 +165,17 @@ function mcAgora(E, dados, nSims, nSeeds) {
     return l;
   });
   const cenarios = Object.entries(vagas).map(([id, v]) => ({
-    id, rot: v.rot,
+    id, rot: v.rot, peso: v.peso,                                         // peso = chance assumida da final (VAGAS_INT.<final>.p)
     linha: { off: v.linha.off[0], on: v.linha.on[0] },                  // 1a semente: distribuicao da linha (G-n)
     times: ctx.times.map(t => ({ time: t,
       lib: { off: media(v.off[t].lib), on: media(v.on[t].lib) }, sul: { off: media(v.off[t].sul), on: media(v.on[t].sul) } }))
       .filter(x => x.lib.on > 0.05 || x.sul.on > 0.05),
   }));
+  // a tabela unica do painel: media dos cenarios ponderada pelo peso
+  const mistura = (t, campo, modo) => Object.values(vagas).reduce((a, v) => a + v.peso * media(v[modo][t][campo]), 0);
+  const unica = ctx.times.map(t => ({ time: t,
+    lib: { off: mistura(t, 'lib', 'off'), on: mistura(t, 'lib', 'on') }, sul: { off: mistura(t, 'sul', 'off'), on: mistura(t, 'sul', 'on') } }))
+    .filter(x => x.lib.on > 0.05 || x.sul.on > 0.05);
   const st = tabelaDe(ctx.times, res);
   const cortes = E.semObjCortes('A', nT, 4);
   const fl = E.semObjFlags(st, cortes, 38);
@@ -178,7 +183,7 @@ function mcAgora(E, dados, nSims, nSeeds) {
   const jogados = new Set(res.map(g => g.c + '|' + g.f));
   const restam = ctx.fixture.filter(g => !jogados.has(g.casa + '|' + g.fora))
     .map(g => ({ r: g.rodada, c: g.casa, f: g.fora, ajuste: fl[g.casa] !== fl[g.fora] ? (fl[g.casa] ? 'casa' : 'fora') : null }));
-  return { nSims, nSeeds, cortes, marcados: ctx.times.filter(t => fl[t]), marcadosBase: ctx.times.filter(t => flBase[t]), restam, linhas, cenarios };
+  return { nSims, nSeeds, cortes, marcados: ctx.times.filter(t => fl[t]), marcadosBase: ctx.times.filter(t => flBase[t]), restam, linhas, cenarios, unica };
 }
 
 // ---------- 3. Monte Carlo retroativo: Serie B de 2026 (liga encerrada) ----------

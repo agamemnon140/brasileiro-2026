@@ -1704,6 +1704,7 @@
    {
     "id": "Palmeiras|Boca Juniors",
     "rot": "Palmeiras campeão da Libertadores",
+    "peso": 0.65,
     "linha": {
      "off": [
       {
@@ -1919,6 +1920,7 @@
    {
     "id": "Estudiantes|Boca Juniors",
     "rot": "Estudiantes campeão da Libertadores",
+    "peso": 0.35,
     "linha": {
      "off": [
       {
@@ -2130,6 +2132,195 @@
       }
      }
     ]
+   }
+  ],
+  "unica": [
+   {
+    "time": "Flamengo",
+    "lib": {
+     "off": 100,
+     "on": 100
+    },
+    "sul": {
+     "off": 0,
+     "on": 0
+    }
+   },
+   {
+    "time": "Palmeiras",
+    "lib": {
+     "off": 100,
+     "on": 100
+    },
+    "sul": {
+     "off": 0,
+     "on": 0
+    }
+   },
+   {
+    "time": "Cruzeiro",
+    "lib": {
+     "off": 100,
+     "on": 100
+    },
+    "sul": {
+     "off": 0,
+     "on": 0
+    }
+   },
+   {
+    "time": "Mirassol",
+    "lib": {
+     "off": 0,
+     "on": 0
+    },
+    "sul": {
+     "off": 15.585,
+     "on": 14.8503
+    }
+   },
+   {
+    "time": "Fluminense",
+    "lib": {
+     "off": 100,
+     "on": 100
+    },
+    "sul": {
+     "off": 0,
+     "on": 0
+    }
+   },
+   {
+    "time": "Botafogo",
+    "lib": {
+     "off": 0,
+     "on": 0
+    },
+    "sul": {
+     "off": 39.8904,
+     "on": 38.4897
+    }
+   },
+   {
+    "time": "Bahia",
+    "lib": {
+     "off": 87.15010000000001,
+     "on": 87.0137
+    },
+    "sul": {
+     "off": 12.849899999999998,
+     "on": 12.9863
+    }
+   },
+   {
+    "time": "São Paulo",
+    "lib": {
+     "off": 0.1963,
+     "on": 0.14820000000000003
+    },
+    "sul": {
+     "off": 99.7765,
+     "on": 99.8134
+    }
+   },
+   {
+    "time": "Grêmio",
+    "lib": {
+     "off": 61.602,
+     "on": 60.662000000000006
+    },
+    "sul": {
+     "off": 0,
+     "on": 0
+    }
+   },
+   {
+    "time": "Atlético-MG",
+    "lib": {
+     "off": 60.444599999999994,
+     "on": 59.6556
+    },
+    "sul": {
+     "off": 39.555400000000006,
+     "on": 40.34439999999999
+    }
+   },
+   {
+    "time": "Santos",
+    "lib": {
+     "off": 27.932399999999998,
+     "on": 26.6583
+    },
+    "sul": {
+     "off": 72.0676,
+     "on": 73.3417
+    }
+   },
+   {
+    "time": "Corinthians",
+    "lib": {
+     "off": 0,
+     "on": 0
+    },
+    "sul": {
+     "off": 21.4743,
+     "on": 25.5983
+    }
+   },
+   {
+    "time": "Vasco",
+    "lib": {
+     "off": 3.1533,
+     "on": 2.8749999999999996
+    },
+    "sul": {
+     "off": 96.4493,
+     "on": 96.6798
+    }
+   },
+   {
+    "time": "Red Bull Bragantino",
+    "lib": {
+     "off": 24.520000000000003,
+     "on": 27.9872
+    },
+    "sul": {
+     "off": 75.48,
+     "on": 72.0128
+    }
+   },
+   {
+    "time": "Vitória",
+    "lib": {
+     "off": 0,
+     "on": 0
+    },
+    "sul": {
+     "off": 69.19730000000001,
+     "on": 67.78009999999999
+    }
+   },
+   {
+    "time": "Coritiba",
+    "lib": {
+     "off": 0.0013000000000000002,
+     "on": 0
+    },
+    "sul": {
+     "off": 57.653499999999994,
+     "on": 58.088899999999995
+    }
+   },
+   {
+    "time": "Athletico-PR",
+    "lib": {
+     "off": 100,
+     "on": 100
+    },
+    "sul": {
+     "off": 0,
+     "on": 0
+    }
    }
   ]
  },

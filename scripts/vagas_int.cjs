@@ -12,12 +12,16 @@
 //     leva vaga, o total de clubes na Libertadores é a cota (nenhuma vaga se cria ou se perde),
 //     todo clube até a linha está classificado e a Sul-Americana são os 6 seguintes elegíveis.
 // (3) Cenários: final continental em aberto com brasileiro = dois cenários; decidida = um; os
-//     cortes do "sem objetivo" da Série A encolhem quando o brasileiro perde a final.
+//     cortes do "sem objetivo" da Série A encolhem quando o brasileiro perde a final. PESOS: a
+//     chance assumida da final (VAGAS_INT.<final>.p) vira o peso de cada cenário — soma 1, sem
+//     `p` vale 1/2, duas finais abertas = produto, final decidida = 1.
 // (4) semObjFlags em casos à mão (campeão antecipado, rebaixado, empate em pontos = ameaça).
 // (5) Monte Carlo da Série A de hoje: por cenário, Σ Libertadores = cota × 100, Σ Sula = 600, a
 //     linha soma 100%; por um SEGUNDO caminho (probs.z4 e posF, que não passam pela alocação):
 //     finalista da Copa do Brasil vai à Libertadores sempre que não cai, quem termina no G4
-//     vai aos grupos, quem termina até o 5º vai à Libertadores.
+//     vai aos grupos, quem termina até o 5º vai à Libertadores. TABELA ÚNICA (vagasIntComb):
+//     é a média dos cenários com aqueles pesos — refeita aqui à mão —, as somas fecham com a
+//     cota ponderada, chance 1 ou 0 devolve um cenário puro, e todo valor fica entre os cenários.
 // (6) O ajuste: m = 1 reproduz a flag desligada bit a bit (mesma semente) nas Séries A e B; na
 //     Série B truncada na 37ª rodada (bandeiras = tabela real, iguais em toda simulação) os
 //     adversários dos times sem objetivo pontuam MAIS com o ajuste ligado; na Série C o ajuste
@@ -28,7 +32,7 @@ const { loadEngine } = require('./engine.cjs');
 
 const NS = parseInt(process.env.NS || '400', 10);
 const E = loadEngine(['DEFAULT_CFG', 'simMC', 'parseTab', 'mergeRes', 'applyCbAuto', 'calcClassif',
-  'VAGAS_INT', 'vagasIntCtx', 'alocaVagasInt', 'cdbFinalInfo', 'semObjCortes', 'semObjFlags',
+  'VAGAS_INT', 'vagasIntCtx', 'alocaVagasInt', 'cdbFinalInfo', 'semObjCortes', 'semObjFlags', 'vagasIntPesos', 'vagasIntComb',
   'SA_RANKING', 'SA_TAB', 'SA_NM', 'SA_DATES', 'SA_RES', 'SB_RANKING', 'SB_TAB', 'SB_NM', 'SB_DATES', 'SB_RES',
   'SC_RANKING', 'SC_TAB', 'SC_NM', 'SC_DATES', 'SC_RES']);
 let results = {};
@@ -122,15 +126,33 @@ console.log('(3) cenários e cortes do "sem objetivo"');
     let c = E.vagasIntCtx();
     check(c.cen.length === 2 && c.cen[0].lib === 'BR1' && c.cen[1].lib === null && c.cen.every(s => s.sul === null), 'final com brasileiro por jogar: dois cenários (campeão / não)');
     check(eq(E.semObjCortes('A', 20, 4), [1, 4, 5, 6, 7, 8, 11, 12, 13, 14, 16]), 'cortes da A com a final aberta: título, 4º–8º, 11º–14º, 16º');
+    check(eq(c.cen.map(s => s.peso), [0.5, 0.5]) && c.ev.lib.p === 0.5 && c.ev.lib.pPadrao === 0.5, 'final aberta sem chance na constante: cada desfecho pesa 1/2');
+    V.lib.p = 0.7;
+    c = E.vagasIntCtx();
+    check(near(c.cen[0].peso, 0.7) && near(c.cen[1].peso, 0.3) && c.cen[0].ch.lib === 'BR1' && c.cen[1].ch.lib === 'EXT', 'chance assumida 0,7 para final[0]: pesos 0,7 / 0,3, no cenário certo');
+    V.lib.p = 7;
+    check(eq(E.vagasIntCtx().cen.map(s => s.peso), [0.5, 0.5]), 'chance inválida na constante (fora de 0–1) cai em 1/2, não vira peso negativo');
+    V.lib.p = 0.7;
+    check(eq(E.semObjCortes('A', 20, 4), [1, 4, 5, 6, 7, 8, 11, 12, 13, 14, 16]), 'a chance assumida NÃO mexe nos cortes do "sem objetivo" (seguem todos os plausíveis)');
     V.lib.campeao = 'EXT';
     c = E.vagasIntCtx();
     check(c.cen.length === 1 && c.cen[0].lib === null, 'estrangeiro campeão: um cenário, sem vaga extra');
+    check(c.cen[0].peso === 1 && c.ev.lib.p === null, 'final decidida: peso 1, a chance assumida deixa de existir');
     check(eq(E.semObjCortes('A', 20, 4), [1, 4, 5, 6, 7, 11, 12, 13, 16]), 'cortes encolhem: o 8º e o 14º deixam de ser linha possível');
     V.lib.campeao = 'BR1';
     c = E.vagasIntCtx();
     check(c.cen.length === 1 && c.cen[0].lib === 'BR1' && E.semObjCortes('A', 20, 4).includes(8), 'brasileiro campeão: um cenário com a vaga extra; 8º segue possível');
     V.lib.campeao = null; V.sula.campeao = null;
     check(E.vagasIntCtx().cen.length === 4 && E.semObjCortes('A', 20, 4).includes(9), 'duas finais abertas com brasileiros: quatro cenários, linha possível até o 9º');
+    V.sula.p = 0.4;
+    c = E.vagasIntCtx();
+    check(near(c.cen.reduce((a, s) => a + s.peso, 0), 1, 1e-12) && eq(c.cen.map(s => +s.peso.toFixed(4)), [0.28, 0.42, 0.12, 0.18]), 'duas finais abertas (0,7 e 0,4): peso = produto, na ordem dos cenários, somando 1');
+    {
+      const falso = { ev: c.ev, cen: c.cen };
+      check(eq(E.vagasIntPesos(falso, null).map(x => +x.toFixed(4)), [0.28, 0.42, 0.12, 0.18]), 'vagasIntPesos sem chance informada reproduz os pesos do contexto');
+      check(eq(E.vagasIntPesos(falso, { lib: 1 }).map(x => +x.toFixed(4)), [0.4, 0.6, 0, 0]) && eq(E.vagasIntPesos(falso, { lib: 0.5, sula: 0.5 }), [0.25, 0.25, 0.25, 0.25]), 'vagasIntPesos com a chance trocada no painel: só aquela final muda');
+      check(eq(E.vagasIntPesos(falso, { lib: -1, sula: 'x' }).map(x => +x.toFixed(4)), [0.28, 0.42, 0.12, 0.18]), 'chance trocada inválida é ignorada (vale a padrão)');
+    }
     V.lib = { rot: 'Libertadores', data: 'x', final: ['EXT', 'EXT3'], br: [], campeao: null };
     check(E.vagasIntCtx().cen.length === 2, 'final sem brasileiro não abre cenário (só a outra final conta)');
   } finally { const g = JSON.parse(guarda); V.lib = g.lib; V.sula = g.sula; }
@@ -181,6 +203,22 @@ console.log('(5) Monte Carlo da Série A: somas e segundo caminho');
     check(s.times.every(t => t.dir >= P[t.time].g4 - 1e-6), `[${s.curto}] quem termina no G4 vai aos grupos (2º caminho: probs.g4)`);
     check(s.times.every(t => t.lib >= P[t.time].posF.slice(0, 5).reduce((a, b) => a + b, 0) - 1e-6), `[${s.curto}] quem termina até o 5º vai à Libertadores (2º caminho: posF)`);
     if (s.lib && P[s.lib]) check(near(T[s.lib].dir, 100 - P[s.lib].z4, 1e-6), `[${s.curto}] o campeão continental está nos grupos em toda simulação em que não cai`);
+  }
+  if (vi) {
+    const w = E.vagasIntPesos(vi, null), cb = E.vagasIntComb(vi);
+    check(near(w.reduce((a, b) => a + b, 0), 1, 1e-12) && eq(w, vi.cen.map(s => s.peso)) && eq(cb.pesos, w), `tabela única: pesos dos cenários somam 1 (${w.map(x => x.toFixed(2)).join(' / ')}) e são os gravados na simulação`);
+    // 2º caminho: a média refeita à mão, campo a campo, sem passar pela função
+    const mao = (j, k) => vi.cen.reduce((a, s, i) => a + w[i] * s.times[j][k], 0);
+    check(cb.times.every((t, j) => t.time === vi.cen[0].times[j].time && ['dir', 'pre', 'lib', 'sul'].every(k => near(t[k], mao(j, k), 1e-9))), 'tabela única = média dos cenários ponderada, time a time (refeita à mão)');
+    const cota = vi.cen.reduce((a, s, i) => a + w[i] * s.times.reduce((x, t) => x + t.lib, 0), 0);
+    check(near(cb.times.reduce((a, t) => a + t.lib, 0), cota, 1e-6) && near(cb.times.reduce((a, t) => a + t.sul, 0), 600, 1e-6), `tabela única: Σ Libertadores = ${(cota / 100).toFixed(2)} clubes (cota ponderada), Σ Sula = 6`);
+    check(['linha', 'linhaDir', 'linhaSul'].every(k => near(cb[k].reduce((a, x) => a + x.pct, 0), 100, 1e-6)), `tabela única: a linha soma 100% — ${cb.linha.map(x => 'G' + x.pos + ' ' + x.pct.toFixed(1) + '%').join(', ')}`);
+    check(cb.times.every((t, j) => ['dir', 'pre', 'lib', 'sul'].every(k => { const v = vi.cen.map(s => s.times[j][k]); return t[k] >= Math.min(...v) - 1e-9 && t[k] <= Math.max(...v) + 1e-9; })), 'tabela única: todo valor fica entre o menor e o maior dos cenários');
+    if (vi.cen.length === 2) {
+      const um = E.vagasIntComb(vi, E.vagasIntPesos(vi, { lib: 1, sula: 1 })), zero = E.vagasIntComb(vi, E.vagasIntPesos(vi, { lib: 0, sula: 0 }));
+      const igual = (c, s) => c.times.every((t, j) => ['dir', 'pre', 'lib', 'sul'].every(k => near(t[k], s.times[j][k], 1e-9))) && eq(c.linha.map(x => x.pos), s.linha.map(x => x.pos));
+      check(igual(um, vi.cen[0]) && igual(zero, vi.cen[1]), 'chance 100% ou 0% devolve o cenário puro (tabela e linha)');
+    }
   }
   if (vi && vi.cen.length === 2 && vi.cen[0].lib && !vi.cen[1].lib) {
     const m = s => s.linha.reduce((a, x) => a + x.pos * x.pct, 0) / 100;

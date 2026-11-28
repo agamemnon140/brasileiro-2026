@@ -39,14 +39,23 @@ const {
 //        para a tabela, e um brasileiro campeão continental entra por fora da cota. Hoje isso
 //        depende de duas coisas: da final Palmeiras × Estudiantes (28/11) e de o Grêmio, finalista
 //        da Copa do Brasil, cair ou não. A segunda sai da própria tabela simulada; a primeira é
-//        um jogo que o app não modela. Então cada simulação é resolvida em TODOS os cenários
-//        ainda abertos (alocaVagasInt, função pura) e o painel novo da aba Monte Carlo da Série A
-//        (VagasIntPanel) os mostra lado a lado: onde cai a linha (G6/G7/G8) e a chance de cada
-//        time ir aos grupos, à prévia e à Sul-Americana — sem chutar a probabilidade da final.
+//        um jogo que o app não modela (não há rating do Estudiantes). Então cada simulação é
+//        resolvida em TODOS os cenários ainda abertos (alocaVagasInt, função pura) e o painel
+//        novo da aba Monte Carlo da Série A (VagasIntPanel) mostra UMA tabela — onde cai a linha
+//        (G6/G7/G8) e a chance de cada time ir aos grupos, à prévia e à Sul-Americana —, que é a
+//        média dos cenários ponderada por uma chance ASSUMIDA para a final.
+//          · A chance é dado, não modelo: VAGAS_INT.lib.p = 0,65 para o Palmeiras, do mercado de
+//            campeão na véspera (1,43 × 2,60 → 65/35 sem a margem; o modelo da Opta dava 59%).
+//            O painel a mostra com um controle deslizante; mexer nele só refaz a média
+//            (vagasIntPesos / vagasIntComb sobre rMC.vagasInt), não o Monte Carlo — a final é
+//            independente da tabela no modelo, então ponderar é exato e não acrescenta ruído.
+//            "Ver por cenário" abre os dois desfechos lado a lado. De 59% a 65% a chance de
+//            Libertadores de quem está na linha muda no máximo 2 p.p.
 //          · Dados: VAGAS_INT (cotas e finais continentais; `campeao: null` = por jogar). NADA na
 //            automação alimenta essa constante: ao decidir-se uma final, preencher `campeao` e
 //            registrar aqui. Enquanto isso o painel deixa informar o resultado neste navegador
-//            (simUni_vagasInt — não é placar digitado; a constante oficial manda).
+//            (simUni_vagasInt — guarda o resultado informado e a chance trocada; não é placar
+//            digitado; a constante oficial manda).
 //          · Finalistas da Copa do Brasil vêm de CB_AUTO.ko.F (results.json). Final por jogar: as
 //            duas ordens pesam metade; em 2026 dão a mesma distribuição (rMC.vagasInt.cdbPesa
 //            avisa se um dia diferirem).
@@ -2077,14 +2086,23 @@ const quadCPlayed = (m) => (m && Array.isArray(m.quadC) ? m.quadC.filter(r => r 
 // preencher `campeao` (e registrar no changelog), como CB27_UF. Enquanto a constante não muda,
 // o painel deixa informar o resultado neste navegador (simUni_vagasInt). Os finalistas da Copa
 // do Brasil vêm de CB_AUTO.ko.F (results.json), sem constante.
+//
+// FINAL CONTINENTAL POR JOGAR: o app não modela esse jogo (não tem rating do adversário
+// estrangeiro), então a chance é ASSUMIDA — `p` = chance de final[0] levantar a taça, tirada do
+// mercado de campeão na véspera — e o painel mostra UMA tabela: a média dos cenários ponderada
+// por ela. Cada simulação continua resolvida em todos os cenários (nada é sorteado: a final é
+// independente da tabela no modelo, logo a média ponderada é exata e sem ruído extra), e o
+// painel deixa mexer na chance sem refazer o Monte Carlo.
 const VAGAS_INT = {
   ano: 2027,
   base: { dir: 4, pre: 1, sula: 6 },
   // final: os dois finalistas; br: quais são brasileiros (só eles abrem vaga extra); campeao: null = ainda não jogada
-  lib: { rot: 'Libertadores', data: '28/11', final: ['Palmeiras', 'Estudiantes'], br: ['Palmeiras'], campeao: null },
+  // p: mercado de campeão em 27/11 (Palmeiras 1,43 × Estudiantes 2,60 → 65/35 sem a margem); o modelo da Opta dava 59%
+  lib: { rot: 'Libertadores', data: '28/11', final: ['Palmeiras', 'Estudiantes'], br: ['Palmeiras'], campeao: null, p: 0.65 },
   sula: { rot: 'Sul-Americana', data: '21/11', final: ['Atlético-MG', 'Boca Juniors'], br: ['Atlético-MG'], campeao: 'Boca Juniors' }
 };
-// resultado de final continental informado NESTE navegador (não é placar digitado; a constante oficial manda)
+// resultado de final continental informado NESTE navegador ({lib: 'Clube'}; a constante oficial
+// manda) e chance assumida trocada no painel ({p: {lib: 0.6}}). Não é placar digitado.
 let VI_USER = {};
 function refreshViUser() {
   VI_USER = {};
@@ -2102,20 +2120,25 @@ const cdbFinalInfo = () => {
   if (s.g1a != null && s.g1b != null) campeao = s.g1a > s.g1b ? F.a : s.g1b > s.g1a ? F.b : F.pen === 'A' ? F.a : F.pen === 'B' ? F.b : null;
   return { a: F.a, b: F.b, campeao, data: F.data && F.data.ida || null };
 };
+// chance de final[0] ser campeão: a do usuário se for um número em [0, 1], senão a da constante, senão 1/2
+const viProb = (padrao, u) => typeof u === 'number' && u >= 0 && u <= 1 ? u : typeof padrao === 'number' && padrao >= 0 && padrao <= 1 ? padrao : 0.5;
 // Contexto das vagas: estado de cada final continental e os CENÁRIOS ainda abertos (produto das
-// finais pendentes com brasileiro; no máximo 4). Nada aqui sorteia: cada simulação é resolvida em
-// TODOS os cenários, e o painel os mostra lado a lado — sem chutar a probabilidade de um jogo
-// que o app não modela.
+// finais pendentes com brasileiro; no máximo 4), cada um com o seu PESO — o produto das chances
+// assumidas. Nada aqui sorteia: cada simulação é resolvida em TODOS os cenários.
 const vagasIntCtx = () => {
   refreshViUser();
   const ev = {};
   for (const k of ['lib', 'sula']) {
     const c = VAGAS_INT[k], u = VI_USER[k];
     const camp = c.campeao || (u && c.final.includes(u) ? u : null);
+    const aberta = !camp && c.br.length > 0;
+    const pu = VI_USER.p && VI_USER.p[k];
+    const p = aberta ? viProb(c.p, pu) : null;
     ev[k] = {
       k, rot: c.rot, data: c.data, final: c.final, br: c.br, campeao: camp,
       origem: c.campeao ? 'oficial' : camp ? 'usuario' : null,
-      saidas: (camp ? [camp] : c.br.length ? c.final : [null]).map(f => ({ campeao: f, br: f != null && c.br.includes(f) }))
+      p, pPadrao: aberta ? viProb(c.p, null) : null,
+      saidas: (camp ? [camp] : aberta ? c.final : [null]).map((f, i) => ({ campeao: f, br: f != null && c.br.includes(f), p: aberta ? (i === 0 ? p : 1 - p) : 1 }))
     };
   }
   const cen = [];
@@ -2125,6 +2148,8 @@ const vagasIntCtx = () => {
       id: (a.campeao || '-') + '|' + (b.campeao || '-'),
       rot: aberto.map(([n, r]) => n + ' campeão da ' + r).join(' · ') || 'Cenário único',
       curto: aberto.map(([n]) => n).join(' + ') || 'Atual',
+      ch: { lib: a.campeao, sula: b.campeao }, // campeão de cada final NESTE cenário (pode ser estrangeiro)
+      peso: a.p * b.p,
       lib: a.br ? a.campeao : null,
       sul: b.br ? b.campeao : null
     });
@@ -2217,19 +2242,47 @@ const vagasIntFinal = (vi, nS) => {
   return {
     nS, ano: VAGAS_INT.ano, base: vi.ctx.base, ev: vi.ctx.ev, cdb: vi.ctx.cdb, cdbPesa: vi.cdbPesa,
     cen: vi.cen.map(s => ({
-      id: s.c.id, rot: s.c.rot, curto: s.c.curto, lib: s.c.lib, sul: s.c.sul,
+      id: s.c.id, rot: s.c.rot, curto: s.c.curto, ch: s.c.ch, peso: s.c.peso, lib: s.c.lib, sul: s.c.sul,
       linha: dist(s.linha), linhaDir: dist(s.linhaDir), linhaSul: dist(s.linhaSul),
       times: Object.keys(s.t).map(t => ({ time: t, dir: pc(s.t[t].dir), pre: pc(s.t[t].pre), lib: pc(s.t[t].dir + s.t[t].pre), sul: pc(s.t[t].sul) }))
     }))
   };
+};
+// Peso de cada cenário de rMC.vagasInt para as chances `p` ({lib: 0.6, sula: ...} = chance de
+// final[0] em cada final aberta). Chance ausente ou inválida = a padrão da constante.
+const vagasIntPesos = (vi, p) => vi.cen.map(s => {
+  let w = 1;
+  for (const k of ['lib', 'sula']) {
+    const e = vi.ev[k];
+    if (!e || e.saidas.length < 2) continue;
+    const p0 = viProb(e.pPadrao, p && p[k]);
+    w *= s.ch[k] === e.final[0] ? p0 : 1 - p0;
+  }
+  return w;
+});
+// A TABELA ÚNICA do painel: média dos cenários ponderada pelos pesos. Função pura sobre
+// rMC.vagasInt — trocar a chance não refaz simulação nenhuma.
+const vagasIntComb = (vi, pesos) => {
+  const w = pesos || vagasIntPesos(vi, null);
+  const mix = campo => {
+    const m = {};
+    vi.cen.forEach((s, i) => s[campo].forEach(x => { m[x.pos] = (m[x.pos] || 0) + w[i] * x.pct; }));
+    return Object.keys(m).map(Number).sort((a, b) => a - b).map(k => ({ pos: k, pct: m[k] })).filter(x => x.pct > 0);
+  };
+  const times = vi.cen[0].times.map((t, j) => {
+    const o = { time: t.time, dir: 0, pre: 0, lib: 0, sul: 0 };
+    vi.cen.forEach((s, i) => { const x = s.times[j]; o.dir += w[i] * x.dir; o.pre += w[i] * x.pre; o.lib += w[i] * x.lib; o.sul += w[i] * x.sul; });
+    return o;
+  });
+  return { pesos: w, linha: mix('linha'), linhaDir: mix('linhaDir'), linhaSul: mix('linhaSul'), times };
 };
 
 // ============================================================================
 // v4.98: TIME SEM OBJETIVO — nas rodadas finais, quem já não tem nada em jogo rende menos contra
 // quem ainda briga por algo. Medido fora de 2026: Série A 2006–25 −0,23 ponto/jogo contra o
 // esperado (−0,33 a −0,39 com o critério matemático abaixo), Série B 2012–21 −0,19, cinco ligas
-// europeias −0,14; as casas de aposta já descontam. Em 2026 (27 jogos, eval/sem_objetivo.cjs)
-// a direção se repete, sem significância sozinha.
+// europeias −0,14; as casas de aposta já descontam. Em 2026 (23 jogos em A+B, eval/sem_objetivo.cjs)
+// a direção se repete, menor e dentro do ruído.
 //   · Um time está DECIDIDO no corte k quando já garantiu o top-k ou já não o alcança (só
 //     aritmética de pontos; quem pode EMPATAR em pontos conta como ameaça — erra para NÃO marcar).
 //   · SEM OBJETIVO = decidido em todos os cortes da lista da série.
@@ -18023,46 +18076,79 @@ function LeagueNextPhaseSU({ serie, f2 }) {
 }
 // v4.98: painel "Vagas continentais" (aba Monte Carlo da Série A). Lê rMC.vagasInt, que o
 // simMC_finalize monta a partir da contagem por cenário feita em cada simulação. Enquanto houver
-// final continental com brasileiro por jogar, os cenários aparecem LADO A LADO — o app não modela
-// esse jogo e não chuta a probabilidade dele.
+// final continental com brasileiro por jogar, o painel mostra UMA tabela: a média dos cenários
+// ponderada pela chance ASSUMIDA da final (VAGAS_INT.<final>.p — o app não modela esse jogo).
+// A chance tem um controle próprio e mexer nele só refaz a conta da média (vagasIntComb), não o
+// Monte Carlo; "Ver por cenário" abre os cenários lado a lado.
 function VagasIntPanel({ vi, onRerun }) {
   const h = React.createElement;
   const [det, setDet] = useState(false);
+  const [porCen, setPorCen] = useState(false);
   const [, bump] = useState(0);
   const cen = vi && vi.cen || [];
   if (!cen.length) return null;
   const fmt = v => v >= 99.95 ? '100' : v < 0.05 ? '·' : v < 9.95 ? v.toFixed(1) : String(Math.round(v));
   const cor = v => v >= 99.95 ? 'text-emerald-300 font-bold' : v >= 50 ? 'text-emerald-300' : v >= 5 ? 'text-slate-200' : v >= 0.05 ? 'text-slate-400' : 'text-slate-700';
+  const ler = () => { try { const o = JSON.parse(localStorage.getItem('simUni_vagasInt') || '{}'); return o && typeof o === 'object' && !Array.isArray(o) ? o : {}; } catch (e) { return {}; } };
+  const gravar = o => { try { localStorage.setItem('simUni_vagasInt', JSON.stringify(o)); } catch (e) {} refreshViUser(); bump(x => x + 1); };
+  // resultado da final: muda os cenários (e os cortes do "sem objetivo") → refaz o Monte Carlo
   const informar = (k, nome) => {
-    let o = {};
-    try { o = JSON.parse(localStorage.getItem('simUni_vagasInt') || '{}') || {}; } catch (e) {}
+    const o = ler();
     if (nome) o[k] = nome; else delete o[k];
-    try { localStorage.setItem('simUni_vagasInt', JSON.stringify(o)); } catch (e) {}
-    refreshViUser();
-    bump(x => x + 1);
+    gravar(o);
     if (onRerun) onRerun();
+  };
+  // chance assumida: só muda os pesos da média → nada a refazer
+  const chance = (k, v) => {
+    const o = ler(), p = { ...(o.p && typeof o.p === 'object' ? o.p : {}) };
+    if (v == null) delete p[k]; else p[k] = v;
+    if (Object.keys(p).length) o.p = p; else delete o.p;
+    gravar(o);
   };
   refreshViUser();
   const ev = vi.ev || {};
-  // uma linha por final continental: decidida (oficial) ou em aberto, com os botões para informar
+  const pesos = vagasIntPesos(vi, VI_USER.p);
+  const comb = vagasIntComb(vi, pesos);
+  const pct = v => Math.round(v * 100) + '%';
+  const btn = (rot, fn, ativo) => h('button', {
+    key: rot, onClick: fn,
+    className: `px-2 py-0.5 rounded text-[11px] ${ativo ? 'bg-emerald-700 text-white font-bold' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`
+  }, rot);
+  // uma linha por final continental: decidida (oficial), informada neste navegador, ou em aberto com a chance assumida
   const linhaFinal = k => {
     const e = ev[k];
     if (!e) return null;
+    const vaga = e.campeao ? (e.br.includes(e.campeao) ? ' — abre vaga extra' : ' — sem vaga extra para o Brasil') : '';
     if (e.origem === 'oficial') {
       return h('div', { key: k, className: 'text-[11px] text-slate-400' },
-        h('span', { className: 'text-slate-300 font-medium' }, e.rot + ': '), e.campeao + ' campeão',
-        e.br.includes(e.campeao) ? ' — abre vaga extra' : ' — sem vaga extra para o Brasil');
+        h('span', { className: 'text-slate-300 font-medium' }, e.rot + ': '), e.campeao + ' campeão', vaga);
     }
-    if (!e.br.length) return null;
-    const escolhido = VI_USER[k] && e.final.includes(VI_USER[k]) ? VI_USER[k] : null;
-    const btn = (rot, nome, ativo) => h('button', {
-      key: rot, onClick: () => informar(k, nome),
-      className: `px-2 py-0.5 rounded text-[11px] ${ativo ? 'bg-emerald-700 text-white font-bold' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`
-    }, rot);
-    return h('div', { key: k, className: 'flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400' },
-      h('span', { className: 'text-slate-300 font-medium' }, `${e.rot} (${e.final.join(' × ')}, ${e.data}):`),
-      btn('em aberto', null, !escolhido),
-      e.final.map(f => btn(f + ' campeão', f, escolhido === f)));
+    if (e.origem === 'usuario') {
+      return h('div', { key: k, className: 'flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400' },
+        h('span', { className: 'text-slate-300 font-medium' }, e.rot + ': '), e.campeao + ' campeão', vaga,
+        h('span', { className: 'text-amber-400' }, '· informado neste navegador'),
+        btn('desfazer', () => informar(k, null), false));
+    }
+    if (e.saidas.length < 2) return null;
+    const p0 = viProb(e.pPadrao, VI_USER.p && VI_USER.p[k]);
+    const mudou = Math.abs(p0 - e.pPadrao) > 0.0049;
+    return h('div', { key: k, className: 'rounded-lg bg-slate-900/60 border border-slate-700/60 p-2 text-[11px] text-slate-400' },
+      h('div', null,
+        h('span', { className: 'text-slate-300 font-medium' }, `${e.rot} (${e.final.join(' × ')}, ${e.data})`),
+        ' — final por jogar; chance assumida, não sai do modelo'),
+      h('div', { className: 'flex items-center gap-2 mt-1' },
+        h('span', { className: 'text-slate-200 font-medium whitespace-nowrap' }, `${e.final[0]} ${pct(p0)}`),
+        h('input', {
+          type: 'range', min: 0, max: 100, step: 1, value: Math.round(p0 * 100),
+          onChange: x => chance(k, Number(x.target.value) / 100),
+          'aria-label': `Chance de ${e.final[0]} ser campeão da ${e.rot}`,
+          className: 'flex-1 min-w-0 accent-emerald-500'
+        }),
+        h('span', { className: 'text-slate-200 font-medium whitespace-nowrap' }, `${pct(1 - p0)} ${e.final[1]}`)),
+      h('div', { className: 'flex flex-wrap items-center gap-1.5 mt-1' },
+        mudou ? btn(`voltar a ${pct(e.pPadrao)}`, () => chance(k, null), false) : h('span', { className: 'text-slate-500' }, `padrão ${pct(e.pPadrao)}, do mercado de campeão`),
+        h('span', { className: 'text-slate-500 ml-1' }, 'Já tem o resultado?'),
+        e.final.map(f => btn(f + ' campeão', () => informar(k, f), false))));
   };
   const cdb = vi.cdb;
   const txtCdb = !cdb ? 'finalistas ainda indefinidos — sem repasse por enquanto'
@@ -18072,32 +18158,37 @@ function VagasIntPanel({ vi, onRerun }) {
     key: x.pos, className: `inline-block px-1.5 py-0.5 rounded bg-slate-900/60 mr-1 ${cor(x.pct)}`
   }, `${pre}${x.pos} ${fmt(x.pct)}%`));
   const lista = arr => arr.map(x => `${x.pos}º (${fmt(x.pct)}%)`).join(', ');
-  // times com alguma chance de vaga em algum cenário, do mais provável ao menos
-  const por = cen.map(s => { const m = {}; s.times.forEach(t => { m[t.time] = t; }); return m; });
-  const soma = (t, k) => por.reduce((a, m) => a + m[t][k], 0);
-  const nomes = cen[0].times.map(t => t.time)
-    .filter(t => soma(t, 'lib') + soma(t, 'sul') >= 0.05)
-    .sort((a, b) => soma(b, 'lib') - soma(a, 'lib') || soma(b, 'dir') - soma(a, 'dir') || soma(b, 'sul') - soma(a, 'sul'));
+  // blocos a mostrar: um só (a média ponderada) ou um por cenário
+  const varios = porCen && cen.length > 1;
+  const blocos = varios ? cen.map((s, i) => ({ id: s.id, rot: s.curto, sub: `campeão · ${pct(pesos[i])}`, d: s })) : [{ id: 'comb', rot: null, d: comb }];
+  const por = blocos.map(b => { const m = {}; b.d.times.forEach(t => { m[t.time] = t; }); return m; });
+  // times com alguma chance de vaga em ALGUM cenário (a lista não muda ao trocar de visão), ordenados pela média
+  const mc = {}; comb.times.forEach(t => { mc[t.time] = t; });
+  const vis = v => v >= 0.05 ? v : 0; // o que a tela mostra como "·" não desempata a ordem
+  const nomes = comb.times.map(t => t.time)
+    .filter(t => cen.some(s => s.times.some(x => x.time === t && x.lib + x.sul >= 0.05)))
+    .sort((a, b) => vis(mc[b].lib) - vis(mc[a].lib) || vis(mc[b].dir) - vis(mc[a].dir) || mc[b].sul - mc[a].sul);
   // rótulos curtos: no celular os cenários têm de caber lado a lado sem rolagem
   const cols = det ? [['dir', 'Grp'], ['pre', 'Prév'], ['sul', 'Sula']] : [['lib', 'Lib'], ['sul', 'Sula']];
   const borda = i => i === 0 ? ' border-l border-slate-700/60' : '';
-  const cabCen = cen.length > 1 ? h('tr', { className: 'text-slate-400' },
+  const cabCen = varios ? h('tr', { className: 'text-slate-400' },
     h('th', null),
-    cen.map(s => h('th', { key: s.id, colSpan: cols.length, className: 'text-center font-medium pb-0.5 px-1 border-l border-slate-700/60 leading-tight' },
-      s.curto, h('div', { className: 'text-[9px] font-normal text-slate-500' }, 'campeão')))) : null;
+    blocos.map(b => h('th', { key: b.id, colSpan: cols.length, className: 'text-center font-medium pb-0.5 px-1 border-l border-slate-700/60 leading-tight' },
+      b.rot, h('div', { className: 'text-[9px] font-normal text-slate-500' }, b.sub)))) : null;
   const cabCol = h('tr', { className: 'text-slate-500 border-b border-slate-700' },
     h('th', { className: 'text-left py-1 font-normal' }, 'Time'),
-    cen.map(s => cols.map(([k, r], i) => h('th', { key: s.id + k, className: 'text-right py-1 px-1 font-normal' + borda(i) }, r))));
+    blocos.map(b => cols.map(([k, r], i) => h('th', { key: b.id + k, className: 'text-right py-1 px-1 font-normal' + borda(i) }, r))));
   const corpo = nomes.map(t => h('tr', { key: t, className: 'border-b border-slate-800' },
-    h('td', { className: 'py-1 pr-1' }, h('span', { className: 'inline-flex items-center gap-1 max-w-[112px] sm:max-w-none', title: t },
+    h('td', { className: 'py-1 pr-1' }, h('span', { className: `inline-flex items-center gap-1 ${varios ? 'max-w-[112px]' : 'max-w-[160px]'} sm:max-w-none`, title: t },
       h(Badge, { name: t, size: 16 }), h('span', { className: 'truncate' }, t))),
     por.map((m, ci) => cols.map(([k], i) => h('td', { key: ci + k, className: 'text-right px-1 font-mono ' + cor(m[t][k]) + borda(i) }, fmt(m[t][k]))))));
   const tabela = h('div', { className: 'overflow-x-auto' },
     h('table', { className: 'text-[11px] w-full' }, h('thead', null, cabCen, cabCol), h('tbody', null, corpo)));
-  const linhas = cen.map(s => h('div', { key: s.id, className: 'text-xs mb-1' },
-    cen.length > 1 ? h('span', { className: 'text-slate-300 mr-2' }, s.curto + ' campeão:') : null,
-    chips(s.linha, 'G'),
-    det ? h('span', { className: 'text-slate-500 ml-1' }, `grupos até o ${lista(s.linhaDir)} · Sula até o ${lista(s.linhaSul)}`) : null));
+  const linhas = blocos.map(b => h('div', { key: b.id, className: 'text-xs mb-1' },
+    b.rot ? h('span', { className: 'text-slate-300 mr-2' }, b.rot + ' campeão:') : null,
+    chips(b.d.linha, 'G'),
+    det ? h('span', { className: 'text-slate-500 ml-1' }, `grupos até o ${lista(b.d.linhaDir)} · Sula até o ${lista(b.d.linhaSul)}`) : null));
+  const aberto = cen.length > 1;
   return h('details', { open: true, className: 'mb-4 bg-slate-900/40 rounded-xl border border-slate-700/60 p-3' },
     h('summary', { className: 'text-sm font-semibold text-sky-300 cursor-pointer' }, `Vagas continentais ${vi.ano || ''} — linha dinâmica`),
     h('p', { className: 'text-[11px] text-slate-500 mt-2 mb-2' },
@@ -18115,9 +18206,12 @@ function VagasIntPanel({ vi, onRerun }) {
     h('div', { className: 'flex flex-wrap items-center gap-3 mt-2' },
       h('button', { onClick: () => setDet(d => !d), className: 'text-[11px] text-emerald-400 hover:underline' },
         det ? 'Juntar grupos e prévia' : 'Separar grupos e prévia'),
-      h('span', { className: 'text-[10px] text-slate-600' }, `${(vi.nS || 0).toLocaleString()} simulações · valores em % · ${det ? 'Grp = fase de grupos, Prév = fase prévia' : 'Lib = Libertadores (grupos + prévia)'}`)));
+      aberto ? h('button', { onClick: () => setPorCen(v => !v), className: 'text-[11px] text-emerald-400 hover:underline' },
+        porCen ? 'Ver tabela única' : 'Ver por cenário') : null,
+      h('span', { className: 'text-[10px] text-slate-600' },
+        `${(vi.nS || 0).toLocaleString()} simulações · valores em % · ${det ? 'Grp = fase de grupos, Prév = fase prévia' : 'Lib = Libertadores (grupos + prévia)'}` +
+        (aberto && !porCen ? ' · média dos cenários da final, ponderada pela chance assumida' : ''))));
 }
-
 function LeagueSim({
   times,
   ranking,
