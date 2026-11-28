@@ -8,6 +8,9 @@ Mede **quanto o modelo do app realmente acerta**, em dois estágios independente
 Existe porque nenhuma previsão de 2026 foi jamais medida contra a realidade, e nenhuma foi
 arquivada: o app recalcula tudo no navegador a cada carga e as probabilidades evaporam.
 
+`REVISAO.md` registra o que o resto da temporada fez com as conclusões do `REPORT.md` de
+setembro e o que foi decidido a partir disso. Leia-o antes de usar as recomendações.
+
 ## Rodar
 
 ```bash
@@ -59,6 +62,17 @@ Hoje o desvio é ~2e-16 (erro de arredondamento de ponto flutuante), nas três s
 | `rodar_curto.cjs` / `shortterm.cjs` | estágio de curto prazo |
 | `rodar_longo.cjs` / `lib/longterm.cjs` | estágio de longo prazo (MC, RPS) |
 | `relatorio.cjs` | JSON → `REPORT.md`; só formata |
+| `holdout.cjs` | teste fora da amostra da config candidata: pontua só os jogos posteriores a `data/holdout_ago19.json` |
+| `paridade.cjs` | confere, pelo histórico do git, se o replay equivale ao que o app publicou |
+| `zonas2026.cjs` | previsões de zona de 2026 rodada a rodada: Brier por zona contra a taxa-base e a tabela do momento, acerto dos apontados e calibração por faixa com bootstrap por clube |
+| `matamata2026.cjs` | o mesmo para as fases finais das Séries C e D: acesso, final e título, pelas rodadas dos quadrangulares e pelas fases do mata-mata |
+| `hist/calibracao.cjs` | calibração das zonas em 2022–2025, com variantes de drift e de preset (`--drift`, `--preset`, `--nome`) |
+| `painel/` | página e dados do painel de calibração: `montar.cjs` gera `dados/*.json` das saídas acima; `index.html` e `page.js` são a página publicada |
+| `hist/coletar_cbf.browser.js` | coletor dos jogos de 2021–2025 na API do site da CBF (rodou num navegador) |
+| `hist/sementes.cjs` | testes multi-temporada de semente contra "todos iguais", por eventos de zona: tabela do ano anterior (sem flag), força do estado na Série D (`--uf`), rating herdado e via de classificação (`--herdado`) |
+| `hist/parametros.cjs` | mando, total de gols, preset e Dixon-Coles nas 16 células de 2022–2025: jogo a jogo (sem flag), eventos de zona (`--zona`) e a candidata do histórico em 2026 (`--2026`) |
+| `hist/estaduais.py` | classificação final dos estaduais a partir do wikitext da Wikipedia pt; grava `data/hist/estaduais_classificacao.json` |
+| `hist/ingerir.cjs` | normaliza, deduplica e confere a coleta; grava `data/hist/cbf_jogos_2021_2025.csv` |
 | `lib/appdata.cjs` | reconstrói os resultados que o app enxerga (`mergeRes` + `results.json`) |
 | `lib/walkforward.cjs` | walk-forward com captura de λ + Dixon-Coles |
 | `lib/metrics.cjs` | Brier, logloss, calibração, ECE, bootstrap pareado |

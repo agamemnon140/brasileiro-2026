@@ -1,0 +1,198 @@
+<meta name="dash-one-writer">
+<style>
+.cal-page { display: grid; gap: var(--cds-gap-lg, 20px); color: var(--color-fg); font-family: var(--font-anthropic-sans); font-size: var(--cds-font-size-body, 15px); line-height: 1.45; }
+.cal-page [hidden] { display: none !important; }
+.cal-title { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title, 28px); line-height: 1.15; margin: 0; }
+.cal-lead { margin: var(--cds-gap-sm, 8px) 0 0; max-width: 70ch; }
+.cal-lead b { font-weight: var(--cds-font-weight-medium, 600); }
+.cal-filters { display: flex; flex-wrap: wrap; gap: var(--cds-gap-md, 12px); align-items: end; }
+.cal-filter { display: grid; gap: var(--cds-gap-xs, 4px); font-size: var(--cds-font-size-caption, 12px); color: var(--color-fg-muted); }
+.cal-filter select { min-width: 12rem; max-width: 100%; }
+.cal-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius, 8px); padding: var(--cds-pad-lg, 20px); min-width: 0; }
+.cal-h { font-size: var(--cds-font-size-heading, 17px); font-weight: var(--cds-font-weight-medium, 600); margin: 0 0 var(--cds-gap-xs, 4px); }
+.cal-sub { margin: 0 0 var(--cds-gap-md, 12px); color: var(--color-fg-muted); font-size: var(--cds-font-size-caption, 12px); max-width: 78ch; }
+.cal-chart { position: relative; min-height: 320px; color: var(--color-fg-muted); }
+.cal-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.cal-chart .cal-tick { fill: var(--cds-text-secondary, var(--color-fg-muted)); font-size: var(--cds-font-size-caption, 12px); font-variant-numeric: tabular-nums; }
+.cal-chart .cal-rot { fill: var(--color-fg); font-size: var(--cds-font-size-caption, 12px); font-variant-numeric: tabular-nums; }
+.cal-chart .cal-grid { stroke: var(--cds-chart-grid, var(--color-border-line)); stroke-width: 1; }
+.cal-chart .cal-diag { stroke: var(--cds-chart-reference, var(--color-fg-muted)); stroke-width: 1.5; }
+.cal-chart .cal-linha { fill: none; stroke: var(--cal-serie); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.cal-chart .cal-margem { stroke: var(--cal-serie); stroke-width: 2; stroke-linecap: round; opacity: .35; }
+.cal-chart .cal-ponto { fill: var(--cal-serie); stroke: var(--color-panel); stroke-width: 2; }
+.cal-chart .cal-ponto.cal-fora { fill: var(--color-panel); stroke: var(--cds-chart-status-critical, var(--color-bad)); stroke-width: 3; }
+.cal-chart .cal-alvo { fill: transparent; cursor: default; outline: none; }
+.cal-chart .cal-alvo:focus-visible + .cal-halo, .cal-chart .cal-halo.cal-on { opacity: 1; }
+.cal-chart .cal-halo { fill: none; stroke: var(--color-fg); stroke-width: 1.5; opacity: 0; pointer-events: none; }
+.cal-vazio { margin: 0; padding: var(--cds-pad-lg, 20px) 0; }
+.cal-tip { position: absolute; pointer-events: none; z-index: 2; min-width: 190px; max-width: 260px; background: var(--cds-surface-popover, var(--color-bg)); border: 1px solid var(--cds-border, var(--color-border-line)); box-shadow: var(--cds-shadow-popover, 0 4px 16px rgba(0,0,0,.16)); border-radius: var(--cds-radius, 8px); padding: var(--cds-pad-sm, 10px); font-size: var(--cds-font-size-caption, 12px); color: var(--cds-text-secondary, var(--color-fg-muted)); }
+.cal-tip strong { display: block; color: var(--color-fg); font-size: var(--cds-font-size-body, 15px); font-weight: var(--cds-font-weight-medium, 600); margin-bottom: 2px; }
+.cal-tip span { display: block; }
+.cal-legenda { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: var(--cds-gap-md, 12px) 0 0; padding: 0; list-style: none; font-size: var(--cds-font-size-caption, 12px); color: var(--color-fg-muted); }
+.cal-legenda li { display: inline-flex; align-items: center; gap: 6px; }
+.cal-sw { display: inline-block; flex: none; }
+.cal-sw-ponto { width: 10px; height: 10px; border-radius: 50%; background: var(--cal-serie); }
+.cal-sw-fora { width: 6px; height: 6px; border-radius: 50%; border: 3px solid var(--cds-chart-status-critical, var(--color-bad)); background: var(--color-panel); }
+.cal-sw-margem { width: 2px; height: 14px; border-radius: 1px; background: var(--cal-serie); opacity: .35; }
+.cal-sw-diag { width: 18px; height: 0; border-top: 1.5px solid var(--cds-chart-reference, var(--color-fg-muted)); }
+.cal-minis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--cds-gap-md, 12px); color: var(--color-fg-muted); }
+.cal-mini { display: block; min-width: 0; text-align: left; font: inherit; color: var(--color-fg); background: var(--color-bg); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius, 8px); padding: var(--cds-pad-sm, 10px); cursor: pointer; }
+.cal-mini:hover { border-color: var(--color-fg-muted); }
+.cal-mini:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 2px; }
+.cal-mini[aria-pressed="true"] { border-color: var(--color-fg); box-shadow: inset 0 0 0 1px var(--color-fg); }
+.cal-mini-t { display: block; font-weight: var(--cds-font-weight-medium, 600); }
+.cal-mini-s, .cal-mini-n { display: block; font-size: var(--cds-font-size-caption, 12px); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+.cal-mini-s { min-height: 1.45em; }
+.cal-mini svg { display: block; width: 100%; height: auto; margin: 6px 0 4px; overflow: visible; }
+.cal-mini .cal-tick { fill: var(--cds-text-secondary, var(--color-fg-muted)); font-size: 10px; font-variant-numeric: tabular-nums; }
+.cal-mini .cal-grid { stroke: var(--cds-chart-grid, var(--color-border-line)); stroke-width: 1; }
+.cal-mini .cal-diag { stroke: var(--cds-chart-reference, var(--color-fg-muted)); stroke-width: 1; }
+.cal-mini .cal-linha { fill: none; stroke: var(--cal-serie); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.cal-mini .cal-margem { stroke: var(--cal-serie); stroke-width: 1.5; stroke-linecap: round; opacity: .3; }
+.cal-mini .cal-ponto { fill: var(--cal-serie); stroke: var(--color-bg); stroke-width: 1.5; }
+.cal-mini .cal-ponto.cal-fora { fill: var(--color-bg); stroke: var(--cds-chart-status-critical, var(--color-bad)); stroke-width: 2.5; }
+.cal-scroll { overflow-x: auto; }
+.cal-table { border-collapse: collapse; width: 100%; font-size: var(--cds-font-size-caption, 12px); font-variant-numeric: tabular-nums; }
+.cal-table th { text-align: left; vertical-align: bottom; font-weight: var(--cds-font-weight-medium, 600); color: var(--color-fg-muted); border-bottom: 1px solid var(--color-border-line); padding: 6px 14px 6px 0; }
+.cal-table td { padding: 6px 14px 6px 0; border-bottom: 1px solid var(--color-border-line); white-space: nowrap; }
+.cal-table .cal-num { text-align: right; }
+.cal-table td.cal-alerta { color: var(--color-fg); font-weight: var(--cds-font-weight-medium, 600); }
+.cal-notas { font-size: var(--cds-font-size-caption, 12px); color: var(--color-fg-muted); }
+.cal-notas summary { cursor: pointer; color: var(--color-fg); }
+.cal-notas p { max-width: 80ch; margin: var(--cds-gap-sm, 8px) 0 0; }
+[data-dash-source-state=refreshing] { opacity: .5; }
+</style>
+
+<div class="cal-page">
+  <header id="topo">
+    <h1 class="cal-title">Calibração das previsões de zona · Brasileirão 2026</h1>
+    <p class="cal-lead" data-cal="lead-com">Nesta seleção, o que o modelo anunciou com 40% a 60% de chance aconteceu em <b data-draw="lead-obs" data-source="calibracao" data-field="aconteceu_pct">—</b> das vezes: foram <b data-draw="lead-n" data-source="calibracao" data-field="previsoes">—</b> previsões, com média anunciada de <b data-draw="lead-prev" data-source="calibracao" data-field="previsto_pct">—</b>.</p>
+    <p class="cal-lead" data-cal="lead-sem" hidden>Nesta seleção o modelo não fez previsões na faixa de 40% a 60%.</p>
+  </header>
+
+  <div class="cal-filters" id="filtros">
+    <label class="cal-filter">Série
+      <select class="dash-select" data-cal="serie" aria-label="Série">
+        <option value="Todas">Todas as séries</option>
+        <option value="A">Série A (prévia)</option>
+        <option value="B">Série B</option>
+        <option value="C">Série C</option>
+        <option value="D">Série D</option>
+      </select>
+    </label>
+    <label class="cal-filter">Zona ou fase
+      <select class="dash-select" data-draw="zona" aria-label="Zona ou fase" data-source="calibracao"></select>
+    </label>
+    <label class="cal-filter">Rodadas
+      <select class="dash-select" data-draw="rodadas" aria-label="Conjunto de rodadas" data-source="recortes"></select>
+    </label>
+  </div>
+
+  <section class="cal-card" id="curva">
+    <h2 class="cal-h">O que foi anunciado aconteceu?</h2>
+    <p class="cal-sub">Cada ponto reúne as previsões de uma faixa de probabilidade. Sobre a diagonal, o modelo acertou a dose; acima dela foi tímido, abaixo foi confiante demais. A barra vertical é a margem de 95% do ponto: quando ela cruza a diagonal, o desvio cabe no acaso. O tamanho do ponto acompanha o número de previsões.</p>
+    <div class="cal-chart" data-draw="curva" data-source="calibracao">—</div>
+    <ul class="cal-legenda" aria-label="Legenda">
+      <li><span class="cal-sw cal-sw-ponto"></span>faixa dentro da margem</li>
+      <li><span class="cal-sw cal-sw-fora"></span>faixa fora da margem</li>
+      <li><span class="cal-sw cal-sw-margem"></span>margem de 95%</li>
+      <li><span class="cal-sw cal-sw-diag"></span>calibração perfeita</li>
+    </ul>
+  </section>
+
+  <section class="cal-card" id="blocos">
+    <h2 class="cal-h">Por conjunto de rodadas</h2>
+    <p class="cal-sub">A mesma curva, separada pelo momento em que a previsão foi feita. Cada quadro reúne as previsões de um quarto da fase de liga, da pré-temporada às últimas rodadas; nas fases finais há um quadro a mais, com o que foi previsto depois dela. Escolha um quadro para vê-lo no gráfico de cima e nas tabelas; escolha de novo para voltar a todas as rodadas.</p>
+    <div class="cal-minis" data-draw="blocos" data-source="calibracao recortes">—</div>
+  </section>
+
+  <section class="cal-card" id="faixas">
+    <h2 class="cal-h">Os números por faixa</h2>
+    <p class="cal-sub">Um caso é um par clube-zona. As previsões de um mesmo clube ao longo das rodadas apontam para o mesmo desfecho, então a margem conta a incerteza por clube, não por previsão.</p>
+    <div class="cal-scroll">
+      <table class="cal-table" data-source="calibracao" data-row-key="id">
+        <thead><tr>
+          <th data-field="faixa">Faixa anunciada</th>
+          <th class="cal-num" data-field="previsoes">Previsões</th>
+          <th class="cal-num" data-field="casos">Casos</th>
+          <th class="cal-num" data-field="previsto_pct">Previsto</th>
+          <th class="cal-num" data-field="aconteceu_pct">Aconteceu</th>
+          <th class="cal-num" data-field="diferenca_pp">Diferença (pp)</th>
+          <th class="cal-num" data-field="margem_lo_pp">Margem: de</th>
+          <th class="cal-num" data-field="margem_hi_pp">até</th>
+          <th data-field="veredito">Leitura</th>
+        </tr></thead>
+        <tbody data-draw="faixas"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="cal-card" id="precisao">
+    <h2 class="cal-h">Precisão por zona</h2>
+    <p class="cal-sub">Habilidade é quanto o modelo melhora sobre dar a mesma chance a todos os clubes ainda na disputa: 0% é não saber nada além do número de vagas, 100% é acertar tudo, e negativo é pior que isso. O acerto dos apontados é a fração dos clubes que o modelo dava como mais prováveis na zona e que terminaram nela, na média das rodadas; a tabela do momento aponta quem ocupava a zona naquela rodada. A tabela segue a série e o conjunto de rodadas escolhidos.</p>
+    <div class="cal-scroll">
+      <table class="cal-table" data-source="precisao" data-row-key="id">
+        <thead><tr>
+          <th data-field="serie_nome">Série</th>
+          <th data-field="fase">Fase</th>
+          <th data-field="zona">Zona ou evento</th>
+          <th data-field="bloco_curto">Rodadas</th>
+          <th class="cal-num" data-field="vagas">Vagas</th>
+          <th class="cal-num" data-field="habilidade_pct">Habilidade</th>
+          <th class="cal-num" data-field="brier">Brier do modelo</th>
+          <th class="cal-num" data-field="brier_referencia">Brier de referência</th>
+          <th class="cal-num" data-field="acerto_modelo_pct">Acerto dos apontados</th>
+          <th class="cal-num" data-field="acerto_tabela_pct">Acerto da tabela do momento</th>
+        </tr></thead>
+        <tbody data-draw="precisao"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="cal-card" id="raros">
+    <h2 class="cal-h">Os desfechos mais improváveis</h2>
+    <p class="cal-sub">Para cada clube e evento, o momento em que o modelo dava a menor chance ao que acabou acontecendo. Numa linha de "não aconteceu", o raro foi o favorito falhar. Probabilidades abaixo de uma simulação em 5 mil aparecem como "menos de 0,02%".</p>
+    <div class="cal-scroll">
+      <table class="cal-table" data-source="raros" data-row-key="id">
+        <thead><tr>
+          <th data-field="serie_nome">Série</th>
+          <th data-field="clube">Clube</th>
+          <th data-field="evento">Evento</th>
+          <th data-field="quando">Quando</th>
+          <th class="cal-num" data-field="probabilidade_pct">Chance dada ao evento</th>
+          <th data-field="desfecho">O que houve</th>
+        </tr></thead>
+        <tbody data-draw="raros"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="cal-card" id="drift">
+    <h2 class="cal-h">O ajuste que a calibração pediria, testado</h2>
+    <p class="cal-sub">O drift é o ruído que o modelo soma à força de cada clube a cada rodada simulada: mais drift alarga as projeções, menos drift as estreita. A linha de 15 é a configuração do app. As colunas mostram o que aconteceu quando o modelo anunciava cada faixa, nas zonas da fase de liga das quatro séries.</p>
+    <div class="cal-scroll">
+      <table class="cal-table" data-source="variantes" data-row-key="id">
+        <thead><tr>
+          <th data-field="base">Base</th>
+          <th class="cal-num" data-field="drift">Drift</th>
+          <th class="cal-num" data-field="previsoes">Previsões</th>
+          <th class="cal-num" data-field="brier">Brier</th>
+          <th class="cal-num" data-field="erro_medio_pp">Erro médio de calibração (pp)</th>
+          <th class="cal-num" data-field="f7080_aconteceu_pct">Anunciado 70–80%: aconteceu</th>
+          <th class="cal-num" data-field="f8090_aconteceu_pct">Anunciado 80–90%: aconteceu</th>
+          <th class="cal-num" data-field="certeza_aconteceu_pct">Anunciado 100%: aconteceu</th>
+        </tr></thead>
+        <tbody data-draw="variantes"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <details class="cal-notas" id="notas">
+    <summary>Como os números foram feitos e o que eles não cobrem</summary>
+    <p>Em cada rodada de 2026, da pré-temporada à penúltima, o Monte Carlo do simulador roda sabendo só os resultados até ali, com a configuração e a semente do app, e a probabilidade de cada clube em cada zona é comparada com o desfecho. Nas fases finais das Séries C e D o eixo continua depois da fase de liga: cada rodada dos quadrangulares e cada fase do mata-mata.</p>
+    <p>Os conjuntos de rodadas dividem a fase de liga de cada série em metades e quartos pelo momento da previsão: o 1º quarto de um campeonato de 38 rodadas são as previsões feitas antes das rodadas 1 a 10. Com "todas as séries", cada campeonato entra com o seu próprio quarto.</p>
+    <p>A Série A é uma prévia: o desfecho usado é a tabela da rodada 34, e não a final. Na Série B, sete placares da rodada 38 vêm da imprensa. Nas fases finais só entram as previsões ainda em aberto, ou seja, com chance maior que zero e menor que 100%.</p>
+    <p>A base de 2022 a 2025 roda o mesmo motor com todos os clubes partindo iguais, porque as temporadas passadas não têm a nota dada à mão; ela serve para ver se um desvio de 2026 se repete.</p>
+  </details>
+</div>
+<script src="page.js"></script>

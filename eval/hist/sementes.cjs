@@ -1,0 +1,391 @@
+// PRIMEIRO TESTE MULTI-TEMPORADA: uma semente derivada da tabela do ano anterior bate
+// "todos iguais" nos eventos de zona?
+//
+// Roda o motor de hoje (recortado do index.html, como todo o eval/) sobre as Series A, B, C e
+// D de 2022 a 2025, com os jogos de eval/data/hist/cbf_jogos_2021_2025.csv. O clube e o id
+// da CBF, nao o nome. Cada liga e simulada como pontos corridos puros (sk 'A' com os gols
+// medios da serie de verdade), entao playoff da B e quadrangular da C de 2026 nao entram.
+//
+// REGUA: Brier dos eventos de zona, com os cortes reais de cada serie na fase de liga
+//   A: 1o, top-4, top-6, 4 ultimos    B: 1o, top-4 (acesso), 4 ultimos
+//   C: 1o, top-8 (quadrangular), 4 ultimos    D (cada grupo de 8): 1o, top-4 (classificados)
+// medido em quatro cortes: pre-temporada e 25%, 50% e 75% das rodadas.
+//
+// SEMENTE "ano anterior": posto na piramide do ano anterior (A 1-20, B 21-40, C 41-60, D
+// 61+ por aproveitamento na fase de grupos; quem nao jogou serie nacional fica no piso),
+// convertido em Elo linear no posto dentro da serie e encolhido por k em direcao ao centro.
+// "iguais" e o piso de comparacao: todo clube no centro.
+//
+// VEREDITO (fixado antes de rodar, ver eval/REVISAO.md): a semente vira licao se melhora o
+// Brier de zona em pelo menos 12 das 16 celulas temporada x serie. A confirmacao em 2026 e
+// passo separado.
+//
+//   node eval/hist/sementes.cjs            # 2000 simulacoes por ponto, ~3 min
+//   node eval/hist/sementes.cjs 5000       # mais simulacoes
+const fs = require('fs');
+const path = require('path');
+const { loadEngine } = require('../../scripts/engine.cjs');
+const L = require('../lib/longterm.cjs');
+const S = require('../lib/seeds.cjs');
+const { lerCsv, tabela } = require('./ingerir.cjs');
+
+const NSIMS = parseInt(process.argv.find(a => /^\d+$/.test(a))) || 2000;
+const KS = [0.25, 0.5, 1.0];
+const CENTRO = (S.ELO_MIN + S.ELO_MAX) / 2;
+const EVENTOS = {
+  A: [['1o', 1, 1], ['top4', 1, 4], ['top6', 1, 6], ['z4', 17, 20]],
+  B: [['1o', 1, 1], ['top4', 1, 4], ['z4', 17, 20]],
+  C: [['1o', 1, 1], ['top8', 1, 8], ['z4', 17, 20]],
+  D: [['1o', 1, 1], ['top4', 1, 4]],
+};
+
+// Ligas de pontos corridos de cada temporada x serie. Na C e o grupo de 190 jogos (ou os
+// dois de 90 em 2021); na D, os oito grupos de 56 jogos.
+function ligas(jogos) {
+  const out = {};
+  const porTS = {};
+  for (const g of jogos) (porTS[`${g.ano}|${g.serie}`] = porTS[`${g.ano}|${g.serie}`] || []).push(g);
+  for (const [k, js] of Object.entries(porTS)) {
+    const [ano, serie] = k.split('|');
+    const porGrupo = {};
+    js.forEach(g => (porGrupo[g.grupo] = porGrupo[g.grupo] || []).push(g));
+    const alvo = { A: [380], B: [380], C: [190, 90], D: [56] }[serie];
+    out[k] = Object.entries(porGrupo).filter(([, v]) => alvo.includes(v.length))
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([nome, v]) => ({ ano: Number(ano), serie, nome, jogos: v, times: [...new Set(v.flatMap(g => [g.id_m, g.id_v]))] }));
+  }
+  return out;
+}
+
+// A CBF troca o id do clube quando ele vira SAF (Cruzeiro, Vasco, Botafogo, Bahia, Fortaleza...).
+// Sem religar os ids, um clube que foi 4o da Serie A no ano anterior entra como "sem
+// historico". O elo e feito pelo nome: um id que estreia no ano Y herda de um id que sumiu
+// antes de Y quando o nome normalizado de um e igual ao do outro ou seu prefixo, e o
+// candidato e unico entre os de aparicao mais recente. Devolve id novo -> id antigo.
+const normNome = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  .replace(/\b(saf|s\.?a\.?f\.?|futebol|clube|esporte|club|de|do|da|e|regatas|fc|ec|sc|sociedade|anonima|ltda)\b/g, ' ')
+  .replace(/[^a-z ]/g, ' ').replace(/\s+/g, ' ').trim();
+function aliases(jogos) {
+  const nome = {}, anos = {};
+  for (const g of jogos) for (const [id, n] of [[g.id_m, g.mandante], [g.id_v, g.visitante]]) { nome[id] = n; (anos[id] = anos[id] || new Set()).add(g.ano); }
+  const prim = id => Math.min(...anos[id]), ult = id => Math.max(...anos[id]);
+  const mapa = {}, ambiguos = [];
+  for (const t of Object.keys(nome)) {
+    const y = prim(t); if (y <= 2021) continue;
+    const nt = normNome(nome[t]);
+    // prefixo so vale quando o nome novo diz SAF: sem isso, "Guarany FC" herdaria de "Guarany de Sobral"
+    const ehSaf = /\bs\.?a\.?f\b/i.test(nome[t]);
+    let c = Object.keys(nome).filter(i => i !== t && ult(i) < y && (normNome(nome[i]) === nt || (ehSaf && (nt.startsWith(normNome(nome[i]) + ' ') || normNome(nome[i]).startsWith(nt + ' ')))));
+    if (!c.length) continue;
+    const rec = Math.max(...c.map(ult)); c = c.filter(i => ult(i) === rec);
+    if (c.length === 1) mapa[t] = c[0]; else ambiguos.push(`${t} ${nome[t]}: ${c.map(i => i + ' ' + nome[i]).join(' / ')}`);
+  }
+  return { mapa, ambiguos, nome };
+}
+// Elos que o nome nao resolve, conferidos a mao.
+const ALIAS_MANUAL = {};
+
+// Posto na piramide ao fim de `ano`: quanto menor, melhor.
+function piramide(LG, ano) {
+  const posto = {};
+  const base = { A: 0, B: 20, C: 40, D: 60 };
+  for (const serie of ['A', 'B', 'C', 'D']) {
+    const ls = LG[`${ano}|${serie}`] || [];
+    if (serie === 'A' || serie === 'B' || (serie === 'C' && ls.length === 1)) {
+      ls.forEach(l => tabela(l.jogos).forEach((c, i) => posto[c.id] = base[serie] + i + 1));
+    } else {
+      // C em dois grupos (2021) e D em oito: ordena todos pelo aproveitamento na fase de grupos.
+      const todos = ls.flatMap(l => tabela(l.jogos));
+      todos.sort((a, b) => b.P / b.J - a.P / a.J || (b.GP - b.GC) / b.J - (a.GP - a.GC) / a.J || b.GP / b.J - a.GP / a.J);
+      todos.forEach((c, i) => posto[c.id] = base[serie] + i + 1);
+    }
+  }
+  return posto;
+}
+
+// Elo linear no posto ordinal dentro do conjunto `ids`; empates (o piso) dividem o posto medio.
+function eloPorPosto(ids, posto0, alias = {}) {
+  const PISO = 1e6;
+  // segue a cadeia de ids antigos ate achar um com posto
+  const posto = {};
+  for (const t of ids) { let i = t, n = 0; while (!posto0[i] && alias[i] && n++ < 5) i = alias[i]; if (posto0[i]) posto[t] = posto0[i]; }
+  const ord = [...ids].sort((a, b) => (posto[a] || PISO) - (posto[b] || PISO));
+  const ordinal = {};
+  for (let i = 0; i < ord.length;) {
+    let j = i;
+    while (j + 1 < ord.length && (posto[ord[j + 1]] || PISO) === (posto[ord[i]] || PISO)) j++;
+    for (let k = i; k <= j; k++) ordinal[ord[k]] = (i + j) / 2;
+    i = j + 1;
+  }
+  const n = ord.length, elo = {};
+  ids.forEach(t => elo[t] = S.ELO_MAX - (S.ELO_MAX - S.ELO_MIN) * ordinal[t] / (n - 1));
+  return elo;
+}
+
+function rodar() {
+  const E = loadEngine(['DEFAULT_CFG', 'simMC', 'calcClassif']);
+  const jogos = lerCsv();
+  const LG = ligas(jogos);
+  const al = { ...aliases(jogos).mapa, ...ALIAS_MANUAL };
+  const celulas = [];
+  for (const ano of [2022, 2023, 2024, 2025]) {
+    const posto = piramide(LG, ano - 1);
+    for (const serie of ['A', 'B', 'C', 'D']) {
+      const ls = LG[`${ano}|${serie}`];
+      // Pontos corridos puros: sk 'A' com os gols medios e o mando da serie de verdade.
+      const cfg = structuredClone(E.DEFAULT_CFG);
+      cfg.lambdas.A = { ...E.DEFAULT_CFG.lambdas[serie] };
+      const eloSerie = eloPorPosto(ls.flatMap(l => l.times), posto, al);
+      const temPosto = t => { let i = t, n = 0; while (!posto[i] && al[i] && n++ < 5) i = al[i]; return !!posto[i]; };
+      const semPosto = ls.flatMap(l => l.times).filter(t => !temPosto(t)).length;
+      const variantes = { iguais: () => CENTRO };
+      KS.forEach(k => variantes[`anterior@${k}`] = t => CENTRO + k * (eloSerie[t] - CENTRO));
+      const soma = {}, soma0 = {}; let n = 0, n0 = 0;
+      Object.keys(variantes).forEach(v => { soma[v] = 0; soma0[v] = 0; });
+      ls.forEach((l, gi) => {
+        const H = l.jogos.reduce((m, g) => Math.max(m, g.rodada), 0);
+        const fixture = l.jogos.map(g => ({ casa: g.id_m, fora: g.id_v, rodada: g.rodada, data: g.data }));
+        const res = l.jogos.filter(g => g.gm != null).map(g => ({ c: g.id_m, f: g.id_v, gc: g.gm, gf: g.gv, r: g.rodada }));
+        const real = {}; E.calcClassif(l.times, res).forEach(c => real[c.time] = c.pos);
+        const nT = l.times.length;
+        for (const corte of [0, Math.round(H * 0.25), Math.round(H * 0.5), Math.round(H * 0.75)]) {
+          for (const [v, ge] of Object.entries(variantes)) {
+            const ranking = {}; l.times.forEach(t => ranking[t] = { elo: ge(t) });
+            const { dist } = L.preverEm(E, {
+              times: l.times, ranking, fixture, res, cfg, sk: 'A', H, corte, nSims: NSIMS,
+              ak: cfg.defaultAlpha, seed: ano * 1000 + gi * 37 + corte * 7 + serie.charCodeAt(0),
+            });
+            let b = 0, m = 0;
+            for (const [, de, ate0] of EVENTOS[serie]) {
+              const ate = Math.min(ate0, nT);
+              for (const t of l.times) {
+                const p = L.soma(dist[t], de - 1, ate), o = real[t] >= de && real[t] <= ate ? 1 : 0;
+                b += (p - o) ** 2; m++;
+              }
+            }
+            soma[v] += b / m; if (corte === 0) soma0[v] += b / m;
+          }
+          n++; if (corte === 0) n0++;
+        }
+      });
+      const cel = { ano, serie, ligas: ls.length, clubes: ls.flatMap(l => l.times).length, semPosto, brier: {}, brierPre: {} };
+      Object.keys(variantes).forEach(v => { cel.brier[v] = soma[v] / n; cel.brierPre[v] = soma0[v] / n0; });
+      celulas.push(cel);
+      process.stderr.write(`  ${ano} ${serie}: iguais ${cel.brier.iguais.toFixed(4)} | ` + KS.map(k => `k=${k} ${cel.brier['anterior@' + k].toFixed(4)}`).join(' | ') + '\n');
+    }
+  }
+  const veredito = {};
+  for (const k of KS) {
+    const v = 'anterior@' + k;
+    const ganha = celulas.filter(c => c.brier[v] < c.brier.iguais);
+    const ganhaPre = celulas.filter(c => c.brierPre[v] < c.brierPre.iguais);
+    const porSerie = {};
+    ['A', 'B', 'C', 'D'].forEach(s => porSerie[s] = ganha.filter(c => c.serie === s).length);
+    veredito[v] = {
+      celulasMelhores: ganha.length, de: celulas.length, porSerie,
+      celulasMelhoresPreTemporada: ganhaPre.length,
+      ganhoMedio: celulas.reduce((a, c) => a + (1 - c.brier[v] / c.brier.iguais), 0) / celulas.length,
+      ganhoMedioPreTemporada: celulas.reduce((a, c) => a + (1 - c.brierPre[v] / c.brierPre.iguais), 0) / celulas.length,
+      passa: ganha.length >= 12,
+    };
+  }
+  return { nSims: NSIMS, ks: KS, eventos: EVENTOS, celulas, veredito };
+}
+
+// SEGUNDO TESTE, so na Serie D: a FORCA DO ESTADO como semente.
+// A UF de cada clube vem de eval/data/hist/serie_d_clubes.json (tabela de participantes da
+// Wikipedia casada com os ids da CBF). A forca de uma UF no ano Y e o aproveitamento dos
+// clubes dela na fase de grupos da Serie D de Y-1, puxado para a media nacional conforme o
+// numero de jogos (28 jogos de "peso" da media). Todos os clubes de uma UF recebem o mesmo
+// posto; "misto" e a media do Elo da UF com o do posto do ano anterior.
+// Licao de uma serie so: precisa melhorar nas 4 celulas.
+function rodarUF() {
+  const E = loadEngine(['DEFAULT_CFG', 'simMC', 'calcClassif']);
+  const jogos = lerCsv(); const LG = ligas(jogos);
+  const al = { ...aliases(jogos).mapa, ...ALIAS_MANUAL };
+  const CLUBES = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'hist', 'serie_d_clubes.json'), 'utf8'));
+  const ufDe = ano => { const m = {}; CLUBES[ano].forEach(c => m[c.id] = c.uf); return m; };
+  const celulas = [];
+  for (const ano of [2022, 2023, 2024, 2025]) {
+    const ls = LG[`${ano}|D`], ids = ls.flatMap(l => l.times);
+    const ufAnt = ufDe(ano - 1), ufHoje = ufDe(ano);
+    const ac = {}; let tp = 0, tj = 0;
+    for (const l of LG[`${ano - 1}|D`]) for (const c of tabela(l.jogos)) { const u = ufAnt[c.id]; (ac[u] = ac[u] || { p: 0, j: 0 }); ac[u].p += c.P; ac[u].j += c.J; tp += c.P; tj += c.J; }
+    const media = tp / tj, forca = {};
+    Object.entries(ac).forEach(([u, v]) => forca[u] = (v.p + 28 * media) / (v.j + 28));
+    const ordUF = Object.keys(forca).sort((a, b) => forca[b] - forca[a]);
+    const postoUF = {}; ids.forEach(t => postoUF[t] = ordUF.indexOf(ufHoje[t]) + 1 || ordUF.length + 1);
+    const eloUF = eloPorPosto(ids, postoUF), eloAnt = eloPorPosto(ids, piramide(LG, ano - 1), al);
+    // Variante acumulada: todos os anos anteriores disponiveis (desde 2021), mesma contracao.
+    const acT = {}; let tpT = 0, tjT = 0;
+    for (let y = 2021; y < ano; y++) { const ufY = ufDe(y); for (const l of LG[`${y}|D`]) for (const c of tabela(l.jogos)) { const u = ufY[c.id]; (acT[u] = acT[u] || { p: 0, j: 0 }); acT[u].p += c.P; acT[u].j += c.J; tpT += c.P; tjT += c.J; } }
+    const forcaT = {}; Object.entries(acT).forEach(([u, v]) => forcaT[u] = (v.p + 28 * tpT / tjT) / (v.j + 28));
+    const ordT = Object.keys(forcaT).sort((a, b) => forcaT[b] - forcaT[a]);
+    const postoT = {}; ids.forEach(t => postoT[t] = ordT.indexOf(ufHoje[t]) + 1 || ordT.length + 1);
+    const eloUFT = eloPorPosto(ids, postoT);
+    const cfg = structuredClone(E.DEFAULT_CFG); cfg.lambdas.A = { ...E.DEFAULT_CFG.lambdas.D };
+    const variantes = { iguais: () => CENTRO, 'anterior@0.25': t => CENTRO + 0.25 * (eloAnt[t] - CENTRO) };
+    for (const k of KS) variantes[`uf@${k}`] = t => CENTRO + k * (eloUF[t] - CENTRO);
+    for (const k of [0.25, 0.5]) variantes[`misto@${k}`] = t => CENTRO + k * ((eloUF[t] + eloAnt[t]) / 2 - CENTRO);
+    for (const k of [0.1, 0.25]) variantes[`uf_acumulada@${k}`] = t => CENTRO + k * (eloUFT[t] - CENTRO);
+    const soma = {}, soma0 = {}; let n = 0, n0 = 0;
+    Object.keys(variantes).forEach(v => { soma[v] = 0; soma0[v] = 0; });
+    ls.forEach((l, gi) => {
+      const H = 14, fixture = l.jogos.map(g => ({ casa: g.id_m, fora: g.id_v, rodada: g.rodada, data: g.data }));
+      const res = l.jogos.filter(g => g.gm != null).map(g => ({ c: g.id_m, f: g.id_v, gc: g.gm, gf: g.gv, r: g.rodada }));
+      const real = {}; E.calcClassif(l.times, res).forEach(c => real[c.time] = c.pos);
+      for (const corte of [0, 4, 7, 10]) {
+        for (const [v, ge] of Object.entries(variantes)) {
+          const ranking = {}; l.times.forEach(t => ranking[t] = { elo: ge(t) });
+          const { dist } = L.preverEm(E, { times: l.times, ranking, fixture, res, cfg, sk: 'A', H, corte, nSims: NSIMS, ak: cfg.defaultAlpha, seed: ano * 1000 + gi * 37 + corte * 7 + 68 });
+          let b = 0, m = 0;
+          for (const [, de, ate] of EVENTOS.D) for (const t of l.times) { const p = L.soma(dist[t], de - 1, ate), o = real[t] >= de && real[t] <= ate ? 1 : 0; b += (p - o) ** 2; m++; }
+          soma[v] += b / m; if (corte === 0) soma0[v] += b / m;
+        }
+        n++; if (corte === 0) n0++;
+      }
+    });
+    const cel = { ano, forcaUF: Object.fromEntries(ordUF.map(u => [u, +forca[u].toFixed(3)])), forcaUFAcumulada: Object.fromEntries(ordT.map(u => [u, +forcaT[u].toFixed(3)])), brier: {}, brierPre: {} };
+    Object.keys(variantes).forEach(v => { cel.brier[v] = soma[v] / n; cel.brierPre[v] = soma0[v] / n0; });
+    celulas.push(cel);
+  }
+  const nomes = Object.keys(celulas[0].brier).filter(v => v !== 'iguais');
+  const veredito = {};
+  for (const v of nomes) veredito[v] = {
+    celulasMelhores: celulas.filter(c => c.brier[v] < c.brier.iguais).length, de: 4,
+    ganhoMedio: celulas.reduce((a, c) => a + (1 - c.brier[v] / c.brier.iguais), 0) / 4,
+    celulasMelhoresPreTemporada: celulas.filter(c => c.brierPre[v] < c.brierPre.iguais).length,
+    ganhoMedioPreTemporada: celulas.reduce((a, c) => a + (1 - c.brierPre[v] / c.brierPre.iguais), 0) / 4,
+    passa: celulas.every(c => c.brier[v] < c.brier.iguais),
+  };
+  return { nSims: NSIMS, celulas, veredito };
+}
+
+// TERCEIRO TESTE: o RATING HERDADO e, na Serie D, a VIA DE CLASSIFICACAO.
+//
+// Rating herdado: roda o motor na temporada Y-1 partindo de todos iguais e guarda o Elo
+// final de cada clube (o trilho de Elo do proprio updR). Na temporada Y o clube entra com
+// esse desvio em relacao ao centro, mais um degrau por divisao trocada (2 desvios-padrao do
+// Elo final de Y-1 por nivel), tudo multiplicado por k. Quem nao jogou serie nacional em
+// Y-1 recebe o piso: o menor valor da serie.
+//
+// Via de classificacao (so D): o caminho pelo qual o clube entrou na Serie D, que e a
+// colocacao no estadual do ano anterior. Ordem: rebaixado da C, campeao estadual, vice ou
+// melhor colocado, 2o melhor ou copa, 3o melhor, 4o melhor em diante. Elo linear no posto.
+function ratingsFinais(E, liga, serie) {
+  const cfg = structuredClone(E.DEFAULT_CFG); cfg.lambdas.A = { ...E.DEFAULT_CFG.lambdas[serie] };
+  const lg = E.initLeague(liga.times, () => CENTRO, cfg), { mc, mf } = E.getML(cfg, 'A');
+  const elos = {}, atk = {}, def = {};
+  liga.times.forEach(t => { elos[t] = CENTRO; const i = lg.initAD(CENTRO); atk[t] = i.atk; def[t] = i.def; });
+  for (const g of [...liga.jogos].filter(g => g.gm != null).sort((a, b) => a.rodada - b.rodada)) {
+    const { lC, lF } = E.calcL(atk[g.id_m], def[g.id_m], atk[g.id_v], def[g.id_v], elos[g.id_m], elos[g.id_v], mc, mf, cfg.homeAdv, false, cfg.c0Log);
+    E.updR(elos, atk, def, g.id_m, g.id_v, g.gm, g.gv, lC, lF, cfg, cfg.defaultAlpha, false);
+  }
+  return elos;
+}
+function categoriaVia(via) {
+  const v = via.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (/copa|taca|recopa/.test(v)) return 3;
+  if (/vice/.test(v)) return 2;
+  if (/campea/.test(v)) return 1;
+  const m = /(\d)\s*\.?\s*[ºo°]?\s*melhor colocad/.exec(v);
+  if (m) return Math.min(6, Number(m[1]) + 1);
+  if (/melhor colocad/.test(v)) return 2;
+  return 4;
+}
+function rodarHerdado() {
+  const E = loadEngine(['DEFAULT_CFG', 'simMC', 'calcClassif', 'initLeague', 'getML', 'calcL', 'updR']);
+  const jogos = lerCsv(); const LG = ligas(jogos);
+  const al = { ...aliases(jogos).mapa, ...ALIAS_MANUAL };
+  const CLUBES = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'hist', 'serie_d_clubes.json'), 'utf8'));
+  const NIVEL = { A: 3, B: 2, C: 1, D: 0 };
+  const KH = [0.5, 1, 2], celulas = [];
+  for (const ano of [2022, 2023, 2024, 2025]) {
+    // Elo final e divisao de cada clube em Y-1
+    const fim = {}, div = {};
+    for (const s of ['A', 'B', 'C', 'D']) for (const l of LG[`${ano - 1}|${s}`]) { const e = ratingsFinais(E, l, s); for (const t of l.times) { fim[t] = e[t] - CENTRO; div[t] = s; } }
+    const vals = Object.values(fim), dp = Math.sqrt(vals.reduce((a, x) => a + x * x, 0) / vals.length), DEGRAU = 2 * dp;
+    const antigo = t => { let i = t, n = 0; while (fim[i] === undefined && al[i] && n++ < 5) i = al[i]; return fim[i] === undefined ? null : i; };
+    for (const serie of ['A', 'B', 'C', 'D']) {
+      const ls = LG[`${ano}|${serie}`], ids = ls.flatMap(l => l.times);
+      const bruto = {}; ids.forEach(t => { const i = antigo(t); if (i) bruto[t] = fim[i] + DEGRAU * (NIVEL[div[i]] - NIVEL[serie]); });
+      const piso = Math.min(...Object.values(bruto)); ids.forEach(t => { if (bruto[t] === undefined) bruto[t] = piso; });
+      const med = ids.reduce((a, t) => a + bruto[t], 0) / ids.length;
+      const variantes = { iguais: () => CENTRO };
+      KH.forEach(k => variantes[`herdado@${k}`] = t => CENTRO + k * (bruto[t] - med));
+      if (serie === 'D') {
+        const via = {}; CLUBES[ano].forEach(c => via[c.id] = c.via);
+        const posto = {}; ids.forEach(t => { const i = antigo(t); posto[t] = (i && div[i] === 'C') ? 0.5 : categoriaVia(via[t] || ''); });
+        const eloVia = eloPorPosto(ids, posto);
+        [0.25, 0.5].forEach(k => variantes[`via@${k}`] = t => CENTRO + k * (eloVia[t] - CENTRO));
+        [0.5, 1].forEach(k => variantes[`herdado+via@${k}`] = t => CENTRO + k * (bruto[t] - med) + 0.25 * (eloVia[t] - CENTRO));
+      }
+      const cfg = structuredClone(E.DEFAULT_CFG); cfg.lambdas.A = { ...E.DEFAULT_CFG.lambdas[serie] };
+      const soma = {}, soma0 = {}; let n = 0, n0 = 0;
+      Object.keys(variantes).forEach(v => { soma[v] = 0; soma0[v] = 0; });
+      ls.forEach((l, gi) => {
+        const H = l.jogos.reduce((m, g) => Math.max(m, g.rodada), 0);
+        const fixture = l.jogos.map(g => ({ casa: g.id_m, fora: g.id_v, rodada: g.rodada, data: g.data }));
+        const res = l.jogos.filter(g => g.gm != null).map(g => ({ c: g.id_m, f: g.id_v, gc: g.gm, gf: g.gv, r: g.rodada }));
+        const real = {}; E.calcClassif(l.times, res).forEach(c => real[c.time] = c.pos);
+        for (const corte of [0, Math.round(H * 0.25), Math.round(H * 0.5), Math.round(H * 0.75)]) {
+          for (const [v, ge] of Object.entries(variantes)) {
+            const ranking = {}; l.times.forEach(t => ranking[t] = { elo: ge(t) });
+            const { dist } = L.preverEm(E, { times: l.times, ranking, fixture, res, cfg, sk: 'A', H, corte, nSims: NSIMS, ak: cfg.defaultAlpha, seed: ano * 1000 + gi * 37 + corte * 7 + serie.charCodeAt(0) });
+            let b = 0, m = 0;
+            for (const [, de, ate0] of EVENTOS[serie]) { const ate = Math.min(ate0, l.times.length); for (const t of l.times) { const p = L.soma(dist[t], de - 1, ate), o = real[t] >= de && real[t] <= ate ? 1 : 0; b += (p - o) ** 2; m++; } }
+            soma[v] += b / m; if (corte === 0) soma0[v] += b / m;
+          }
+          n++; if (corte === 0) n0++;
+        }
+      });
+      const cel = { ano, serie, degrau: +DEGRAU.toFixed(1), amplitudeBruta: +(Math.max(...Object.values(bruto)) - piso).toFixed(1), semHistorico: ids.filter(t => !antigo(t)).length, brier: {}, brierPre: {} };
+      Object.keys(variantes).forEach(v => { cel.brier[v] = soma[v] / n; cel.brierPre[v] = soma0[v] / n0; });
+      celulas.push(cel);
+      process.stderr.write(`  ${ano} ${serie}: ` + Object.entries(cel.brier).map(([v, x]) => `${v} ${x.toFixed(4)}`).join(' | ') + '\n');
+    }
+  }
+  const veredito = {};
+  const todas = [...new Set(celulas.flatMap(c => Object.keys(c.brier)))].filter(v => v !== 'iguais');
+  for (const v of todas) { const cs = celulas.filter(c => c.brier[v] !== undefined); const g = cs.filter(c => c.brier[v] < c.brier.iguais);
+    const porSerie = {}; ['A', 'B', 'C', 'D'].forEach(s => porSerie[s] = g.filter(c => c.serie === s).length);
+    veredito[v] = { celulasMelhores: g.length, de: cs.length, porSerie, ganhoMedio: cs.reduce((a, c) => a + (1 - c.brier[v] / c.brier.iguais), 0) / cs.length,
+      celulasMelhoresPreTemporada: cs.filter(c => c.brierPre[v] < c.brierPre.iguais).length, ganhoMedioPreTemporada: cs.reduce((a, c) => a + (1 - c.brierPre[v] / c.brierPre.iguais), 0) / cs.length,
+      passa: cs.length === 16 ? g.length >= 12 : g.length === cs.length }; }
+  return { nSims: NSIMS, celulas, veredito };
+}
+
+if (require.main === module && process.argv.includes('--herdado')) {
+  const out = rodarHerdado();
+  console.log('\nveredito (16 celulas: >= 12; so D: 4 de 4):');
+  for (const [v, r] of Object.entries(out.veredito)) console.log(`  ${v}: melhor em ${r.celulasMelhores}/${r.de} (A ${r.porSerie.A}, B ${r.porSerie.B}, C ${r.porSerie.C}, D ${r.porSerie.D}) | ganho medio ${(r.ganhoMedio * 100).toFixed(1)}% | pre-temporada: ${r.celulasMelhoresPreTemporada}/${r.de}, ganho ${(r.ganhoMedioPreTemporada * 100).toFixed(1)}% | ${r.passa ? 'PASSA' : 'nao passa'}`);
+  console.log('degrau e amplitude bruta por celula:', out.celulas.map(c => `${c.ano}${c.serie} ${c.degrau}/${c.amplitudeBruta}`).join(' '));
+  fs.writeFileSync(path.join(__dirname, '..', 'out', 'hist_sementes_herdado.json'), JSON.stringify(out, null, 2) + '\n');
+  console.log('-> eval/out/hist_sementes_herdado.json');
+} else if (require.main === module && process.argv.includes('--uf')) {
+  const out = rodarUF();
+  const vs = Object.keys(out.celulas[0].brier);
+  console.log('Serie D, Brier de zona (1o e top-4 do grupo) | ' + vs.join(' | '));
+  for (const c of out.celulas) console.log(`${c.ano} | ` + vs.map(v => c.brier[v].toFixed(4)).join(' | ') + ` | UFs mais fortes: ${Object.keys(c.forcaUF).slice(0, 5).join(',')} | mais fracas: ${Object.keys(c.forcaUF).slice(-4).join(',')}`);
+  console.log('\nveredito (licao de uma serie: 4 de 4):');
+  for (const [v, r] of Object.entries(out.veredito)) console.log(`  ${v}: melhor em ${r.celulasMelhores}/4 | ganho medio ${(r.ganhoMedio * 100).toFixed(1)}% | pre-temporada: ${r.celulasMelhoresPreTemporada}/4, ganho ${(r.ganhoMedioPreTemporada * 100).toFixed(1)}% | ${r.passa ? 'PASSA' : 'nao passa'}`);
+  fs.writeFileSync(path.join(__dirname, '..', 'out', 'hist_sementes_uf.json'), JSON.stringify(out, null, 2) + '\n');
+  console.log('\n-> eval/out/hist_sementes_uf.json');
+} else if (require.main === module) {
+  const out = rodar();
+  console.log('\ncelula | clubes (sem posto no ano anterior) | Brier de zona: iguais | ' + KS.map(k => 'anterior k=' + k).join(' | ') + ' | pre-temporada: iguais -> melhor k');
+  for (const c of out.celulas) {
+    const pre = KS.map(k => c.brierPre['anterior@' + k]);
+    console.log(`${c.ano} ${c.serie} | ${c.clubes} (${c.semPosto}) | ${c.brier.iguais.toFixed(4)} | ` +
+      KS.map(k => c.brier['anterior@' + k].toFixed(4)).join(' | ') + ` | ${c.brierPre.iguais.toFixed(4)} -> ${Math.min(...pre).toFixed(4)}`);
+  }
+  console.log('\nveredito pela regra de celulas (>= 12 de 16):');
+  for (const [v, r] of Object.entries(out.veredito)) {
+    console.log(`  ${v}: melhor em ${r.celulasMelhores}/${r.de} (A ${r.porSerie.A}, B ${r.porSerie.B}, C ${r.porSerie.C}, D ${r.porSerie.D} de 4) | ` +
+      `ganho medio ${(r.ganhoMedio * 100).toFixed(1)}% | so pre-temporada: ${r.celulasMelhoresPreTemporada}/${r.de}, ganho ${(r.ganhoMedioPreTemporada * 100).toFixed(1)}% | ${r.passa ? 'PASSA' : 'nao passa'}`);
+  }
+  fs.writeFileSync(path.join(__dirname, '..', 'out', 'hist_sementes.json'), JSON.stringify(out, null, 2) + '\n');
+  console.log('\n-> eval/out/hist_sementes.json');
+}
+
+module.exports = { ligas, piramide, eloPorPosto, aliases, normNome, rodar };
