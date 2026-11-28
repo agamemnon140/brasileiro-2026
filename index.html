@@ -31,7 +31,61 @@ const {
 } = React;
 
 // ============================================================================
-// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.97
+// SIMULADOR UNIFICADO BRASILEIRÃO 2026 v4.98
+// v4.98 (28/11/2026): SÉRIE A — VAGAS CONTINENTAIS DINÂMICAS + TIME SEM OBJETIVO NAS RODADAS FINAIS.
+//        (1) VAGAS CONTINENTAIS. A linha da Libertadores não é fixa: em 2026 o Brasileiro dá 5
+//        vagas (1º–4º nos grupos, 5º na prévia) e a Copa do Brasil 2 (campeão nos grupos, vice na
+//        prévia), mas a vaga de quem já está classificado — ou de finalista rebaixado — desce
+//        para a tabela, e um brasileiro campeão continental entra por fora da cota. Hoje isso
+//        depende de duas coisas: da final Palmeiras × Estudiantes (28/11) e de o Grêmio, finalista
+//        da Copa do Brasil, cair ou não. A segunda sai da própria tabela simulada; a primeira é
+//        um jogo que o app não modela. Então cada simulação é resolvida em TODOS os cenários
+//        ainda abertos (alocaVagasInt, função pura) e o painel novo da aba Monte Carlo da Série A
+//        (VagasIntPanel) os mostra lado a lado: onde cai a linha (G6/G7/G8) e a chance de cada
+//        time ir aos grupos, à prévia e à Sul-Americana — sem chutar a probabilidade da final.
+//          · Dados: VAGAS_INT (cotas e finais continentais; `campeao: null` = por jogar). NADA na
+//            automação alimenta essa constante: ao decidir-se uma final, preencher `campeao` e
+//            registrar aqui. Enquanto isso o painel deixa informar o resultado neste navegador
+//            (simUni_vagasInt — não é placar digitado; a constante oficial manda).
+//          · Finalistas da Copa do Brasil vêm de CB_AUTO.ko.F (results.json). Final por jogar: as
+//            duas ordens pesam metade; em 2026 dão a mesma distribuição (rMC.vagasInt.cdbPesa
+//            avisa se um dia diferirem).
+//          · Sul-Americana: Boca campeão (21/11), sem vaga extra para o Brasil.
+//          · Conferido: os quatro cenários publicados para esta reta final (Estudiantes campeão
+//            e Grêmio fica = G6 com 1º–4º nos grupos; um dos dois muda = G7 com 1º–5º; os dois
+//            = G8 com 1º–6º) saem da função. Fonte das regras: resumos do REC (Art. 6º e 7º) e do
+//            Manual da Conmebol na imprensa; o texto do REC não foi lido diretamente.
+//          · Limites: SA_META.zonas (cores e rótulos G4 / 5-6 / 7-8 da tabela) NÃO mudou; na aba
+//            Evolução os pontos antigos usam as copas como se conhecem hoje (vazamento uniforme,
+//            como o do applyCBToLeague); campeão continental rebaixado perde a vaga sem repasse
+//            (regra não confirmada, sem efeito em 2026).
+//          · Sem sorteio novo: nenhum número existente mudou por causa do painel.
+//        (2) TIME SEM OBJETIVO. Nas rodadas finais, quem já não tem nada em jogo rende menos
+//        contra quem ainda briga por algo. Medido fora de 2026: Série A 2006–25 −0,23 ponto por
+//        jogo contra o esperado pelo rating (razão de chances 0,68; −0,33 a −0,39 com o critério
+//        matemático usado aqui), Série B 2012–21 −0,19, cinco ligas europeias −0,14, e as casas
+//        de aposta já descontam (na Série A, tudo; na Europa, cerca de 70%). Em 2026 (23 jogos
+//        marcados nas Séries A e B) a direção se repete, menor e dentro do ruído: 0,74 ponto
+//        real contra 0,83 esperado — 2026 não decide o m (eval/sem_objetivo.cjs).
+//          · Regra: antes de cada rodada (últimas 8), um time está DECIDIDO no corte k se já
+//            garantiu o top-k ou já não o alcança — só aritmética de pontos, e quem pode empatar
+//            em pontos conta como ameaça. Sem objetivo = decidido em todos os cortes.
+//          · Ajuste só no confronto assimétrico: λ do sem-objetivo ÷ m, λ do adversário × m
+//            (cfg.semObj, m = 1,15 ≈ −0,2 ponto por jogo). Age depois do calcL, logo vale no
+//            modo ATK/DEF e no Elo puro. Ligado por padrão; chave e m na aba Config.
+//          · Cortes: B = título, acesso direto, playoff, Z4. A = título, Z4 e toda linha
+//            continental ainda plausível (do corte-base até onde as copas podem empurrar) — a
+//            linha incerta não tira o objetivo de quem ainda pode cruzar um corte possível. No
+//            histórico da A o efeito é o mesmo com o corte ex post (−0,39), o de regulamento
+//            (−0,39) ou a faixa (−0,33). C e D: sem evidência, sem ajuste.
+//          · Onde entra: simMC_single e simUnica (jogos SIMULADOS). Não mexe em ratings (updR
+//            só roda em jogo real, que o ajuste não toca), nem no backtest/calibração, nem no
+//            Confronto.
+//          · Efeito hoje (28/11, 10k × 5 sementes): 1 a 2 p.p. no Z4 (Inter 96,5→95,0,
+//            Corinthians 17,9→16,1, Botafogo 11,0→12,3) e 3 a 5 p.p. na briga pelo 8º
+//            (Bragantino 51→56, Santos 57→54). Na previsão jogo a jogo de 2026 o Brier muda
+//            menos de 0,1% — é refinamento das rodadas finais, não ganho geral.
+//        Harness novo: scripts/vagas_int.cjs (na suíte check_all).
 // v4.97 (26/11/2026): CONFIG — "LIMPAR TODOS OS PLACARES DIGITADOS". Painel novo na aba Config
 //        (entre os parâmetros e o log da automação) que mostra o que este navegador guarda de
 //        placar digitado, por origem, e apaga tudo de uma vez:
@@ -485,7 +539,7 @@ const {
 //        o slot "em disputa", até uma rodada de pesquisa notar. APP_VERSION vira const
 //        colada neste cabeçalho — o rodapé já ficou preso duas vezes (v4.59, v4.73) por
 //        ser string solta.
-const APP_VERSION = 'v4.97';
+const APP_VERSION = 'v4.98';
 // v4.77 (19/08/2026): FILA DE SUCESSÃO nos 27 estados (antes 14 com fonte, 11 sem folga
 //        alguma sobre a cota) + coluna Copa do Brasil 2027 na aba Ranking CBF.
 //        A rodada de pesquisa corrigiu a ordem campeão/vice em SETE estados (AC, AP, MS,
@@ -1113,6 +1167,12 @@ const DEFAULT_CFG = {
   targetRatio: 3.0,
   homeAdv: 100,
   drift: 15,
+  // v4.98: time sem objetivo nas rodadas finais (Séries A e B) — ver semObjFlags
+  semObj: {
+    on: true,
+    m: 1.15,
+    ultimas: 8
+  },
   defaultAlpha: 'conservador',
   alphas: {
     conservador: {
@@ -1995,8 +2055,226 @@ const poBRealAB = (A, B) => {
 // Jogos com placar das fases seguintes de C (quad_c) e, desde a v4.95, de B (po_b) — entram no
 // total "acumulado via automação" do selo e da Config.
 const quadCPlayed = (m) => (m && Array.isArray(m.quadC) ? m.quadC.filter(r => r && r.gc != null).length : 0) + (m && Array.isArray(m.poB) ? m.poB.filter(r => r && r.gc != null).length : 0);
+// ============================================================================
+// v4.98: VAGAS CONTINENTAIS DE 2027 (Libertadores / Sul-Americana) — LINHA DINÂMICA
+// A linha de corte da Série A não é fixa: depende das copas e da própria tabela. Aqui cada
+// simulação resolve quem leva vaga, com a classificação SIMULADA e o que já se sabe das copas.
+//
+// Regras (REC da Série A 2026, Art. 6º e 7º; Manual de Clubes da Conmebol para os campeões
+// continentais e para a exigência de estar na 1ª divisão):
+//   · Brasileiro: 1º–4º na fase de grupos, 5º na fase prévia.
+//   · Copa do Brasil: campeão nos grupos, vice na prévia. Se o campeão já chega aos grupos por
+//     outra via, a vaga direta da Copa vai para o vice e a prévia do vice desce para a tabela.
+//   · Vaga de quem já está classificado, ou de finalista REBAIXADO (não joga a Libertadores),
+//     desce para o melhor colocado ainda sem vaga, na mesma fase.
+//   · Campeão da Libertadores / da Sul-Americana brasileiro entra nos grupos por fora da cota:
+//     se também estava na zona da tabela, a vaga da tabela desce um degrau.
+//   · Sul-Americana: os 6 melhores colocados que não foram à Libertadores (rebaixado não entra).
+// Conferência: os quatro cenários publicados para a reta final de 2026 (G6 / G7 / G7 / G8, com
+// 1º–4º, 1º–5º ou 1º–6º nos grupos) saem desta função — ver scripts/vagas_int.cjs.
+//
+// VAGAS_INT é DADO e nada na automação o alimenta: quando uma final continental se decide,
+// preencher `campeao` (e registrar no changelog), como CB27_UF. Enquanto a constante não muda,
+// o painel deixa informar o resultado neste navegador (simUni_vagasInt). Os finalistas da Copa
+// do Brasil vêm de CB_AUTO.ko.F (results.json), sem constante.
+const VAGAS_INT = {
+  ano: 2027,
+  base: { dir: 4, pre: 1, sula: 6 },
+  // final: os dois finalistas; br: quais são brasileiros (só eles abrem vaga extra); campeao: null = ainda não jogada
+  lib: { rot: 'Libertadores', data: '28/11', final: ['Palmeiras', 'Estudiantes'], br: ['Palmeiras'], campeao: null },
+  sula: { rot: 'Sul-Americana', data: '21/11', final: ['Atlético-MG', 'Boca Juniors'], br: ['Atlético-MG'], campeao: 'Boca Juniors' }
+};
+// resultado de final continental informado NESTE navegador (não é placar digitado; a constante oficial manda)
+let VI_USER = {};
+function refreshViUser() {
+  VI_USER = {};
+  try {
+    const o = JSON.parse(localStorage.getItem('simUni_vagasInt') || '{}');
+    if (o && typeof o === 'object' && !Array.isArray(o)) VI_USER = o;
+  } catch (e) {}
+}
+// Final da Copa do Brasil como a automação a conhece: {a, b, campeao|null}. null = finalistas ainda indefinidos.
+const cdbFinalInfo = () => {
+  const F = (CB_AUTO && CB_AUTO.ko && CB_AUTO.ko.F || [])[0];
+  if (!F || !F.a || !F.b) return null;
+  const s = F.sc || {};
+  let campeao = null;
+  if (s.g1a != null && s.g1b != null) campeao = s.g1a > s.g1b ? F.a : s.g1b > s.g1a ? F.b : F.pen === 'A' ? F.a : F.pen === 'B' ? F.b : null;
+  return { a: F.a, b: F.b, campeao, data: F.data && F.data.ida || null };
+};
+// Contexto das vagas: estado de cada final continental e os CENÁRIOS ainda abertos (produto das
+// finais pendentes com brasileiro; no máximo 4). Nada aqui sorteia: cada simulação é resolvida em
+// TODOS os cenários, e o painel os mostra lado a lado — sem chutar a probabilidade de um jogo
+// que o app não modela.
+const vagasIntCtx = () => {
+  refreshViUser();
+  const ev = {};
+  for (const k of ['lib', 'sula']) {
+    const c = VAGAS_INT[k], u = VI_USER[k];
+    const camp = c.campeao || (u && c.final.includes(u) ? u : null);
+    ev[k] = {
+      k, rot: c.rot, data: c.data, final: c.final, br: c.br, campeao: camp,
+      origem: c.campeao ? 'oficial' : camp ? 'usuario' : null,
+      saidas: (camp ? [camp] : c.br.length ? c.final : [null]).map(f => ({ campeao: f, br: f != null && c.br.includes(f) }))
+    };
+  }
+  const cen = [];
+  for (const a of ev.lib.saidas) for (const b of ev.sula.saidas) {
+    const aberto = [ev.lib.saidas.length > 1 ? [a.campeao, ev.lib.rot] : null, ev.sula.saidas.length > 1 ? [b.campeao, ev.sula.rot] : null].filter(Boolean);
+    cen.push({
+      id: (a.campeao || '-') + '|' + (b.campeao || '-'),
+      rot: aberto.map(([n, r]) => n + ' campeão da ' + r).join(' · ') || 'Cenário único',
+      curto: aberto.map(([n]) => n).join(' + ') || 'Atual',
+      lib: a.br ? a.campeao : null,
+      sul: b.br ? b.campeao : null
+    });
+  }
+  return { base: VAGAS_INT.base, ev, cen, cdb: cdbFinalInfo() };
+};
+// Função PURA: dada a classificação final (ord[0] = campeão), devolve quem vai aonde.
+//   lib / sul      = clube BRASILEIRO campeão continental (ou null)
+//   cdbCh / cdbVi  = campeão e vice da Copa do Brasil (null/null = finalistas desconhecidos: sem repasse)
+// linha = pior posição que leva vaga de Libertadores PELA TABELA (o "G-n"); linhaDir = idem, só grupos.
+const alocaVagasInt = (ord, nReb, base, lib, sul, cdbCh, cdbVi) => {
+  const n = ord.length, pos = {};
+  for (let i = 0; i < n; i++) pos[ord[i]] = i + 1;
+  const eleg = t => t != null && pos[t] != null && pos[t] <= n - nReb; // rebaixado não joga a Libertadores
+  const dir = new Set(), pre = new Set();
+  let xDir = 0, xPre = 0; // vagas das copas que descem para a tabela
+  if (eleg(lib)) dir.add(lib);
+  if (eleg(sul)) dir.add(sul);
+  // os k melhores da tabela ainda sem vaga direta
+  const fila = k => { const o = []; for (const t of ord) { if (o.length >= k) break; if (!dir.has(t)) o.push(t); } return o; };
+  if (cdbCh != null || cdbVi != null) {
+    const ligaDir = new Set(fila(base.dir));
+    const jaDir = t => dir.has(t) || ligaDir.has(t);
+    let viceDir = false;
+    if (eleg(cdbCh) && !jaDir(cdbCh)) dir.add(cdbCh); // campeão usa a vaga direta da Copa (se era 5º, a prévia da tabela desce)
+    else if (eleg(cdbCh) && eleg(cdbVi) && !jaDir(cdbVi)) { dir.add(cdbVi); viceDir = true; } // campeão já nos grupos: vai para o vice
+    else xDir++; // campeão rebaixado, ou os dois já nos grupos: desce para a tabela
+    if (viceDir) xPre++; // a prévia que seria do vice desce
+    else if (eleg(cdbVi) && !dir.has(cdbVi) && !fila(base.dir + xDir + base.pre + xPre).includes(cdbVi)) pre.add(cdbVi);
+    else xPre++; // vice já classificado pela tabela ou por título, ou rebaixado
+  }
+  const dirL = [], preL = [];
+  for (const t of ord) {
+    if (dir.has(t) || pre.has(t)) continue;
+    if (dirL.length < base.dir + xDir) dirL.push(t);
+    else if (preL.length < base.pre + xPre) preL.push(t);
+    else break;
+  }
+  const naLib = new Set([...dir, ...pre, ...dirL, ...preL]);
+  const sula = [];
+  for (const t of ord) { if (sula.length >= base.sula) break; if (!naLib.has(t) && eleg(t)) sula.push(t); }
+  const ult = preL.length ? preL[preL.length - 1] : dirL[dirL.length - 1];
+  return {
+    dir: [...dir, ...dirL], pre: [...pre, ...preL], sula,
+    linha: pos[ult] || 0,
+    linhaDir: dirL.length ? pos[dirL[dirL.length - 1]] : 0,
+    linhaSul: sula.length ? pos[sula[sula.length - 1]] : 0
+  };
+};
+// Acumuladores do Monte Carlo (Série A): por cenário, quantas simulações cada time foi aos
+// grupos / à prévia / à Sul-Americana, e onde caiu a linha.
+const vagasIntNovo = times => {
+  const ctx = vagasIntCtx();
+  return {
+    ctx, cdbPesa: false,
+    cen: ctx.cen.map(c => {
+      const t = {};
+      times.forEach(x => { t[x] = { dir: 0, pre: 0, sul: 0 }; });
+      return { c, t, linha: {}, linhaDir: {}, linhaSul: {} };
+    })
+  };
+};
+// Final da Copa do Brasil ainda não jogada: as duas ordens (a campeão / b campeão) entram com
+// peso 1/2. Em 2026 as duas dão a MESMA distribuição (o campeão ou o vice herdam a vaga direta
+// conforme o caso e a outra desce); se um dia diferirem, cdbPesa avisa o painel.
+const vagasIntConta = (vi, ord, nReb) => {
+  const f = vi.ctx.cdb;
+  const ordens = !f ? [[null, null]] : f.campeao ? [[f.campeao, f.campeao === f.a ? f.b : f.a]] : [[f.a, f.b], [f.b, f.a]];
+  const w = 1 / ordens.length;
+  for (const s of vi.cen) {
+    let ass = null;
+    for (const [ch, vc] of ordens) {
+      const r = alocaVagasInt(ord, nReb, vi.ctx.base, s.c.lib, s.c.sul, ch, vc);
+      for (const t of r.dir) s.t[t].dir += w;
+      for (const t of r.pre) s.t[t].pre += w;
+      for (const t of r.sula) s.t[t].sul += w;
+      s.linha[r.linha] = (s.linha[r.linha] || 0) + w;
+      s.linhaDir[r.linhaDir] = (s.linhaDir[r.linhaDir] || 0) + w;
+      s.linhaSul[r.linhaSul] = (s.linhaSul[r.linhaSul] || 0) + w;
+      if (ordens.length > 1) {
+        const a = [...r.dir].sort().join('|') + '#' + [...r.pre].sort().join('|');
+        if (ass === null) ass = a; else if (ass !== a) vi.cdbPesa = true;
+      }
+    }
+  }
+};
+const vagasIntFinal = (vi, nS) => {
+  const pc = v => v / nS * 100;
+  const dist = m => Object.keys(m).map(Number).filter(k => k > 0).sort((a, b) => a - b).map(k => ({ pos: k, pct: pc(m[k]) }));
+  return {
+    nS, ano: VAGAS_INT.ano, base: vi.ctx.base, ev: vi.ctx.ev, cdb: vi.ctx.cdb, cdbPesa: vi.cdbPesa,
+    cen: vi.cen.map(s => ({
+      id: s.c.id, rot: s.c.rot, curto: s.c.curto, lib: s.c.lib, sul: s.c.sul,
+      linha: dist(s.linha), linhaDir: dist(s.linhaDir), linhaSul: dist(s.linhaSul),
+      times: Object.keys(s.t).map(t => ({ time: t, dir: pc(s.t[t].dir), pre: pc(s.t[t].pre), lib: pc(s.t[t].dir + s.t[t].pre), sul: pc(s.t[t].sul) }))
+    }))
+  };
+};
+
+// ============================================================================
+// v4.98: TIME SEM OBJETIVO — nas rodadas finais, quem já não tem nada em jogo rende menos contra
+// quem ainda briga por algo. Medido fora de 2026: Série A 2006–25 −0,23 ponto/jogo contra o
+// esperado (−0,33 a −0,39 com o critério matemático abaixo), Série B 2012–21 −0,19, cinco ligas
+// europeias −0,14; as casas de aposta já descontam. Em 2026 (27 jogos, eval/sem_objetivo.cjs)
+// a direção se repete, sem significância sozinha.
+//   · Um time está DECIDIDO no corte k quando já garantiu o top-k ou já não o alcança (só
+//     aritmética de pontos; quem pode EMPATAR em pontos conta como ameaça — erra para NÃO marcar).
+//   · SEM OBJETIVO = decidido em todos os cortes da lista da série.
+//   · Só no confronto assimétrico: λ do sem-objetivo ÷ m, λ do adversário × m (m = 1,15 ≈ −0,2
+//     ponto/jogo; vale no modo ATK/DEF e no Elo puro, porque age depois do calcL).
+//   · Não mexe em ratings: Elo/atk/def seguem atualizados só por resultado real, com o λ sem ajuste.
+// Cortes: B = título, acesso direto, playoff e Z4. A = título, Z4 e TODA linha continental que
+// ainda é plausível (grupos, prévia e Sul-Americana, do corte-base até onde as copas ainda podem
+// empurrar) — a linha incerta não tira o objetivo de quem ainda pode cruzar um corte possível.
+// C e D: sem evidência, sem ajuste.
+const SEM_OBJ_FIXO = { B: [1, 2, 6, 16] };
+const semObjCortes = (sk, n, nReb) => {
+  if (sk === 'B') return SEM_OBJ_FIXO.B;
+  if (sk !== 'A') return null;
+  const ctx = vagasIntCtx(), b = ctx.base;
+  let extra = 2; // as duas vagas da Copa do Brasil podem descer para a tabela
+  for (const k of ['lib', 'sula']) if (ctx.ev[k].saidas.some(s => s.br)) extra++; // título continental de brasileiro, aberto ou consumado
+  const lo = b.dir + b.pre, hi = lo + extra;
+  const c = new Set([1, n - nReb]);
+  for (let k = b.dir; k <= hi; k++) c.add(k);
+  for (let k = lo + b.sula; k <= hi + b.sula; k++) c.add(k);
+  return [...c].filter(k => k >= 1 && k < n).sort((x, y) => x - y);
+};
+// lista vigente por série, refeita no início de cada simMC / simMC_async / simUnica (padrão do BC_USER)
+let SEM_OBJ_ATUAL = {};
+function refreshSemObj(sk, n, nReb) { SEM_OBJ_ATUAL[sk] = semObjCortes(sk, n, nReb); }
+function semObjFlags(st, cortes, nR) {
+  const ts = Object.keys(st), out = {};
+  for (const t of ts) {
+    const max = st[t].P + 3 * (nR - st[t].J);
+    let acima = 0, alcancam = 0;
+    for (const u of ts) if (u !== t) {
+      if (st[u].P > max) acima++;
+      if (st[u].P + 3 * (nR - st[u].J) >= st[t].P) alcancam++;
+    }
+    let dec = true;
+    for (const k of cortes) if (!(acima >= k || alcancam < k)) { dec = false; break; }
+    out[t] = dec;
+  }
+  return out;
+}
+
 const simMC = (times, ranking, tab, res, cfg, sk, nS, ak, eo, opts) => {
   refreshBcUser();
+  refreshSemObj(sk, times.length, sk === 'C' ? 2 : 4); // v4.98: cortes do "time sem objetivo"
   if (opts && opts.ignoreUser) BC_USER = { B: {}, Bsc: {}, C: { games: {}, final: {} } }; // v4.80: sem edições de playoff/quadrangular
   const lg = initLeague(times, t => ranking[t].elo, cfg);
   const {
@@ -2009,7 +2287,7 @@ const simMC = (times, ranking, tab, res, cfg, sk, nS, ak, eo, opts) => {
     elFinal = {},
     atFinal = {},
     dfFinal = {};
-  const extraStats = sk === 'C' || sk === 'B' ? {} : sk === 'A' ? { __rebTrace: [] } : null; // v4.86: na A só os rebaixados
+  const extraStats = sk === 'C' || sk === 'B' ? {} : sk === 'A' ? { __rebTrace: [], __vi: vagasIntNovo(times) } : null; // v4.86: na A só os rebaixados; v4.98: + vagas continentais
   // v4.55: distribuição CONJUNTA por UF (acesso/rebaixamento) para B/C, como na Série D.
   // Chave especial __uf (não é nome de time; simMC_single acumula e simMC_finalize emite rMC.ufDist).
   if (extraStats && sk !== 'A') {
@@ -2113,6 +2391,12 @@ const simMC_single = (times, ranking, tab, res, cfg, sk, ak, eo, lg, mc, mf, ct,
     }
   });
   let lastDR = 0;
+  // v4.98: time sem objetivo — bandeiras refeitas no início de cada rodada final, com a tabela DESTA simulação
+  const __so = cfg.semObj && cfg.semObj.on && Number(cfg.semObj.m) > 0 ? cfg.semObj : null;
+  const __soC = __so ? SEM_OBJ_ATUAL[sk] : null;
+  const __soNR = __soC ? tab.reduce((a, g) => Math.max(a, g.rodada), 0) : 0;
+  let __soRd = -1,
+    __soFl = null;
   const maxRR = Math.max(0, ...res.map(r => r.r));
   for (const j of tab) {
     const {
@@ -2121,6 +2405,10 @@ const simMC_single = (times, ranking, tab, res, cfg, sk, ak, eo, lg, mc, mf, ct,
       rodada: rd
     } = j;
     if (!st[c] || !st[f]) continue;
+    if (__soC && rd !== __soRd) {
+      __soRd = rd;
+      __soFl = __soNR - rd < (__so.ultimas || 8) ? semObjFlags(st, __soC, __soNR) : null;
+    }
     if (rd > lastDR && rd > maxRR && cfg.drift > 0) {
       lastDR = rd;
       applyDrift(times, el, at, df, cfg.drift);
@@ -2135,8 +2423,15 @@ const simMC_single = (times, ranking, tab, res, cfg, sk, ak, eo, lg, mc, mf, ct,
         lC,
         lF
       } = calcL(at[c], df[c], at[f], df[f], el[c], el[f], mc, mf, cfg.homeAdv, eo, cfg.c0Log);
-      gc = poissonRandom(lC);
-      gf = poissonRandom(lF);
+      let __lC = lC,
+        __lF = lF;
+      if (__soFl && __soFl[c] !== __soFl[f]) {
+        const __k = __soFl[c] ? 1 / __so.m : __so.m; // sem objetivo ÷ m, adversário × m
+        __lC = Math.max(0.2, Math.min(4.5, lC * __k));
+        __lF = Math.max(0.15, Math.min(4.0, lF / __k));
+      }
+      gc = poissonRandom(__lC);
+      gf = poissonRandom(__lF);
     }
     st[c].J++;
     st[f].J++;
@@ -2202,6 +2497,8 @@ const simMC_single = (times, ranking, tab, res, cfg, sk, ak, eo, lg, mc, mf, ct,
   };
   ufTally(cl.slice(times.length - nRebN).map(c => c.time), 'reb');
   if (extraStats && extraStats.__rebTrace) for (const c of cl.slice(times.length - nRebN)) extraStats.__rebTrace.push(c.time);
+  // v4.98: vagas continentais desta simulação, em todos os cenários abertos (não sorteia nada)
+  if (extraStats && extraStats.__vi) vagasIntConta(extraStats.__vi, cl.map(c => c.time), nRebN);
   // v4.55b: classificados à fase seguinte — top-6 na B (2 diretos + 4 do playoff), top-8 na C (quadrangular).
   ufTally(cl.slice(0, sk === 'C' ? 8 : 6).map(c => c.time), 'topN');
   // Acumula Elo final por time (amostra no fim da temporada simulada).
@@ -2533,6 +2830,8 @@ const simMC_finalize = (times, ct, pts, posF, ptsAtPos, nS, elFinal, extraStats,
     // v4.91: a B também emite rebTrace (4 por sim) e a C accTrace (4 por sim: top-2 de cada grupo).
     accTrace: extraStats && extraStats.__accTrace || null,
     finTrace: extraStats && extraStats.__finTrace || null,
+    // v4.98: vagas continentais por cenário (Série A) — painel VagasIntPanel
+    vagasInt: extraStats && extraStats.__vi ? vagasIntFinal(extraStats.__vi, nS) : null,
     // v4.94: contagem conjunta pontos × posição (matriz do detalhamento do Monte Carlo).
     ptsPos: buildPtsPos(ptsAtPos, nS),
     cortes: {
@@ -2555,6 +2854,7 @@ const simMC_finalize = (times, ct, pts, posF, ptsAtPos, nS, elFinal, extraStats,
 // dynamics são aproximadamente comutativas para shifts pequenos).
 const simMC_async = (times, ranking, tab, res, cfg, sk, nS, ak, eo, onProgress, onDone, opts) => {
   refreshBcUser();
+  refreshSemObj(sk, times.length, sk === 'C' ? 2 : 4); // v4.98: cortes do "time sem objetivo"
   if (opts && opts.ignoreUser) BC_USER = { B: {}, Bsc: {}, C: { games: {}, final: {} } }; // v4.80: sem edições de playoff/quadrangular
   const lg = initLeague(times, t => ranking[t].elo, cfg);
   const {
@@ -2567,7 +2867,7 @@ const simMC_async = (times, ranking, tab, res, cfg, sk, nS, ak, eo, onProgress, 
     elFinal = {},
     atFinal = {},
     dfFinal = {};
-  const extraStats = sk === 'C' || sk === 'B' ? {} : sk === 'A' ? { __rebTrace: [] } : null; // v4.86: na A só os rebaixados
+  const extraStats = sk === 'C' || sk === 'B' ? {} : sk === 'A' ? { __rebTrace: [], __vi: vagasIntNovo(times) } : null; // v4.86: na A só os rebaixados; v4.98: + vagas continentais
   // v4.55: distribuição CONJUNTA por UF (acesso/rebaixamento) para B/C, como na Série D.
   // Chave especial __uf (não é nome de time; simMC_single acumula e simMC_finalize emite rMC.ufDist).
   if (extraStats && sk !== 'A') {
@@ -2727,6 +3027,7 @@ const simFase2BC = (sk, cl, at, df, el, cfg, mc, mf, eo, usarPo) => {
 };
 const simUnica = (times, ranking, tab, res, cfg, sk, ak, eo) => {
   refreshBcUser();
+  refreshSemObj(sk, times.length, sk === 'C' ? 2 : 4); // v4.98: cortes do "time sem objetivo"
   const lg = initLeague(times, t => ranking[t].elo, cfg);
   const {
     mc,
@@ -2753,6 +3054,12 @@ const simUnica = (times, ranking, tab, res, cfg, sk, ak, eo) => {
   });
   const jogos = [];
   let lastDR = 0;
+  // v4.98: time sem objetivo — bandeiras refeitas no início de cada rodada final, com a tabela DESTA simulação
+  const __so = cfg.semObj && cfg.semObj.on && Number(cfg.semObj.m) > 0 ? cfg.semObj : null;
+  const __soC = __so ? SEM_OBJ_ATUAL[sk] : null;
+  const __soNR = __soC ? tab.reduce((a, g) => Math.max(a, g.rodada), 0) : 0;
+  let __soRd = -1,
+    __soFl = null;
   const maxRR = Math.max(0, ...res.map(r => r.r));
   for (const j of tab) {
     const {
@@ -2761,6 +3068,10 @@ const simUnica = (times, ranking, tab, res, cfg, sk, ak, eo) => {
       rodada: rd
     } = j;
     if (!st[c] || !st[f]) continue;
+    if (__soC && rd !== __soRd) {
+      __soRd = rd;
+      __soFl = __soNR - rd < (__so.ultimas || 8) ? semObjFlags(st, __soC, __soNR) : null;
+    }
     if (rd > lastDR && rd > maxRR && cfg.drift > 0) {
       lastDR = rd;
       applyDrift(times, el, at, df, cfg.drift);
@@ -2775,8 +3086,15 @@ const simUnica = (times, ranking, tab, res, cfg, sk, ak, eo) => {
         lC,
         lF
       } = calcL(at[c], df[c], at[f], df[f], el[c], el[f], mc, mf, cfg.homeAdv, eo, cfg.c0Log);
-      gc = poissonRandom(lC);
-      gf = poissonRandom(lF);
+      let __lC = lC,
+        __lF = lF;
+      if (__soFl && __soFl[c] !== __soFl[f]) {
+        const __k = __soFl[c] ? 1 / __so.m : __so.m; // sem objetivo ÷ m, adversário × m
+        __lC = Math.max(0.2, Math.min(4.5, lC * __k));
+        __lF = Math.max(0.15, Math.min(4.0, lF / __k));
+      }
+      gc = poissonRandom(__lC);
+      gf = poissonRandom(__lF);
     }
     jogos.push({
       casa: c,
@@ -16607,6 +16925,36 @@ const ManualResPanel = ({ userResAll, onClear, rodando }) => {
             h('button', { onClick: () => setConf(false), className: 'px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs text-slate-200' }, 'Cancelar'))
           : h('button', { onClick: () => setConf(true), className: 'px-3 py-1.5 bg-red-900/40 hover:bg-red-900/60 border border-red-500/40 rounded-lg text-xs text-red-200' }, 'Limpar todos os placares digitados')));
 };
+// v4.98: chave do ajuste "time sem objetivo" (aba Config). O estado mora no cfg, como o resto dos
+// parâmetros: vale para a sessão e entra na próxima simulação.
+function SemObjCard({ cfg, setCfg }) {
+  const h = React.createElement;
+  const PAD = { on: true, m: 1.15, ultimas: 8 };
+  const so = { ...PAD, ...(cfg.semObj || { on: false }) };
+  const set = patch => setCfg(p => ({ ...p, semObj: { ...PAD, ...(p.semObj || { on: false }), ...patch } }));
+  const num = (label, key, step, min, max) => h('div', { className: 'flex items-center justify-between gap-2' },
+    h('span', { className: 'text-xs text-slate-400' }, label),
+    h('input', {
+      type: 'number', step, min, max, value: so[key],
+      onChange: e => { const v = Number(e.target.value); if (isFinite(v) && v >= min && v <= max) set({ [key]: v }); },
+      className: 'w-20 bg-slate-700 text-white text-xs rounded px-2 py-1 border border-slate-600 text-right'
+    }));
+  return h('div', { className: 'bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50' },
+    h('div', { className: 'flex items-center justify-between mb-2' },
+      h('h3', { className: 'text-sm font-bold text-emerald-300' }, 'Time sem objetivo (rodadas finais)'),
+      h('button', {
+        onClick: () => set({ on: !so.on }),
+        className: `text-[11px] font-bold px-2 py-0.5 rounded ${so.on ? 'bg-emerald-700 text-white' : 'bg-slate-700 text-slate-400'}`
+      }, so.on ? 'ligado' : 'desligado')),
+    h('p', { className: 'text-[11px] text-slate-500 mb-2' },
+      'Nas Séries A e B, o time que já está decidido em todos os cortes (título, vagas, queda) tem os gols esperados divididos por m contra quem ainda briga por algo, e o adversário tem os dele multiplicados por m. ',
+      'm = 1,15 equivale a cerca de −0,2 ponto por jogo, o medido em 20 temporadas da Série A, 10 da B e nas ligas europeias. ',
+      'Só entra nos jogos simulados; os ratings não mudam. Na Série A os cortes continentais acompanham o painel de vagas do Monte Carlo.'),
+    h('div', { className: 'grid grid-cols-2 gap-3' },
+      num('m (fator nos gols)', 'm', 0.01, 1, 1.5),
+      num('Últimas rodadas', 'ultimas', 1, 1, 19)));
+}
+
 function SettingsTab({
   cfg,
   setCfg,
@@ -16762,7 +17110,7 @@ function SettingsTab({
     step: 0.01
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] text-slate-600"
-  }, "\u03BB=", (((cfg.lambdas[s] || {}).total || 0) * ((cfg.lambdas[s] || {}).pesoCasa || 0)).toFixed(2), "+", (((cfg.lambdas[s] || {}).total || 0) * (1 - ((cfg.lambdas[s] || {}).pesoCasa || 0))).toFixed(2))))), cfg.c0Log && /*#__PURE__*/React.createElement("div", {
+  }, "\u03BB=", (((cfg.lambdas[s] || {}).total || 0) * ((cfg.lambdas[s] || {}).pesoCasa || 0)).toFixed(2), "+", (((cfg.lambdas[s] || {}).total || 0) * (1 - ((cfg.lambdas[s] || {}).pesoCasa || 0))).toFixed(2))))), cfg.c0Log && /*#__PURE__*/React.createElement(SemObjCard, { cfg: cfg, setCfg: setCfg }), /*#__PURE__*/React.createElement("div", {
     className: "bg-slate-800/40 rounded-2xl p-4 border border-slate-700/50"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between mb-2"
@@ -17673,6 +18021,103 @@ function LeagueNextPhaseSU({ serie, f2 }) {
     h('div', { className: 'mt-2 text-xs' }, h('span', { className: 'text-amber-300 font-semibold' }, '🏆 Campeão da Série C: '), tn(f2.campeao), F.pen ? h('span', { className: 'text-slate-500' }, ' (pênaltis' + (F.penSrc === 'real' ? ' — oficiais' : F.penSrc === 'user' ? ' — sua edição' : ' — simulados') + ')') : null),
     h('div', { className: 'mt-1 text-xs' }, h('span', { className: 'text-emerald-300 font-semibold' }, 'Sobem à Série B: '), f2.sobem.map((t, i) => h('span', { key: i }, i ? ', ' : '', tn(t)))), legend);
 }
+// v4.98: painel "Vagas continentais" (aba Monte Carlo da Série A). Lê rMC.vagasInt, que o
+// simMC_finalize monta a partir da contagem por cenário feita em cada simulação. Enquanto houver
+// final continental com brasileiro por jogar, os cenários aparecem LADO A LADO — o app não modela
+// esse jogo e não chuta a probabilidade dele.
+function VagasIntPanel({ vi, onRerun }) {
+  const h = React.createElement;
+  const [det, setDet] = useState(false);
+  const [, bump] = useState(0);
+  const cen = vi && vi.cen || [];
+  if (!cen.length) return null;
+  const fmt = v => v >= 99.95 ? '100' : v < 0.05 ? '·' : v < 9.95 ? v.toFixed(1) : String(Math.round(v));
+  const cor = v => v >= 99.95 ? 'text-emerald-300 font-bold' : v >= 50 ? 'text-emerald-300' : v >= 5 ? 'text-slate-200' : v >= 0.05 ? 'text-slate-400' : 'text-slate-700';
+  const informar = (k, nome) => {
+    let o = {};
+    try { o = JSON.parse(localStorage.getItem('simUni_vagasInt') || '{}') || {}; } catch (e) {}
+    if (nome) o[k] = nome; else delete o[k];
+    try { localStorage.setItem('simUni_vagasInt', JSON.stringify(o)); } catch (e) {}
+    refreshViUser();
+    bump(x => x + 1);
+    if (onRerun) onRerun();
+  };
+  refreshViUser();
+  const ev = vi.ev || {};
+  // uma linha por final continental: decidida (oficial) ou em aberto, com os botões para informar
+  const linhaFinal = k => {
+    const e = ev[k];
+    if (!e) return null;
+    if (e.origem === 'oficial') {
+      return h('div', { key: k, className: 'text-[11px] text-slate-400' },
+        h('span', { className: 'text-slate-300 font-medium' }, e.rot + ': '), e.campeao + ' campeão',
+        e.br.includes(e.campeao) ? ' — abre vaga extra' : ' — sem vaga extra para o Brasil');
+    }
+    if (!e.br.length) return null;
+    const escolhido = VI_USER[k] && e.final.includes(VI_USER[k]) ? VI_USER[k] : null;
+    const btn = (rot, nome, ativo) => h('button', {
+      key: rot, onClick: () => informar(k, nome),
+      className: `px-2 py-0.5 rounded text-[11px] ${ativo ? 'bg-emerald-700 text-white font-bold' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`
+    }, rot);
+    return h('div', { key: k, className: 'flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400' },
+      h('span', { className: 'text-slate-300 font-medium' }, `${e.rot} (${e.final.join(' × ')}, ${e.data}):`),
+      btn('em aberto', null, !escolhido),
+      e.final.map(f => btn(f + ' campeão', f, escolhido === f)));
+  };
+  const cdb = vi.cdb;
+  const txtCdb = !cdb ? 'finalistas ainda indefinidos — sem repasse por enquanto'
+    : cdb.campeao ? `${cdb.campeao} campeão; ${cdb.campeao === cdb.a ? cdb.b : cdb.a} vice`
+    : `final ${cdb.a} × ${cdb.b}${cdb.data ? ' em ' + cdb.data : ''}; os dois têm vaga, salvo rebaixamento`;
+  const chips = (arr, pre) => arr.map(x => h('span', {
+    key: x.pos, className: `inline-block px-1.5 py-0.5 rounded bg-slate-900/60 mr-1 ${cor(x.pct)}`
+  }, `${pre}${x.pos} ${fmt(x.pct)}%`));
+  const lista = arr => arr.map(x => `${x.pos}º (${fmt(x.pct)}%)`).join(', ');
+  // times com alguma chance de vaga em algum cenário, do mais provável ao menos
+  const por = cen.map(s => { const m = {}; s.times.forEach(t => { m[t.time] = t; }); return m; });
+  const soma = (t, k) => por.reduce((a, m) => a + m[t][k], 0);
+  const nomes = cen[0].times.map(t => t.time)
+    .filter(t => soma(t, 'lib') + soma(t, 'sul') >= 0.05)
+    .sort((a, b) => soma(b, 'lib') - soma(a, 'lib') || soma(b, 'dir') - soma(a, 'dir') || soma(b, 'sul') - soma(a, 'sul'));
+  // rótulos curtos: no celular os cenários têm de caber lado a lado sem rolagem
+  const cols = det ? [['dir', 'Grp'], ['pre', 'Prév'], ['sul', 'Sula']] : [['lib', 'Lib'], ['sul', 'Sula']];
+  const borda = i => i === 0 ? ' border-l border-slate-700/60' : '';
+  const cabCen = cen.length > 1 ? h('tr', { className: 'text-slate-400' },
+    h('th', null),
+    cen.map(s => h('th', { key: s.id, colSpan: cols.length, className: 'text-center font-medium pb-0.5 px-1 border-l border-slate-700/60 leading-tight' },
+      s.curto, h('div', { className: 'text-[9px] font-normal text-slate-500' }, 'campeão')))) : null;
+  const cabCol = h('tr', { className: 'text-slate-500 border-b border-slate-700' },
+    h('th', { className: 'text-left py-1 font-normal' }, 'Time'),
+    cen.map(s => cols.map(([k, r], i) => h('th', { key: s.id + k, className: 'text-right py-1 px-1 font-normal' + borda(i) }, r))));
+  const corpo = nomes.map(t => h('tr', { key: t, className: 'border-b border-slate-800' },
+    h('td', { className: 'py-1 pr-1' }, h('span', { className: 'inline-flex items-center gap-1 max-w-[112px] sm:max-w-none', title: t },
+      h(Badge, { name: t, size: 16 }), h('span', { className: 'truncate' }, t))),
+    por.map((m, ci) => cols.map(([k], i) => h('td', { key: ci + k, className: 'text-right px-1 font-mono ' + cor(m[t][k]) + borda(i) }, fmt(m[t][k]))))));
+  const tabela = h('div', { className: 'overflow-x-auto' },
+    h('table', { className: 'text-[11px] w-full' }, h('thead', null, cabCen, cabCol), h('tbody', null, corpo)));
+  const linhas = cen.map(s => h('div', { key: s.id, className: 'text-xs mb-1' },
+    cen.length > 1 ? h('span', { className: 'text-slate-300 mr-2' }, s.curto + ' campeão:') : null,
+    chips(s.linha, 'G'),
+    det ? h('span', { className: 'text-slate-500 ml-1' }, `grupos até o ${lista(s.linhaDir)} · Sula até o ${lista(s.linhaSul)}`) : null));
+  return h('details', { open: true, className: 'mb-4 bg-slate-900/40 rounded-xl border border-slate-700/60 p-3' },
+    h('summary', { className: 'text-sm font-semibold text-sky-300 cursor-pointer' }, `Vagas continentais ${vi.ano || ''} — linha dinâmica`),
+    h('p', { className: 'text-[11px] text-slate-500 mt-2 mb-2' },
+      'Cada simulação distribui as vagas pela tabela simulada e pelas copas: 1º–4º nos grupos, 5º na prévia, campeão da Copa do Brasil nos grupos e vice na prévia; ',
+      'vaga de quem já está classificado ou foi rebaixado desce para a tabela; a Sul-Americana fica com os 6 seguintes.'),
+    h('div', { className: 'space-y-1 mb-3' },
+      linhaFinal('lib'), linhaFinal('sula'),
+      h('div', { className: 'text-[11px] text-slate-400' },
+        h('span', { className: 'text-slate-300 font-medium' }, 'Copa do Brasil: '), txtCdb,
+        vi.cdbPesa ? ' — o resultado da final muda a distribuição; aqui cada desfecho pesa metade' : '')),
+    h('div', { className: 'mb-3' },
+      h('div', { className: 'text-[11px] uppercase tracking-wide text-slate-500 mb-1' }, 'Onde cai a linha da Libertadores'),
+      linhas),
+    tabela,
+    h('div', { className: 'flex flex-wrap items-center gap-3 mt-2' },
+      h('button', { onClick: () => setDet(d => !d), className: 'text-[11px] text-emerald-400 hover:underline' },
+        det ? 'Juntar grupos e prévia' : 'Separar grupos e prévia'),
+      h('span', { className: 'text-[10px] text-slate-600' }, `${(vi.nS || 0).toLocaleString()} simulações · valores em % · ${det ? 'Grp = fase de grupos, Prév = fase prévia' : 'Lib = Libertadores (grupos + prévia)'}`)));
+}
+
 function LeagueSim({
   times,
   ranking,
@@ -17686,7 +18131,8 @@ function LeagueSim({
   initialMC,
   initialAk,
   initialEo,
-  initialDrift
+  initialDrift,
+  onRerun
 }) {
   const [aba, setAba] = useState('ratings');
   const [nS, setNS] = useState(1000);
@@ -18139,7 +18585,7 @@ function LeagueSim({
     className: "text-slate-400 text-center py-8"
   }, "Rode \"\u26A1 Simular Tudo\" no dashboard acima para ver os resultados Monte Carlo.") : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h2", {
     className: "text-base font-semibold text-emerald-300 mb-3"
-  }, rMC.nSims.toLocaleString(), " sims", eo && ' (ELO)'), subSwitch(mcView, setMcView), mcView === 'fase2' && (meta.key === 'B' || meta.key === 'C') ? /*#__PURE__*/React.createElement(LeagueNextPhaseMC, { serie: meta.key, rMC: rMC }) : /*#__PURE__*/React.createElement(React.Fragment, null, rMC.cortes && /*#__PURE__*/React.createElement("div", {
+  }, rMC.nSims.toLocaleString(), " sims", eo && ' (ELO)'), subSwitch(mcView, setMcView), mcView !== 'fase2' && rMC.vagasInt && /*#__PURE__*/React.createElement(VagasIntPanel, { vi: rMC.vagasInt, onRerun: onRerun }), mcView === 'fase2' && (meta.key === 'B' || meta.key === 'C') ? /*#__PURE__*/React.createElement(LeagueNextPhaseMC, { serie: meta.key, rMC: rMC }) : /*#__PURE__*/React.createElement(React.Fragment, null, rMC.cortes && /*#__PURE__*/React.createElement("div", {
     className: "mb-4 overflow-x-auto"
   }, /*#__PURE__*/React.createElement("table", {
     className: "text-xs w-full max-w-md"
@@ -23325,7 +23771,8 @@ function SimuladorUnificado() {
     initialMC: dash?.A,
     initialAk: dash?.ak,
     initialEo: dash?.eo,
-    initialDrift: dash?.drift
+    initialDrift: dash?.drift,
+    onRerun: () => setManualTick(t => t + 1) // v4.98: final continental informada no painel de vagas
   }), tab === 'serieB' && /*#__PURE__*/React.createElement(LeagueSim, {
     times: Object.keys(SB_RANKING),
     ranking: SB_RANKING,

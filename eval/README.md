@@ -64,6 +64,7 @@ Hoje o desvio é ~2e-16 (erro de arredondamento de ponto flutuante), nas três s
 | `lib/metrics.cjs` | Brier, logloss, calibração, ECE, bootstrap pareado |
 | `lib/seeds.cjs` | estratégias de Elo inicial |
 | `lib/rncjoin.cjs` | join app ↔ `RNC_2026` por (nome normalizado, UF) |
+| `sem_objetivo.cjs` | ajuste "time sem objetivo" (v4.98): ligado × desligado no motor que está no ar → `out/sem_objetivo.json` |
 
 ## Decisões de desenho que não são óbvias
 
@@ -71,6 +72,13 @@ Hoje o desvio é ~2e-16 (erro de arredondamento de ponto flutuante), nas três s
 fim da fixture que recebe. Filtrar a fixture por `rodada <= H` faz o MC tratar H como o fim
 do campeonato. Com H = 38 (dezembro) isso é a temporada inteira e o comportamento é o
 nativo.
+
+Desde a v4.98 isso tem um efeito colateral: o ajuste "time sem objetivo" (`cfg.semObj`, ligado
+por padrão) conta as "últimas 8 rodadas" a partir do fim da fixture que recebe, então num
+horizonte encurtado ele age nas 8 rodadas antes de H e trata como decidido quem está decidido
+*até H*. São poucos jogos (o time precisa estar decidido em todos os cortes), mas o estágio de
+longo prazo com H < 38 passa a medir o motor com esse desvio. Com H = 38 é o comportamento
+nativo. `longo.json` e o `REPORT.md` atuais são anteriores à v4.98.
 
 **Eventos derivados de `posF`.** Os campos `titulo`/`g4`/`z4` embutem a regra de zona de
 cada série. Em horizonte encurtado essas zonas não existem — "rebaixado na rodada 22" não é
@@ -89,6 +97,25 @@ que ninguém mediu.
 
 **Monte Carlo semeado.** `lib/longterm.cjs` troca `Math.random` por um PRNG semeado durante
 a simulação e restaura depois, para que duas execuções com a mesma semente coincidam.
+
+## `sem_objetivo.cjs` — o ajuste das rodadas finais
+
+```bash
+node eval/sem_objetivo.cjs            # 10k sims, 5 sementes
+node eval/sem_objetivo.cjs --curto    # só os jogos já disputados
+```
+
+Mede o ajuste da v4.98 **sem emendar nada**: liga e desliga `cfg.semObj` numa cópia do
+`DEFAULT_CFG` e usa a regra e os cortes do próprio app (`semObjFlags`, `semObjCortes`). Três
+blocos: os jogos de 2026 que a regra marca (pontos do time sem objetivo contra o esperado, Brier
+com m = 1,09…1,25), a Série A de hoje ligada × desligada (posições, Z4 e vagas continentais por
+cenário) e a Série B retroativa (RPS por rodada de corte).
+
+O valor de m **não sai daqui**. Ele foi fixado por 20 temporadas da Série A, 10 da B e 95
+temporadas de cinco ligas europeias; 2026 tem 23 jogos marcados em A+B e sozinho não confirma
+nem derruba nada (pontos reais 0,74 contra 0,83 esperados; com m = 1,15 o esperado cai para
+0,66). A Série C fica de fora: a evidência histórica é inconclusiva (n = 46) e o app não a
+ajusta.
 
 ## Calibração decide, Brier confirma
 
